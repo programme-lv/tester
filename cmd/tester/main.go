@@ -15,13 +15,19 @@ func main() {
 	log.Println("Connecting to Postgres...")
 	postgres, err := sqlx.Connect("postgres", cfg.SqlxConnString)
 	panicOnError(err)
-	defer postgres.Close()
+	defer func(postgres *sqlx.DB) {
+		err := postgres.Close()
+		panicOnError(err)
+	}(postgres)
 	log.Println("Connected to Postgres")
 
 	log.Println("Connecting to RabbitMQ...")
 	rabbit, err := amqp.Dial(cfg.AMQPConnString)
 	panicOnError(err)
-	defer rabbit.Close()
+	defer func(rabbit *amqp.Connection) {
+		err := rabbit.Close()
+		panicOnError(err)
+	}(rabbit)
 	log.Println("Connected to RabbitMQ")
 
 	log.Println("Exiting...")
