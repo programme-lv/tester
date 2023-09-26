@@ -30,6 +30,43 @@ func main() {
 	}(rabbit)
 	log.Println("Connected to RabbitMQ")
 
+	ch, err := rabbit.Channel()
+	panicOnError(err)
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		panicOnError(err)
+	}(ch)
+
+	q, err := ch.QueueDeclare(
+		"eval_q",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	panicOnError(err)
+
+	err = ch.Qos(1, 0, false)
+	panicOnError(err)
+
+	msgs, err := ch.Consume(
+		q.Name,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	panicOnError(err)
+
+	for d := range msgs {
+		log.Printf("Received a message: %s", d.Body)
+		err = d.Ack(false)
+		panicOnError(err)
+	}
+
 	log.Println("Exiting...")
 }
 

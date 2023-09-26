@@ -51,12 +51,12 @@ func main() {
 	}(ch)
 
 	_, err = ch.QueueDeclare(
-		"eval_q", // name
-		true,     // durable
-		false,    // delete when unused
-		false,    // exclusive
-		false,    // no-wait
-		nil,      // arguments
+		"eval_q",
+		true,
+		false,
+		false,
+		false,
+		nil,
 	)
 	panicOnError(err)
 
@@ -77,10 +77,10 @@ func main() {
 	log.Println("Publishing message...")
 	err = ch.PublishWithContext(
 		ctx,
-		"",       // exchange
-		"eval_q", // routing key
-		false,    // mandatory
-		false,    // immediate
+		"",
+		"eval_q",
+		false,
+		false,
 		amqp.Publishing{
 			ContentType:   "application/json",
 			CorrelationId: string(marshalled),
