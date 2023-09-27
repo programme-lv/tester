@@ -23,17 +23,25 @@ type EvalResGatherer interface {
 		testerInfo string,
 		evalMaxScore int,
 	)
+	UpdateScore(currentScore int)
 	FinishEvaluation()
 	// compilation
 	StartCompilation()
 	FinishCompilation(RuntimeData)
 	// testing
 	StartTesting()
-	FinishSingleTest(
+	StartTestingSingleTest(testId int64)
+	FinishTestingSingleTest(
 		testId int64,
-		status string,
 		submission RuntimeData,
 		checker RuntimeData,
 	)
-	UpdateScore()
+	IgnoreTest(testId int64)
 }
+
+/*
+- AC, PT ( accepted, partial )
+- WA, PE ( wrong answer, presentation error )
+- TLE, MLE, ILE ( ? limit exceeded )
+- RE ( runtime error )
+*/
