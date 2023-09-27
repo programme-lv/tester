@@ -21,7 +21,7 @@ type EvalResGatherer interface {
 	// evaluation
 	StartEvaluation(
 		testerInfo string,
-		maxScore int,
+		evalMaxScore int,
 	)
 	FinishEvaluation()
 	// compilation
@@ -31,7 +31,9 @@ type EvalResGatherer interface {
 	StartTesting()
 	FinishSingleTest(
 		testId int64,
+		status string,
 		submission RuntimeData,
 		checker RuntimeData,
 	)
+	UpdateScore()
 }

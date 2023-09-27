@@ -9,5 +9,3 @@ type EvaluationRequest struct {
 	TaskVersionId int
 	Submission    Submission
 }
-
-func TestEvalRequest
