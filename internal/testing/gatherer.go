@@ -23,7 +23,7 @@ type EvalResGatherer interface {
 		testerInfo string,
 		evalMaxScore int,
 	)
-	UpdateScore(currentScore int)
+	IncrementScore(delta int)
 	FinishEvaluation()
 	// compilation
 	StartCompilation()
