@@ -4,12 +4,12 @@ type RuntimeMetrics struct {
 	CpuTimeMillis  float64
 	WallTimeMillis float64
 	MemoryKBytes   int
-	ExitCode       int
 }
 
 type RuntimeOutput struct {
-	Stdout string
-	Stderr string
+	Stdout   string
+	Stderr   string
+	ExitCode int
 }
 
 type RuntimeData struct {
@@ -24,24 +24,35 @@ type EvalResGatherer interface {
 		evalMaxScore int,
 	)
 	IncrementScore(delta int)
-	FinishEvaluation()
-	// compilation
+	FinishWithInernalServerError(error)
+	FinishEvaluation() // to be called after all tests are marked as finished
+
+	// compilatihlkkjn
 	StartCompilation()
 	FinishCompilation(RuntimeData)
+
 	// testing
 	StartTesting()
-	StartTestingSingleTest(testId int64)
-	FinishTestingSingleTest(
-		testId int64,
-		submission RuntimeData,
-		checker RuntimeData,
-	)
 	IgnoreTest(testId int64)
+
+	StartTest(testId int64)
+	// runtime data
+	ReportTestSubmissionRuntimeData(int64, RuntimeData)
+	ReportTestCheckerRuntimeData(int64, RuntimeData)
+	// verdicts
+	ReportTestVerdictLimitExceeded(testId int64, tle bool, mle bool, ile bool)
+	ReportTestRuntimeError(testId int64)
+	ReportTestAccepted(testId int64)
+	ReportTestWrongAnswer(testId int64)
+
+	FinishTest(testId int64) // to be called after all runtime data and verdicts are reported
 }
 
 /*
+CHECKER DETERMINED RESULTS
 - AC, PT ( accepted, partial )
 - WA, PE ( wrong answer, presentation error )
+SOLUTION DETERMINED RESULTS
 - TLE, MLE, ILE ( ? limit exceeded )
 - RE ( runtime error )
 */
