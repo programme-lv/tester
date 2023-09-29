@@ -17,42 +17,36 @@ type RuntimeData struct {
 	Metrics RuntimeMetrics
 }
 
+type RuntimeExceededFlags struct {
+	TimeLimitExceeded        bool
+	MemoryLimitExceeded      bool
+	InstructionLimitExceeded bool
+}
+
 type EvalResGatherer interface {
-	// evaluation
 	StartEvaluation(
 		testerInfo string,
 		evalMaxScore int,
 	)
 	IncrementScore(delta int)
-	FinishWithInernalServerError(error)
-	FinishEvaluation() // to be called after all tests are marked as finished
+	FinishWithInternalServerError(error)
+	FinishEvaluation()
 
-	// compilatihlkkjn
 	StartCompilation()
 	FinishCompilation(RuntimeData)
 
-	// testing
 	StartTesting()
 	IgnoreTest(testId int64)
 
 	StartTest(testId int64)
-	// runtime data
-	ReportTestSubmissionRuntimeData(int64, RuntimeData)
-	ReportTestCheckerRuntimeData(int64, RuntimeData)
-	// verdicts
-	ReportTestVerdictLimitExceeded(testId int64, tle bool, mle bool, ile bool)
-	ReportTestRuntimeError(testId int64)
-	ReportTestAccepted(testId int64)
-	ReportTestWrongAnswer(testId int64)
+	ReportTestUserRuntimeData(testId int64, rd RuntimeData)
+	ReportTestUserRuntimeLimitExceeded(testId int64, flags RuntimeExceededFlags)
+	ReportTestUserRuntimeError(testId int64)
 
-	FinishTest(testId int64) // to be called after all runtime data and verdicts are reported
+	ReportTestCheckerRuntimeData(testId int64, rd RuntimeData)
+
+	ReportTestVerdictAccepted(testId int64)
+	ReportTestVerdictWrongAnswer(testId int64)
+
+	FinishTest(testId int64)
 }
-
-/*
-CHECKER DETERMINED RESULTS
-- AC, PT ( accepted, partial )
-- WA, PE ( wrong answer, presentation error )
-SOLUTION DETERMINED RESULTS
-- TLE, MLE, ILE ( ? limit exceeded )
-- RE ( runtime error )
-*/
