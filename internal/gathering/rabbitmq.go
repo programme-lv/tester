@@ -3,6 +3,7 @@ package gathering
 import "github.com/programme-lv/tester/internal/testing"
 
 type RabbitMQGatherer struct {
+	correlationIsEvaluation bool
 }
 
 func (r RabbitMQGatherer) StartEvaluation(testerInfo string, evalMaxScore int) {

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"github.com/programme-lv/tester/internal/messaging"
 	"log"
 
 	"github.com/jmoiron/sqlx"
@@ -62,9 +64,19 @@ func main() {
 	panicOnError(err)
 
 	for d := range msgs {
-		log.Printf("Received a message: %s", d.Body)
-		log.Printf("Replying to %s", d.ReplyTo)
-		log.Printf("Correlation ID: %s", d.CorrelationId)
+		request := messaging.EvaluationRequest{}
+		err := json.Unmarshal(d.Body, &request)
+		panicOnError(err)
+		log.Printf("Request: %+v", request)
+
+		correlation := messaging.Correlation{}
+		err = json.Unmarshal([]byte(d.CorrelationId), &correlation)
+		panicOnError(err)
+		log.Printf("Correlation: %+v", correlation)
+
+		replyTo := d.ReplyTo
+		log.Printf("ReplyTo: %s", replyTo)
+
 		err = d.Ack(false)
 		panicOnError(err)
 	}

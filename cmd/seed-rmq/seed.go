@@ -3,44 +3,18 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"github.com/programme-lv/tester/internal/messaging"
 	"log"
 	"math/rand"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/programme-lv/tester/internal/environment"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type Submission struct {
-	SourceCode string
-	LanguageId string
-}
-
-type EvaluationRequest struct {
-	TaskVersionId int
-	Submission    Submission
-}
-
-type CorrelationStruct struct {
-	IsEvaluation bool  `json:"is_evaluation"`
-	EvaluationId int64 `json:"evaluation_id,omitempty"`
-	UnixMillis   int64 `json:"unix_millis"`
-	RandomInt63  int64 `json:"random_int_63"`
-}
-
 func main() {
 	cfg := environment.ReadEnvConfig()
-
-	log.Println("Connecting to Postgres...")
-	postgres, err := sqlx.Connect("postgres", cfg.SqlxConnString)
-	panicOnError(err)
-	defer func(postgres *sqlx.DB) {
-		err := postgres.Close()
-		panicOnError(err)
-	}(postgres)
-	log.Println("Connected to Postgres")
 
 	log.Println("Connecting to RabbitMQ...")
 	rabbit, err := amqp.Dial(cfg.AMQPConnString)
@@ -68,9 +42,9 @@ func main() {
 	)
 	panicOnError(err)
 
-	msg := EvaluationRequest{
+	msg := messaging.EvaluationRequest{
 		TaskVersionId: 1,
-		Submission: Submission{
+		Submission: messaging.Submission{
 			SourceCode: "print(3)",
 			LanguageId: "python3",
 		},
@@ -82,7 +56,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	correlation := CorrelationStruct{
+	correlation := messaging.Correlation{
 		IsEvaluation: false,
 		EvaluationId: 0,
 		UnixMillis:   time.Now().UnixMilli(),
