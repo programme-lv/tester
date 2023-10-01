@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -20,6 +21,13 @@ type Submission struct {
 type EvaluationRequest struct {
 	TaskVersionId int
 	Submission    Submission
+}
+
+type CorrelationStruct struct {
+	IsEvaluation bool  `json:"is_evaluation"`
+	EvaluationId int64 `json:"evaluation_id,omitempty"`
+	UnixMillis   int64 `json:"unix_millis"`
+	RandomInt63  int64 `json:"random_int_63"`
 }
 
 func main() {
@@ -74,6 +82,15 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	correlation := CorrelationStruct{
+		IsEvaluation: false,
+		EvaluationId: 0,
+		UnixMillis:   time.Now().UnixMilli(),
+		RandomInt63:  rand.Int63(),
+	}
+	correlationJson, err := json.Marshal(correlation)
+	panicOnError(err)
+
 	log.Println("Publishing message...")
 	err = ch.PublishWithContext(
 		ctx,
@@ -83,7 +100,7 @@ func main() {
 		false,
 		amqp.Publishing{
 			ContentType:   "application/json",
-			CorrelationId: string(marshalled),
+			CorrelationId: string(correlationJson),
 			ReplyTo:       "res_q",
 			Body:          marshalled,
 		})

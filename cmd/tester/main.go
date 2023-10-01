@@ -63,6 +63,8 @@ func main() {
 
 	for d := range msgs {
 		log.Printf("Received a message: %s", d.Body)
+		log.Printf("Replying to %s", d.ReplyTo)
+		log.Printf("Correlation ID: %s", d.CorrelationId)
 		err = d.Ack(false)
 		panicOnError(err)
 	}
