@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/programme-lv/tester/internal/gatherers"
 	"github.com/programme-lv/tester/internal/messaging"
+	"github.com/programme-lv/tester/internal/testing"
 	"log"
 
 	"github.com/jmoiron/sqlx"
@@ -64,6 +66,9 @@ func main() {
 	panicOnError(err)
 
 	for d := range msgs {
+		err = d.Ack(false)
+		panicOnError(err)
+
 		request := messaging.EvaluationRequest{}
 		err := json.Unmarshal(d.Body, &request)
 		panicOnError(err)
@@ -77,7 +82,9 @@ func main() {
 		replyTo := d.ReplyTo
 		log.Printf("ReplyTo: %s", replyTo)
 
-		err = d.Ack(false)
+		rmqGatherer := gatherers.NewRabbitMQGatherer(correlation, replyTo)
+
+		err = testing.EvaluateSubmission(request, rmqGatherer)
 		panicOnError(err)
 	}
 

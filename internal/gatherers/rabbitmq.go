@@ -1,9 +1,19 @@
-package gathering
+package gatherers
 
-import "github.com/programme-lv/tester/internal/testing"
+import (
+	"github.com/programme-lv/tester/internal/messaging"
+	"github.com/programme-lv/tester/internal/testing"
+)
 
 type RabbitMQGatherer struct {
-	correlationIsEvaluation bool
+	correlation messaging.Correlation
+	replyTo     string
+}
+
+var _ testing.EvalResGatherer = (*RabbitMQGatherer)(nil)
+
+func NewRabbitMQGatherer(correlation messaging.Correlation, replyTo string) *RabbitMQGatherer {
+	return &RabbitMQGatherer{correlation: correlation, replyTo: replyTo}
 }
 
 func (r RabbitMQGatherer) StartEvaluation(testerInfo string, evalMaxScore int) {
@@ -85,5 +95,3 @@ func (r RabbitMQGatherer) FinishTest(testId int64) {
 	//TODO implement me
 	panic("implement me")
 }
-
-var _ testing.EvalResGatherer = (*RabbitMQGatherer)(nil)

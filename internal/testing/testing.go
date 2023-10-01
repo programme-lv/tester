@@ -1,11 +1,11 @@
 package testing
 
-type Submission struct {
-	SourceCode string
-	LanguageId string
-}
+import "github.com/programme-lv/tester/internal/messaging"
 
-type EvaluationRequest struct {
-	TaskVersionId int
-	Submission    Submission
+func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGatherer) error {
+	gatherer.StartEvaluation("testerInfo", 100)
+	gatherer.IncrementScore(10)
+	gatherer.IncrementScore(10)
+	gatherer.FinishEvaluation()
+	return nil
 }

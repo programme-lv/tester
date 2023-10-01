@@ -1,4 +1,4 @@
-package gathering
+package gatherers
 
 type Status string
 
