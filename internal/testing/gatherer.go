@@ -18,35 +18,34 @@ type RuntimeData struct {
 }
 
 type RuntimeExceededFlags struct {
-	TimeLimitExceeded        bool
+	TimeLimitExceeded     bool
 	MemoryLimitExceeded   bool
 	IdlenessLimitExceeded bool
 }
 
 type EvalResGatherer interface {
-	StartEvaluation(
-		testerInfo string,
-		evalMaxScore int,
-	)
-	IncrementScore(delta int)
+	StartEvaluation(testerInfo string)
 	FinishWithInternalServerError(error)
 	FinishEvaluation()
 
 	StartCompilation()
 	FinishCompilation(RuntimeData)
 
-	StartTesting()
+	StartTesting(maxScore int)
 	IgnoreTest(testId int64)
 
 	StartTest(testId int64)
-	ReportTestUserRuntimeData(testId int64, rd RuntimeData)
-	ReportTestUserRuntimeLimitExceeded(testId int64, flags RuntimeExceededFlags)
-	ReportTestUserRuntimeError(testId int64)
+	ReportTestSubmissionRuntimeData(testId int64, rd RuntimeData)
+
+	FinishTestWithLimitExceeded(testId int64, flags RuntimeExceededFlags)
+	FinishTestWithRuntimeError(testId int64)
 
 	ReportTestCheckerRuntimeData(testId int64, rd RuntimeData)
 
-	ReportTestVerdictAccepted(testId int64)
-	ReportTestVerdictWrongAnswer(testId int64)
+	FinishTestWithVerdictAccepted(testId int64)
+	FinishTestWithVerdictWrongAnswer(testId int64)
+
+	IncrementScore(delta int)
 
 	FinishTest(testId int64)
 }

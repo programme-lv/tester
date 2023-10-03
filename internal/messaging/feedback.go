@@ -19,7 +19,6 @@ type FeedbackData interface {
 
 type SubmissionReceivedData struct {
 	TestEnvInfo string `json:"test_env_info"`
-	MaxScore    int    `json:"max_score"`
 }
 
 func (SubmissionReceivedData) isFeedbackData() {}
@@ -40,7 +39,9 @@ func (CompilationFinishedData) isFeedbackData() {}
 
 var _ FeedbackData = (*CompilationFinishedData)(nil)
 
-type TestingStartedData struct{}
+type TestingStartedData struct {
+	MaxScore int `json:"max_score"`
+}
 
 func (TestingStartedData) isFeedbackData() {}
 
@@ -55,10 +56,10 @@ func (TestStartedData) isFeedbackData() {}
 var _ FeedbackData = (*TestStartedData)(nil)
 
 type TestFinishedData struct {
-	TestId                int64       `json:"test_id"`
-	Verdict               Status      `json:"verdict"`
-	SubmissionRuntimeData RuntimeData `json:"submission_runtime_data"`
-	CheckerRuntimeData    RuntimeData `json:"checker_runtime_data"`
+	TestId                int64        `json:"test_id"`
+	Verdict               Status       `json:"verdict"`
+	SubmissionRuntimeData *RuntimeData `json:"submission_runtime_data,omitempty"`
+	CheckerRuntimeData    *RuntimeData `json:"checker_runtime_data,omitempty"`
 }
 
 func (TestFinishedData) isFeedbackData() {}

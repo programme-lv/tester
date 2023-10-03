@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/programme-lv/tester/internal/gatherers"
+	"github.com/programme-lv/tester/internal/gatherers/rabbitmq"
 	"github.com/programme-lv/tester/internal/messaging"
 	"github.com/programme-lv/tester/internal/testing"
 	"log"
@@ -82,7 +82,7 @@ func main() {
 		replyTo := d.ReplyTo
 		log.Printf("ReplyTo: %s", replyTo)
 
-		rmqGatherer := gatherers.NewRabbitMQGatherer(ch, correlation, replyTo)
+		rmqGatherer := rabbitmq.NewRabbitMQGatherer(ch, correlation, replyTo)
 
 		err = testing.EvaluateSubmission(request, rmqGatherer)
 		panicOnError(err)
