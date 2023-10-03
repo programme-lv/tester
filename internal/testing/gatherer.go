@@ -30,6 +30,7 @@ type EvalResGatherer interface {
 
 	StartCompilation()
 	FinishCompilation(RuntimeData)
+	FinishWithCompilationError(error)
 
 	StartTesting(maxScore int)
 	IgnoreTest(testId int64)
