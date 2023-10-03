@@ -19,8 +19,8 @@ type RuntimeData struct {
 
 type RuntimeExceededFlags struct {
 	TimeLimitExceeded        bool
-	MemoryLimitExceeded      bool
-	InstructionLimitExceeded bool
+	MemoryLimitExceeded   bool
+	IdlenessLimitExceeded bool
 }
 
 type EvalResGatherer interface {
