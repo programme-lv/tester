@@ -24,12 +24,12 @@ type RuntimeExceededFlags struct {
 }
 
 type EvalResGatherer interface {
-	StartEvaluation(testerInfo string)
+	StartEvaluation()
 	FinishWithInternalServerError(error)
 	FinishEvaluation()
 
 	StartCompilation()
-	FinishCompilation(RuntimeData)
+	FinishCompilation(data *RuntimeData)
 	FinishWithCompilationError(error)
 
 	StartTesting(maxScore int)
@@ -48,3 +48,5 @@ type EvalResGatherer interface {
 
 	IncrementScore(delta int)
 }
+
+// TODO: add reporting tester information somewhere

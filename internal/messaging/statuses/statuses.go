@@ -1,23 +1,27 @@
-package messaging
+package statuses
 
 type Status string
 
 const (
-	InQueue               Status = "IQ"
+	Received              Status = "R"
 	Compiling             Status = "C"
 	Testing               Status = "T"
 	Finished              Status = "F"
 	CompilationError      Status = "CE"
-	Rejected              Status = "RJ"
 	Accepted              Status = "AC"
-	PartiallyCorrect      Status = "PT"
 	WrongAnswer           Status = "WA"
-	PresentationError     Status = "PE"
 	TimeLimitExceeded     Status = "TLE"
 	MemoryLimitExceeded   Status = "MLE"
 	IdlenessLimitExceeded Status = "ILE"
 	Ignored               Status = "IG"
 	RuntimeError          Status = "RE"
-	SecurityViolation     Status = "SV"
 	InternalServerError   Status = "ISE"
 )
+
+/*
+	InQueue               Status = "IQ"
+	Rejected              Status = "RJ"
+	PresentationError     Status = "PE"
+	PartiallyCorrect      Status = "PT"
+	SecurityViolation     Status = "SV"
+*/

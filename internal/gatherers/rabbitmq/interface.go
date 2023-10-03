@@ -2,14 +2,15 @@ package rabbitmq
 
 import (
 	"github.com/programme-lv/tester/internal/messaging"
+	"github.com/programme-lv/tester/internal/messaging/statuses"
 	"github.com/programme-lv/tester/internal/testing"
 )
 
-func (r *Gatherer) StartEvaluation(testerInfo string) {
+func (r *Gatherer) StartEvaluation() {
 	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.SubmissionReceived,
-		Data: messaging.SubmissionReceivedData{
-			TestEnvInfo: testerInfo,
+		FeedbackType: messaging.UpdateEvalStatus,
+		Data: messaging.UpdateEvalStatusData{
+			Status: statuses.Received,
 		},
 	}
 	r.sendEvalResponse(msg)
@@ -17,8 +18,16 @@ func (r *Gatherer) StartEvaluation(testerInfo string) {
 
 func (r *Gatherer) StartTesting(maxScore int) {
 	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.TestingStarted,
-		Data: messaging.TestingStartedData{
+		FeedbackType: messaging.UpdateEvalStatus,
+		Data: messaging.UpdateEvalStatusData{
+			Status: statuses.Testing,
+		},
+	}
+	r.sendEvalResponse(msg)
+
+	msg = &messaging.EvaluationResponse{
+		FeedbackType: messaging.SetMaxScore,
+		Data: messaging.SetMaxScoreData{
 			MaxScore: maxScore,
 		},
 	}
@@ -37,9 +46,9 @@ func (r *Gatherer) IncrementScore(delta int) {
 
 func (r *Gatherer) FinishWithInternalServerError(err error) {
 	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.FinishEvaluation,
-		Data: messaging.FinishEvaluationData{
-			Err: err,
+		FeedbackType: messaging.UpdateEvalStatus,
+		Data: messaging.UpdateEvalStatusData{
+			Status: statuses.InternalServerError,
 		},
 	}
 	r.sendEvalResponse(msg)
@@ -47,9 +56,9 @@ func (r *Gatherer) FinishWithInternalServerError(err error) {
 
 func (r *Gatherer) FinishEvaluation() {
 	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.FinishEvaluation,
-		Data: messaging.FinishEvaluationData{
-			Err: nil,
+		FeedbackType: messaging.UpdateEvalStatus,
+		Data: messaging.UpdateEvalStatusData{
+			Status: statuses.Finished,
 		},
 	}
 	r.sendEvalResponse(msg)
@@ -57,8 +66,10 @@ func (r *Gatherer) FinishEvaluation() {
 
 func (r *Gatherer) StartCompilation() {
 	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.CompilationStarted,
-		Data:         messaging.CompilationStartedData{},
+		FeedbackType: messaging.UpdateEvalStatus,
+		Data: messaging.UpdateEvalStatusData{
+			Status: statuses.Compiling,
+		},
 	}
 	r.sendEvalResponse(msg)
 }
@@ -83,7 +94,7 @@ func (r *Gatherer) IgnoreTest(testId int64) {
 		FeedbackType: messaging.TestFinished,
 		Data: messaging.TestFinishedData{
 			TestId:                testId,
-			Verdict:               messaging.Ignored,
+			Verdict:               statuses.Ignored,
 			SubmissionRuntimeData: nil,
 			CheckerRuntimeData:    nil,
 		},
@@ -142,11 +153,11 @@ func (r *Gatherer) FinishTest(testId int64) {
 func (r *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	verdict := messaging.IdlenessLimitExceeded
+	verdict := statuses.IdlenessLimitExceeded
 	if flags.TimeLimitExceeded {
-		verdict = messaging.TimeLimitExceeded
+		verdict = statuses.TimeLimitExceeded
 	} else if flags.MemoryLimitExceeded {
-		verdict = messaging.MemoryLimitExceeded
+		verdict = statuses.MemoryLimitExceeded
 	}
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.TestFinished,
@@ -167,7 +178,7 @@ func (r *Gatherer) FinishTestWithRuntimeError(testId int64) {
 		FeedbackType: messaging.TestFinished,
 		Data: messaging.TestFinishedData{
 			TestId:                testId,
-			Verdict:               messaging.RuntimeError,
+			Verdict:               statuses.RuntimeError,
 			SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
 			CheckerRuntimeData:    toMessagingRuntimeData(checkerRd),
 		},
@@ -182,7 +193,7 @@ func (r *Gatherer) FinishTestWithVerdictAccepted(testId int64) {
 		FeedbackType: messaging.TestFinished,
 		Data: messaging.TestFinishedData{
 			TestId:                testId,
-			Verdict:               messaging.Accepted,
+			Verdict:               statuses.Accepted,
 			SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
 			CheckerRuntimeData:    toMessagingRuntimeData(checkerRd),
 		},
@@ -197,7 +208,7 @@ func (r *Gatherer) FinishTestWithVerdictWrongAnswer(testId int64) {
 		FeedbackType: messaging.TestFinished,
 		Data: messaging.TestFinishedData{
 			TestId:                testId,
-			Verdict:               messaging.WrongAnswer,
+			Verdict:               statuses.WrongAnswer,
 			SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
 			CheckerRuntimeData:    toMessagingRuntimeData(checkerRd),
 		},

@@ -4,6 +4,7 @@ import "github.com/programme-lv/tester/internal/testing"
 
 func (g *Gatherer) StartEvaluation(testerInfo string) {
 	//TODO implement me
+
 	panic("implement me")
 }
 
