@@ -1,37 +1,70 @@
 package postgres
 
-import "github.com/programme-lv/tester/internal/testing"
+import (
+	"github.com/jmoiron/sqlx"
+	"github.com/programme-lv/tester/internal/database"
+	"github.com/programme-lv/tester/internal/messaging/statuses"
+	"github.com/programme-lv/tester/internal/testing"
+)
 
 type Gatherer struct {
+	postgres         *sqlx.DB
+	submissionEvalId int64
+}
+
+func NewPostgresGatherer(postgres *sqlx.DB, submissionEvalId int64) *Gatherer {
+	return &Gatherer{
+		postgres:         postgres,
+		submissionEvalId: submissionEvalId,
+	}
 }
 
 func (g *Gatherer) StartEvaluation() {
-	//TODO implement me
-	panic("implement me")
+	err := database.UpdateSubmissionEvaluationEvalStatusId(
+		g.postgres,
+		statuses.Received,
+		g.submissionEvalId,
+	)
+	panicOnError(err)
 }
 
 func (g *Gatherer) FinishWithInternalServerError(err error) {
-	//TODO implement me
-	panic("implement me")
+	err2 := database.UpdateSubmissionEvaluationEvalStatusId(
+		g.postgres,
+		statuses.InternalServerError,
+		g.submissionEvalId,
+	)
+	panicOnError(err)
+	panicOnError(err2)
 }
 
 func (g *Gatherer) FinishEvaluation() {
-	//TODO implement me
-	panic("implement me")
+	err := database.UpdateSubmissionEvaluationEvalStatusId(
+		g.postgres,
+		statuses.Finished,
+		g.submissionEvalId,
+	)
+	panicOnError(err)
 }
 
 func (g *Gatherer) StartCompilation() {
-	//TODO implement me
-	panic("implement me")
+	err := database.UpdateSubmissionEvaluationEvalStatusId(
+		g.postgres,
+		statuses.Compiling,
+		g.submissionEvalId,
+	)
+	panicOnError(err)
 }
 
 func (g *Gatherer) FinishCompilation(data *testing.RuntimeData) {
 	//TODO implement me
+	// update compilation_stdout, compilation_stderr, and so on
 	panic("implement me")
 }
 
 func (g *Gatherer) FinishWithCompilationError() {
 	//TODO implement me
+	// update eval_status_id to CompilationError
 	panic("implement me")
 }
 
@@ -86,3 +119,9 @@ func (g *Gatherer) IncrementScore(delta int) {
 }
 
 var _ testing.EvalResGatherer = (*Gatherer)(nil)
+
+func panicOnError(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
