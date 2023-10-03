@@ -3,6 +3,7 @@ package isolate
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,16 +53,24 @@ func (box *Box) Run(
 		return nil, err
 	}
 
-	args := []string{"--env=HOME=/box", "--meta=" + process.metaFilePath}
+	var args []string
+	args = append(args, "--cg")
+	args = append(args, fmt.Sprintf("--box-id=%d", box.id))
+
 	args = append(args, constraints.ToArgs()...)
 
+	args = append(args, fmt.Sprintf("--meta=%s", process.metaFilePath))
+
+	args = append(args, "--env=HOME=/box")
+	args = append(args, "--env=PATH")
+
 	cmdStr := fmt.Sprintf(
-		"isolate --cg --box-id %d %s --run /usr/bin/env %s",
-		box.id,
+		"isolate %s --run -- /usr/bin/bash -c \"%s\"",
 		strings.Join(args, " "),
 		command,
 	)
 
+	log.Println("Running command:", cmdStr)
 	cmd := exec.Command("/usr/bin/bash", "-c", cmdStr)
 	cmd.Stdin = stdin
 	process.stdout, err = cmd.StdoutPipe()
