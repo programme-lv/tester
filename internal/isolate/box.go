@@ -31,7 +31,7 @@ func (box *Box) Path() string {
 }
 
 func (box *Box) Close() error {
-	return box.isolate.EraseBox(box.id)
+	return box.isolate.eraseBox(box.id)
 }
 
 func (box *Box) Run(

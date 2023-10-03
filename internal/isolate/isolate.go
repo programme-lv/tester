@@ -79,3 +79,22 @@ func (i *Isolate) initBox(boxId int) (string, error) {
 	boxPath := strings.TrimSuffix(string(cmdOutput), "\n")
 	return boxPath, nil
 }
+
+func (i *Isolate) eraseBox(boxId int) error {
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
+
+	err := i.cleanupBox(boxId)
+	if err != nil {
+		return err
+	}
+
+	for index, usedId := range i.idsInUse {
+		if usedId == boxId {
+			i.idsInUse = append(i.idsInUse[:index], i.idsInUse[index+1:]...)
+			break
+		}
+	}
+
+	return nil
+}
