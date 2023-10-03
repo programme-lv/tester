@@ -17,3 +17,16 @@ func UpdateSubmissionEvaluationEvalStatusId(
 	)
 	return err
 }
+
+func SelectProgrammingLanguageById(
+	db *sqlx.DB,
+	programmingLanguageId string,
+) (*ProgrammingLanguage, error) {
+	var programmingLanguage *ProgrammingLanguage = &ProgrammingLanguage{}
+	err := db.Get(
+		programmingLanguage,
+		"SELECT id, full_name, code_filename, compile_cmd, execute_cmd, env_version_cmd, hello_world_code FROM programming_languages WHERE id = $1",
+		programmingLanguageId,
+	)
+	return programmingLanguage, err
+}

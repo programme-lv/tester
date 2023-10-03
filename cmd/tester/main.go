@@ -84,7 +84,7 @@ func main() {
 
 		rmqGatherer := rabbitmq.NewRabbitMQGatherer(ch, correlation, replyTo)
 
-		err = testing.EvaluateSubmission(request, rmqGatherer)
+		err = testing.EvaluateSubmission(request, rmqGatherer, postgres)
 		panicOnError(err)
 	}
 
