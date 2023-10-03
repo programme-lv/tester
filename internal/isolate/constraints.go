@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type RuntimeConstraints struct {
+type Constraints struct {
 	CpuTimeLimInSec      float64
 	ExtraCpuTimeLimInSec float64
 	WallTimeLimInSec     float64
@@ -13,8 +13,8 @@ type RuntimeConstraints struct {
 	MaxOpenFiles         int
 }
 
-func DefaultRuntimeConstraints() RuntimeConstraints {
-	return RuntimeConstraints{
+func DefaultConstraints() Constraints {
+	return Constraints{
 		CpuTimeLimInSec:      50.0,
 		ExtraCpuTimeLimInSec: 0.5,
 		WallTimeLimInSec:     10.0,
@@ -24,7 +24,7 @@ func DefaultRuntimeConstraints() RuntimeConstraints {
 	}
 }
 
-func (constraints *RuntimeConstraints) ToArgs() []string {
+func (constraints *Constraints) ToArgs() []string {
 	return []string{
 		constraints.MemLimArg(),
 		constraints.CpuTimeLimArg(),
@@ -35,26 +35,26 @@ func (constraints *RuntimeConstraints) ToArgs() []string {
 	}
 }
 
-func (constraints *RuntimeConstraints) MemLimArg() string {
+func (constraints *Constraints) MemLimArg() string {
 	return fmt.Sprintf("--mem=%d", constraints.MemoryLimitInKB)
 }
 
-func (constraints *RuntimeConstraints) CpuTimeLimArg() string {
+func (constraints *Constraints) CpuTimeLimArg() string {
 	return fmt.Sprintf("--time=%f", constraints.CpuTimeLimInSec)
 }
 
-func (constraints *RuntimeConstraints) ExtraCpuTimeLimArg() string {
+func (constraints *Constraints) ExtraCpuTimeLimArg() string {
 	return fmt.Sprintf("--extra-time=%f", constraints.ExtraCpuTimeLimInSec)
 }
 
-func (constraints *RuntimeConstraints) WallTimeLimArg() string {
+func (constraints *Constraints) WallTimeLimArg() string {
 	return fmt.Sprintf("--wall-time=%f", constraints.WallTimeLimInSec)
 }
 
-func (constraints *RuntimeConstraints) MaxProcessesArg() string {
+func (constraints *Constraints) MaxProcessesArg() string {
 	return fmt.Sprintf("--processes=%d", constraints.MaxProcesses)
 }
 
-func (constraints *RuntimeConstraints) MaxOpenFilesArg() string {
+func (constraints *Constraints) MaxOpenFilesArg() string {
 	return fmt.Sprintf("--open-files=%d", constraints.MaxOpenFiles)
 }

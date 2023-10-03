@@ -37,11 +37,13 @@ func (box *Box) Close() error {
 func (box *Box) Run(
 	command string,
 	stdin io.ReadCloser,
-	constraints *RuntimeConstraints) (*Process, error) {
+	constraints *Constraints) (*Process, error) {
+
 	if constraints == nil {
-		c := DefaultRuntimeConstraints()
+		c := DefaultConstraints()
 		constraints = &c
 	}
+	
 	box.logger.Info("running command in box", slog.String("command", command),
 		slog.String("constraints", strings.Join(constraints.ToArgs(), " ")))
 
