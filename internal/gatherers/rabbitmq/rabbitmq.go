@@ -15,17 +15,17 @@ type testRuntimeData struct {
 	checkerRuntimeData    testing.RuntimeData
 }
 
-type RabbitMQGatherer struct {
+type Gatherer struct {
 	amqpChannel          *amqp.Channel
 	correlation          messaging.Correlation
 	replyTo              string
 	testRuntimeDataCache map[int64]*testRuntimeData
 }
 
-var _ testing.EvalResGatherer = (*RabbitMQGatherer)(nil)
+var _ testing.EvalResGatherer = (*Gatherer)(nil)
 
-func NewRabbitMQGatherer(ch *amqp.Channel, correlation messaging.Correlation, replyTo string) *RabbitMQGatherer {
-	return &RabbitMQGatherer{
+func NewRabbitMQGatherer(ch *amqp.Channel, correlation messaging.Correlation, replyTo string) *Gatherer {
+	return &Gatherer{
 		amqpChannel:          ch,
 		correlation:          correlation,
 		replyTo:              replyTo,
@@ -33,7 +33,7 @@ func NewRabbitMQGatherer(ch *amqp.Channel, correlation messaging.Correlation, re
 	}
 }
 
-func (r *RabbitMQGatherer) declareReplyToQueue() {
+func (r *Gatherer) declareReplyToQueue() {
 	_, err := r.amqpChannel.QueueDeclare(
 		r.replyTo,
 		true,
@@ -45,7 +45,7 @@ func (r *RabbitMQGatherer) declareReplyToQueue() {
 	panicOnError(err)
 }
 
-func (r *RabbitMQGatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
+func (r *Gatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
 	r.declareReplyToQueue()
 
 	marshalled, err := json.Marshal(msg)

@@ -5,7 +5,7 @@ import (
 	"github.com/programme-lv/tester/internal/testing"
 )
 
-func (r *RabbitMQGatherer) StartEvaluation(testerInfo string) {
+func (r *Gatherer) StartEvaluation(testerInfo string) {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.SubmissionReceived,
 		Data: messaging.SubmissionReceivedData{
@@ -15,7 +15,7 @@ func (r *RabbitMQGatherer) StartEvaluation(testerInfo string) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) StartTesting(maxScore int) {
+func (r *Gatherer) StartTesting(maxScore int) {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.TestingStarted,
 		Data: messaging.TestingStartedData{
@@ -25,7 +25,7 @@ func (r *RabbitMQGatherer) StartTesting(maxScore int) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) IncrementScore(delta int) {
+func (r *Gatherer) IncrementScore(delta int) {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.IncrementScore,
 		Data: messaging.IncrementScoreData{
@@ -35,7 +35,7 @@ func (r *RabbitMQGatherer) IncrementScore(delta int) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) FinishWithInternalServerError(err error) {
+func (r *Gatherer) FinishWithInternalServerError(err error) {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.FinishEvaluation,
 		Data: messaging.FinishEvaluationData{
@@ -45,7 +45,7 @@ func (r *RabbitMQGatherer) FinishWithInternalServerError(err error) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) FinishEvaluation() {
+func (r *Gatherer) FinishEvaluation() {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.FinishEvaluation,
 		Data: messaging.FinishEvaluationData{
@@ -55,7 +55,7 @@ func (r *RabbitMQGatherer) FinishEvaluation() {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) StartCompilation() {
+func (r *Gatherer) StartCompilation() {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.CompilationStarted,
 		Data:         messaging.CompilationStartedData{},
@@ -63,7 +63,7 @@ func (r *RabbitMQGatherer) StartCompilation() {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) FinishCompilation(data testing.RuntimeData) {
+func (r *Gatherer) FinishCompilation(data testing.RuntimeData) {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.CompilationFinished,
 		Data: messaging.CompilationFinishedData{
@@ -83,7 +83,7 @@ func (r *RabbitMQGatherer) FinishCompilation(data testing.RuntimeData) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) IgnoreTest(testId int64) {
+func (r *Gatherer) IgnoreTest(testId int64) {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.TestFinished,
 		Data: messaging.TestFinishedData{
@@ -96,7 +96,7 @@ func (r *RabbitMQGatherer) IgnoreTest(testId int64) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) StartTest(testId int64) {
+func (r *Gatherer) StartTest(testId int64) {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.TestStarted,
 		Data: messaging.TestStartedData{
@@ -106,11 +106,11 @@ func (r *RabbitMQGatherer) StartTest(testId int64) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) ReportTestSubmissionRuntimeData(testId int64, rd testing.RuntimeData) {
+func (r *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd testing.RuntimeData) {
 	r.testRuntimeDataCache[testId].submissionRuntimeData = rd
 }
 
-func (r *RabbitMQGatherer) ReportTestCheckerRuntimeData(testId int64, rd testing.RuntimeData) {
+func (r *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd testing.RuntimeData) {
 	r.testRuntimeDataCache[testId].checkerRuntimeData = rd
 }
 
@@ -129,7 +129,7 @@ func toMessagingRuntimeData(rd *testing.RuntimeData) *messaging.RuntimeData {
 	}
 }
 
-func (r *RabbitMQGatherer) FinishTest(testId int64) {
+func (r *Gatherer) FinishTest(testId int64) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
 	msg := &messaging.EvaluationResponse{
@@ -144,7 +144,7 @@ func (r *RabbitMQGatherer) FinishTest(testId int64) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) FinishTestWithLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
+func (r *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
 	verdict := messaging.IdlenessLimitExceeded
@@ -165,7 +165,7 @@ func (r *RabbitMQGatherer) FinishTestWithLimitExceeded(testId int64, flags testi
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) FinishTestWithRuntimeError(testId int64) {
+func (r *Gatherer) FinishTestWithRuntimeError(testId int64) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
 	msg := &messaging.EvaluationResponse{
@@ -180,7 +180,7 @@ func (r *RabbitMQGatherer) FinishTestWithRuntimeError(testId int64) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) FinishTestWithVerdictAccepted(testId int64) {
+func (r *Gatherer) FinishTestWithVerdictAccepted(testId int64) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
 	msg := &messaging.EvaluationResponse{
@@ -195,7 +195,7 @@ func (r *RabbitMQGatherer) FinishTestWithVerdictAccepted(testId int64) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *RabbitMQGatherer) FinishTestWithVerdictWrongAnswer(testId int64) {
+func (r *Gatherer) FinishTestWithVerdictWrongAnswer(testId int64) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
 	msg := &messaging.EvaluationResponse{
