@@ -52,7 +52,6 @@ func (r *Gatherer) FinishWithInternalServerError(err error) {
 		},
 	}
 	r.sendEvalResponse(msg)
-	panicOnError(err)
 }
 
 func (r *Gatherer) FinishEvaluation() {

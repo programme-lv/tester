@@ -6,7 +6,6 @@ import (
 	"github.com/programme-lv/tester/internal/messaging"
 	"github.com/programme-lv/tester/internal/testing"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"log"
 	"time"
 )
 
@@ -57,7 +56,6 @@ func (r *Gatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
 	correlationJson, err := json.Marshal(r.correlation)
 	panicOnError(err)
 
-	log.Println("Publishing message...")
 	err = r.amqpChannel.PublishWithContext(
 		ctx,
 		"",

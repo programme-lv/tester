@@ -45,8 +45,8 @@ func main() {
 	msg := messaging.EvaluationRequest{
 		TaskVersionId: 1,
 		Submission: messaging.Submission{
-			SourceCode: "print(3)",
-			LanguageId: "python3",
+			SourceCode: exampleCpp,
+			LanguageId: "cpp17",
 		},
 	}
 
