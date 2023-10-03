@@ -3,13 +3,13 @@ package testing
 type RuntimeMetrics struct {
 	CpuTimeMillis  float64
 	WallTimeMillis float64
-	MemoryKBytes   int
+	MemoryKBytes   int64
 }
 
 type RuntimeOutput struct {
 	Stdout   string
 	Stderr   string
-	ExitCode int
+	ExitCode int64
 }
 
 type RuntimeData struct {
