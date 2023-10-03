@@ -52,6 +52,7 @@ func (r *Gatherer) FinishWithInternalServerError(err error) {
 		},
 	}
 	r.sendEvalResponse(msg)
+	panicOnError(err)
 }
 
 func (r *Gatherer) FinishEvaluation() {
@@ -84,7 +85,7 @@ func (r *Gatherer) FinishCompilation(data *testing.RuntimeData) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *Gatherer) FinishWithCompilationError(err error) {
+func (r *Gatherer) FinishWithCompilationError() {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.UpdateEvalStatus,
 		Data: messaging.UpdateEvalStatusData{
