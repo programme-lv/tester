@@ -82,7 +82,7 @@ func main() {
 		replyTo := d.ReplyTo
 		log.Printf("ReplyTo: %s", replyTo)
 
-		rmqGatherer := gatherers.NewRabbitMQGatherer(correlation, replyTo)
+		rmqGatherer := gatherers.NewRabbitMQGatherer(ch, correlation, replyTo)
 
 		err = testing.EvaluateSubmission(request, rmqGatherer)
 		panicOnError(err)
