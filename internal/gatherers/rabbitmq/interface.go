@@ -63,24 +63,19 @@ func (r *Gatherer) StartCompilation() {
 	r.sendEvalResponse(msg)
 }
 
-func (r *Gatherer) FinishCompilation(data testing.RuntimeData) {
+func (r *Gatherer) FinishCompilation(data *testing.RuntimeData) {
 	msg := &messaging.EvaluationResponse{
 		FeedbackType: messaging.CompilationFinished,
 		Data: messaging.CompilationFinishedData{
-			RuntimeData: messaging.RuntimeData{
-				Output: messaging.RuntimeOutput{
-					Stdout: data.Output.Stdout,
-					Stderr: data.Output.Stderr,
-				},
-				Metrics: messaging.RuntimeMetrics{
-					CpuTimeMillis:  data.Metrics.CpuTimeMillis,
-					WallTimeMillis: data.Metrics.WallTimeMillis,
-					MemoryKBytes:   data.Metrics.MemoryKBytes,
-				},
-			},
+			RuntimeData: toMessagingRuntimeData(data),
 		},
 	}
 	r.sendEvalResponse(msg)
+}
+
+func (r *Gatherer) FinishWithCompilationError(err error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (r *Gatherer) IgnoreTest(testId int64) {

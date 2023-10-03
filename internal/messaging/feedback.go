@@ -32,7 +32,7 @@ func (CompilationStartedData) isFeedbackData() {}
 var _ FeedbackData = (*CompilationStartedData)(nil)
 
 type CompilationFinishedData struct {
-	RuntimeData RuntimeData `json:"runtime_data"`
+	RuntimeData *RuntimeData `json:"runtime_data"`
 }
 
 func (CompilationFinishedData) isFeedbackData() {}
