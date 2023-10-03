@@ -29,7 +29,7 @@ func NewRabbitMQGatherer(ch *amqp.Channel, correlation messaging.Correlation, re
 		amqpChannel:          ch,
 		correlation:          correlation,
 		replyTo:              replyTo,
-		testRuntimeDataCache: make(map[int64]testRuntimeData),
+		testRuntimeDataCache: make(map[int64]*testRuntimeData),
 	}
 }
 

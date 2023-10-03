@@ -46,6 +46,4 @@ type EvalResGatherer interface {
 	FinishTestWithVerdictWrongAnswer(testId int64)
 
 	IncrementScore(delta int)
-
-	FinishTest(testId int64)
 }
