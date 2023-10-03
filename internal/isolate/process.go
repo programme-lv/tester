@@ -1,9 +1,11 @@
 package isolate
 
 import (
+	"errors"
 	"io"
 	"os"
 	"os/exec"
+	"syscall"
 )
 
 type Process struct {
@@ -14,8 +16,19 @@ type Process struct {
 }
 
 func (process *Process) Wait() (*Metrics, error) {
-	if err := process.cmd.Wait(); err != nil {
-		return nil, err
+	err := process.cmd.Wait()
+
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if _, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+				// fmt.Printf("Exit Status: %d\n", status.ExitStatus())
+			} else {
+				// fmt.Println("Cmd failed but was unable to determine exit status.")
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	metaFileBytes, err := os.ReadFile(process.metaFilePath)
