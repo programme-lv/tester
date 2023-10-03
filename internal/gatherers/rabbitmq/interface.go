@@ -85,8 +85,13 @@ func (r *Gatherer) FinishCompilation(data *testing.RuntimeData) {
 }
 
 func (r *Gatherer) FinishWithCompilationError(err error) {
-	//TODO implement me
-	panic("implement me")
+	msg := &messaging.EvaluationResponse{
+		FeedbackType: messaging.UpdateEvalStatus,
+		Data: messaging.UpdateEvalStatusData{
+			Status: statuses.CompilationError,
+		},
+	}
+	r.sendEvalResponse(msg)
 }
 
 func (r *Gatherer) IgnoreTest(testId int64) {
