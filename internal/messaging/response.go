@@ -2,5 +2,5 @@ package messaging
 
 type EvaluationResponse struct {
 	FeedbackType FeedbackType `json:"feedback_type"`
-	Data         FeedbackData `json:"feedback_data"`
+	Data         FeedbackData `json:"data"`
 }
