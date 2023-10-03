@@ -7,7 +7,6 @@ import (
 	"github.com/programme-lv/tester/internal/testing"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
-	"math/rand"
 	"time"
 )
 
@@ -20,18 +19,16 @@ type RabbitMQGatherer struct {
 var _ testing.EvalResGatherer = (*RabbitMQGatherer)(nil)
 
 func NewRabbitMQGatherer(ch *amqp.Channel, correlation messaging.Correlation, replyTo string) *RabbitMQGatherer {
-	return &RabbitMQGatherer{correlation: correlation, replyTo: replyTo}
+	return &RabbitMQGatherer{
+		amqpChannel: ch,
+		correlation: correlation,
+		replyTo:     replyTo,
+	}
 }
 
-func (r RabbitMQGatherer) StartEvaluation(testerInfo string, evalMaxScore int) {
-	response := messaging.EvaluationResponse{
-		FeedbackType: "123",
-		Data:         nil,
-	}
-	// ensure reply to queue exists
-
-	_, err = ch.QueueDeclare(
-		"eval_q",
+func (r *RabbitMQGatherer) declareReplyToQueue() {
+	_, err := r.amqpChannel.QueueDeclare(
+		r.replyTo,
 		true,
 		false,
 		false,
@@ -39,119 +36,156 @@ func (r RabbitMQGatherer) StartEvaluation(testerInfo string, evalMaxScore int) {
 		nil,
 	)
 	panicOnError(err)
+}
 
-	msg := messaging.EvaluationRequest{
-		TaskVersionId: 1,
-		Submission: messaging.Submission{
-			SourceCode: "print(3)",
-			LanguageId: "python3",
-		},
-	}
+func (r *RabbitMQGatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
+	r.declareReplyToQueue()
 
 	marshalled, err := json.Marshal(msg)
 	panicOnError(err)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	correlation := messaging.Correlation{
-		IsEvaluation: false,
-		EvaluationId: 0,
-		UnixMillis:   time.Now().UnixMilli(),
-		RandomInt63:  rand.Int63(),
-	}
-	correlationJson, err := json.Marshal(correlation)
+	correlationJson, err := json.Marshal(r.correlation)
 	panicOnError(err)
 
 	log.Println("Publishing message...")
-	err = ch.PublishWithContext(
+	err = r.amqpChannel.PublishWithContext(
 		ctx,
 		"",
-		"eval_q",
+		r.replyTo,
 		false,
 		false,
 		amqp.Publishing{
 			ContentType:   "application/json",
 			CorrelationId: string(correlationJson),
-			ReplyTo:       "res_q",
 			Body:          marshalled,
 		})
 	panicOnError(err)
-	log.Println("Message published") //TODO implement me
-	panic("implement me")
 }
 
-func (r RabbitMQGatherer) IncrementScore(delta int) {
+func (r *RabbitMQGatherer) StartEvaluation(testerInfo string, evalMaxScore int) {
+	msg := &messaging.EvaluationResponse{
+		FeedbackType: messaging.SubmissionReceived,
+		Data: messaging.SubmissionReceivedData{
+			TestEnvInfo: testerInfo,
+			MaxScore:    evalMaxScore,
+		},
+	}
+	r.sendEvalResponse(msg)
+}
+
+func (r *RabbitMQGatherer) IncrementScore(delta int) {
+	msg := &messaging.EvaluationResponse{
+		FeedbackType: messaging.IncrementScore,
+		Data: messaging.IncrementScoreData{
+			Delta: delta,
+		},
+	}
+	r.sendEvalResponse(msg)
+}
+
+func (r *RabbitMQGatherer) FinishWithInternalServerError(err error) {
+	msg := &messaging.EvaluationResponse{
+		FeedbackType: messaging.FinishEvaluation,
+		Data: messaging.FinishEvaluationData{
+			Err: err,
+		},
+	}
+	r.sendEvalResponse(msg)
+}
+
+func (r *RabbitMQGatherer) FinishEvaluation() {
+	msg := &messaging.EvaluationResponse{
+		FeedbackType: messaging.FinishEvaluation,
+		Data: messaging.FinishEvaluationData{
+			Err: nil,
+		},
+	}
+	r.sendEvalResponse(msg)
+}
+
+func (r *RabbitMQGatherer) StartCompilation() {
+	msg := &messaging.EvaluationResponse{
+		FeedbackType: messaging.CompilationStarted,
+		Data:         messaging.CompilationStartedData{},
+	}
+	r.sendEvalResponse(msg)
+}
+
+func (r *RabbitMQGatherer) FinishCompilation(data testing.RuntimeData) {
+	msg := &messaging.EvaluationResponse{
+		FeedbackType: messaging.CompilationFinished,
+		Data: messaging.CompilationFinishedData{
+			RuntimeData: messaging.RuntimeData{
+				Output: messaging.RuntimeOutput{
+					Stdout: data.Output.Stdout,
+					Stderr: data.Output.Stderr,
+				},
+				Metrics: messaging.RuntimeMetrics{
+					CpuTimeMillis:  data.Metrics.CpuTimeMillis,
+					WallTimeMillis: data.Metrics.WallTimeMillis,
+					MemoryKBytes:   data.Metrics.MemoryKBytes,
+				},
+			},
+		},
+	}
+	r.sendEvalResponse(msg)
+}
+
+func (r *RabbitMQGatherer) StartTesting() {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) FinishWithInternalServerError(err error) {
+func (r *RabbitMQGatherer) IgnoreTest(testId int64) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) FinishEvaluation() {
+func (r *RabbitMQGatherer) StartTest(testId int64) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) StartCompilation() {
+func (r *RabbitMQGatherer) ReportTestUserRuntimeData(testId int64, rd testing.RuntimeData) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) FinishCompilation(data testing.RuntimeData) {
+func (r *RabbitMQGatherer) ReportTestUserRuntimeLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) StartTesting() {
+func (r *RabbitMQGatherer) ReportTestUserRuntimeError(testId int64) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) IgnoreTest(testId int64) {
+func (r *RabbitMQGatherer) ReportTestCheckerRuntimeData(testId int64, rd testing.RuntimeData) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) StartTest(testId int64) {
+func (r *RabbitMQGatherer) ReportTestVerdictAccepted(testId int64) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) ReportTestUserRuntimeData(testId int64, rd testing.RuntimeData) {
+func (r *RabbitMQGatherer) ReportTestVerdictWrongAnswer(testId int64) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) ReportTestUserRuntimeLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
+func (r *RabbitMQGatherer) FinishTest(testId int64) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (r RabbitMQGatherer) ReportTestUserRuntimeError(testId int64) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (r RabbitMQGatherer) ReportTestCheckerRuntimeData(testId int64, rd testing.RuntimeData) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (r RabbitMQGatherer) ReportTestVerdictAccepted(testId int64) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (r RabbitMQGatherer) ReportTestVerdictWrongAnswer(testId int64) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (r RabbitMQGatherer) FinishTest(testId int64) {
-	//TODO implement me
-	panic("implement me")
+func panicOnError(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

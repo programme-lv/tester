@@ -76,3 +76,7 @@ var _ FeedbackData = (*IncrementScoreData)(nil)
 type FinishEvaluationData struct {
 	Err error `json:"err"`
 }
+
+func (FinishEvaluationData) isFeedbackData() {}
+
+var _ FeedbackData = (*FinishEvaluationData)(nil)
