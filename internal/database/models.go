@@ -50,8 +50,8 @@ type TaskVersionTest struct {
 	ID               int64  `db:"id"`
 	TestFilename     string `db:"test_filename"`
 	TaskVersionID    int64  `db:"task_version_id"`
-	InputTextFileID  *int64 `db:"input_text_file_id"`
-	AnswerTextFileID *int64 `db:"answer_text_file_id"`
+	InputTextFileID  int64  `db:"input_text_file_id"`
+	AnswerTextFileID int64  `db:"answer_text_file_id"`
 }
 
 type TextFile struct {
