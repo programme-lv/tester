@@ -75,9 +75,30 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		// TODO: retrieve eval ready file from isolate box
 	}
 
+	log.Println(len(evalReadyFile))
 	// TODO: download tests
 	// select id, test_filename, task_version_id, input_text_file_id, answer_text_file_id
 	// from task_version_tests
+
+	log.Println("Selecting tests...")
+	taskVersionTests, err := database.SelectTaskVersionTestsByTaskVersionId(postgres, request.TaskVersionId)
+	if err != nil {
+		return err
+	}
+	log.Printf("Selected %d tests.\n", len(taskVersionTests))
+
+	for _, test := range taskVersionTests {
+		inputTextFile, err := database.SelectTextFileById(postgres, test.InputTextFileID)
+		if err != nil {
+			return err
+		}
+		log.Println(inputTextFile)
+		answerTextFile, err := database.SelectTextFileById(postgres, test.AnswerTextFileID)
+		if err != nil {
+			return err
+		}
+		log.Println(answerTextFile)
+	}
 
 	// download to /tmp/tester, move to /var/cache/tester
 	// store the tests by their respective sha values in the database

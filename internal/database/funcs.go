@@ -30,3 +30,29 @@ func SelectProgrammingLanguageById(
 	)
 	return programmingLanguage, err
 }
+
+func SelectTaskVersionTestsByTaskVersionId(
+	db *sqlx.DB,
+	taskVersionId int,
+) ([]TaskVersionTest, error) {
+	var taskVersionTests []TaskVersionTest
+	err := db.Select(
+		&taskVersionTests,
+		"SELECT id, test_filename, task_version_id, input_text_file_id, answer_text_file_id FROM task_version_tests WHERE task_version_id = $1",
+		taskVersionId,
+	)
+	return taskVersionTests, err
+}
+
+func SelectTextFileById(
+	db *sqlx.DB,
+	textFileId int64,
+) (*TextFile, error) {
+	var textFile TextFile
+	err := db.Get(
+		&textFile,
+		"SELECT * FROM text_files WHERE id = $1",
+		textFileId,
+	)
+	return &textFile, err
+}
