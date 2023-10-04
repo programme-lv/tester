@@ -45,3 +45,18 @@ type SubmissionEvaluation struct {
 	CreatedAt           time.Time `db:"created_at"`
 	UpdateAt            time.Time `db:"updated_at"`
 }
+
+type TaskVersionTest struct {
+	ID               int64  `db:"id"`
+	TestFilename     string `db:"test_filename"`
+	TaskVersionID    int64  `db:"task_version_id"`
+	InputTextFileID  *int64 `db:"input_text_file_id"`
+	AnswerTextFileID *int64 `db:"answer_text_file_id"`
+}
+
+type TextFile struct {
+	ID        int64     `db:"id"`
+	Sha256    string    `db:"sha256"`
+	Content   string    `db:"content"`
+	CreatedAt time.Time `db:"created_at"`
+}

@@ -21,22 +21,26 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	}
 	log.Println("Got programming language:", language.FullName)
 
-	log.Println("Creating isolate box...")
-	box, err := isolateInstance.NewBox()
-	if err != nil {
-		return err
-	}
-	log.Println("Created isolate box:", box.Path())
+	var evalReadyFile []byte
 
-	log.Println("Adding source code to isolate box...")
-	codeBytes := []byte(request.Submission.SourceCode)
-	err = box.AddFile(language.CodeFilename, codeBytes)
-	if err != nil {
-		return err
-	}
-	log.Println("Added source code to isolate box")
+	if language.CompileCmd == nil {
+		evalReadyFile = []byte(request.Submission.SourceCode)
+	} else {
+		log.Println("Creating isolate box...")
+		box, err := isolateInstance.NewBox()
+		if err != nil {
+			return err
+		}
+		log.Println("Created isolate box:", box.Path())
 
-	if language.CompileCmd != nil {
+		log.Println("Adding source code to isolate box...")
+		codeBytes := []byte(request.Submission.SourceCode)
+		err = box.AddFile(language.CodeFilename, codeBytes)
+		if err != nil {
+			return err
+		}
+		log.Println("Added source code to isolate box")
+
 		log.Println("Starting compilation...")
 		gatherer.StartCompilation()
 
@@ -67,7 +71,16 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 			gatherer.FinishWithCompilationError()
 			return nil
 		}
+
+		// TODO: retrieve eval ready file from isolate box
 	}
+
+	// TODO: download tests
+	// select id, test_filename, task_version_id, input_text_file_id, answer_text_file_id
+	// from task_version_tests
+
+	// download to /tmp/tester, move to /var/cache/tester
+	// store the tests by their respective sha values in the database
 
 	return nil
 }
