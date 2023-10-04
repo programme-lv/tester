@@ -18,13 +18,14 @@ type TaskVersion struct {
 }
 
 type ProgrammingLanguage struct {
-	ID             string  `db:"id"`
-	FullName       string  `db:"full_name"`
-	CodeFilename   string  `db:"code_filename"`
-	CompileCmd     *string `db:"compile_cmd"`
-	ExecuteCmd     string  `db:"execute_cmd"`
-	EnvVersionCmd  string  `db:"env_version_cmd"`
-	HelloWorldCode string  `db:"hello_world_code"`
+	ID               string  `db:"id"`
+	FullName         string  `db:"full_name"`
+	CodeFilename     string  `db:"code_filename"`
+	CompiledFilename *string `db:"compiled_filename"`
+	CompileCmd       *string `db:"compile_cmd"`
+	ExecuteCmd       string  `db:"execute_cmd"`
+	EnvVersionCmd    string  `db:"env_version_cmd"`
+	HelloWorldCode   string  `db:"hello_world_code"`
 }
 
 type SubmissionEvaluation struct {

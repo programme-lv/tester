@@ -24,6 +24,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	var evalReadyFile []byte
 
 	if language.CompileCmd == nil {
+		log.Println("No compilation needed")
 		evalReadyFile = []byte(request.Submission.SourceCode)
 	} else {
 		log.Println("Creating isolate box...")
@@ -72,7 +73,14 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 			return nil
 		}
 
-		// TODO: retrieve eval ready file from isolate box
+		log.Println("Compilation finished successfully")
+
+		log.Println("Retrieving compiled executable...")
+		evalReadyFile, err = box.GetFile(*language.CompiledFilename)
+		if err != nil {
+			return err
+		}
+		log.Println("Retrieved compiled executable")
 	}
 
 	log.Println(len(evalReadyFile))
