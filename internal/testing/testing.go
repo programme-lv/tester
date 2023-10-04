@@ -7,6 +7,8 @@ import (
 	"github.com/programme-lv/tester/internal/messaging"
 	"io"
 	"log"
+	"os"
+	"path/filepath"
 )
 
 func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGatherer, postgres *sqlx.DB) error {
@@ -83,34 +85,67 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		log.Println("Retrieved compiled executable")
 	}
 
-	log.Println(len(evalReadyFile))
-	// TODO: download tests
-	// select id, test_filename, task_version_id, input_text_file_id, answer_text_file_id
-	// from task_version_tests
-
-	log.Println("Selecting tests...")
+	log.Println("Selecting task version tests...")
 	taskVersionTests, err := database.SelectTaskVersionTestsByTaskVersionId(postgres, request.TaskVersionId)
 	if err != nil {
 		return err
 	}
 	log.Printf("Selected %d tests.\n", len(taskVersionTests))
 
+	textFileCachePath := "cache/tester/text_files"
+
 	for _, test := range taskVersionTests {
+		log.Println("Downloading test file to cache...", test.TestFilename)
 		inputTextFile, err := database.SelectTextFileById(postgres, test.InputTextFileID)
 		if err != nil {
 			return err
 		}
-		log.Println(inputTextFile)
+		log.Println("Saving test file to cache...", test.TestFilename)
+		err = saveTextFileToCache(inputTextFile, textFileCachePath)
+		if err != nil {
+			return err
+		}
+		log.Println("Saved test file to cache:", test.TestFilename)
+
+		log.Println("Downloading answer file to cache...", test.TestFilename)
 		answerTextFile, err := database.SelectTextFileById(postgres, test.AnswerTextFileID)
 		if err != nil {
 			return err
 		}
-		log.Println(answerTextFile)
+		log.Println("Saving answer file to cache...", test.TestFilename)
+		err = saveTextFileToCache(answerTextFile, textFileCachePath)
+		if err != nil {
+			return err
+		}
+		log.Println("Saved answer file to cache:", test.TestFilename)
 	}
 
+	log.Println(len(evalReadyFile))
 	// download to /tmp/tester, move to /var/cache/tester
 	// store the tests by their respective sha values in the database
 
+	return nil
+}
+
+func saveTextFileToCache(textFile *database.TextFile, cachePath string) error {
+	err := os.MkdirAll(cachePath, 0755)
+	if err != nil {
+		return err
+	}
+
+	fileName := textFile.Sha256
+	filePath := filepath.Join(cachePath, fileName)
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
+	_, err = file.Write([]byte(textFile.Content))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
