@@ -123,3 +123,8 @@ func (box *Box) AddFile(path string, content []byte) error {
 	}
 	return nil
 }
+
+func (box *Box) GetFile(path string) ([]byte, error) {
+	path = filepath.Join(box.path, "box", path)
+	return os.ReadFile(path)
+}
