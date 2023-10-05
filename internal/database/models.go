@@ -65,3 +65,8 @@ type TextFile struct {
 	TextFileWithoutContent
 	Content string `db:"content"`
 }
+
+type TestlibChecker struct {
+	ID   int64  `db:"id"`
+	Code string `db:"code"`
+}

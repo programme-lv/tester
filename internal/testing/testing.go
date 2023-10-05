@@ -18,6 +18,12 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	gatherer.StartEvaluation()
 	isolateInstance := isolate.GetInstance()
 
+	taskVersion, err := database.SelectTaskVersionById(postgres, request.TaskVersionId)
+	if err != nil {
+		gatherer.FinishWithInternalServerError(err)
+		return err
+	}
+
 	log.Println("Getting programming language...")
 	language, err := getProgrammingLanguage(request, postgres)
 	if err != nil {
@@ -86,6 +92,19 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		}
 		log.Println("Retrieved compiled executable")
 	}
+
+	log.Println("Selecting task version checker...")
+	if taskVersion.CheckerID == nil {
+		err := fmt.Errorf("task version checker id is nil")
+		gatherer.FinishWithInternalServerError(err)
+		return err
+	}
+	checker, err := database.SelectTestlibCheckerById(postgres, *taskVersion.CheckerID)
+	if err != nil {
+		gatherer.FinishWithInternalServerError(err)
+		return err
+	}
+	log.Println("Selected task version checker:", checker.ID)
 
 	log.Println("Selecting task version tests...")
 	taskVersionTests, err := database.SelectTaskVersionTestsByTaskVersionId(postgres, request.TaskVersionId)

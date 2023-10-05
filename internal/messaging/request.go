@@ -6,7 +6,7 @@ type Submission struct {
 }
 
 type EvaluationRequest struct {
-	TaskVersionId int
+	TaskVersionId int64
 	Submission    Submission
 }
 

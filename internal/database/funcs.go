@@ -33,7 +33,7 @@ func SelectProgrammingLanguageById(
 
 func SelectTaskVersionTestsByTaskVersionId(
 	db *sqlx.DB,
-	taskVersionId int,
+	taskVersionId int64,
 ) ([]TaskVersionTest, error) {
 	var taskVersionTests []TaskVersionTest
 	err := db.Select(
@@ -68,4 +68,30 @@ func SelectTextFileByIdWithoutContent(
 		textFileId,
 	)
 	return &textFile, err
+}
+
+func SelectTestlibCheckerById(
+	db *sqlx.DB,
+	checkerId int64,
+) (*TestlibChecker, error) {
+	var checker TestlibChecker
+	err := db.Get(
+		&checker,
+		"SELECT id, code FROM testlib_checkers WHERE id = $1",
+		checkerId,
+	)
+	return &checker, err
+}
+
+func SelectTaskVersionById(
+	db *sqlx.DB,
+	taskVersionId int64,
+) (*TaskVersion, error) {
+	var taskVersion TaskVersion
+	err := db.Get(
+		&taskVersion,
+		"SELECT * FROM task_versions WHERE id = $1",
+		taskVersionId,
+	)
+	return &taskVersion, err
 }
