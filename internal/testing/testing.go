@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/programme-lv/tester/internal/database"
@@ -89,6 +90,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	log.Println("Selecting task version tests...")
 	taskVersionTests, err := database.SelectTaskVersionTestsByTaskVersionId(postgres, request.TaskVersionId)
 	if err != nil {
+		gatherer.FinishWithInternalServerError(err)
 		return err
 	}
 	log.Printf("Selected %d tests.\n", len(taskVersionTests))
@@ -100,11 +102,13 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	for _, test := range taskVersionTests {
 		inputTextFile, err := database.SelectTextFileByIdWithoutContent(postgres, test.InputTextFileID)
 		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
 			return err
 		}
 		testInputTextFiles[test.ID] = inputTextFile
 		answerTextFile, err := database.SelectTextFileByIdWithoutContent(postgres, test.AnswerTextFileID)
 		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
 			return err
 		}
 		testAnswerTextFiles[test.ID] = answerTextFile
@@ -121,17 +125,20 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		}
 		isInputTextFileInCache, err := isTextFileInCache(inputTextFile.Sha256, textFileCachePath)
 		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
 			return err
 		}
 		if !isInputTextFileInCache {
 			log.Println("Downloading test file to cache...", test.TestFilename)
 			inputTextFile, err := database.SelectTextFileById(postgres, test.InputTextFileID)
 			if err != nil {
+				gatherer.FinishWithInternalServerError(err)
 				return err
 			}
 			log.Println("Saving test file to cache...", test.TestFilename)
 			err = saveTextFileToCache(inputTextFile, textFileCachePath)
 			if err != nil {
+				gatherer.FinishWithInternalServerError(err)
 				return err
 			}
 			log.Println("Downloaded & saved test file to cache:", test.TestFilename)
@@ -143,6 +150,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		}
 		isAnswerTextFileInCache, err := isTextFileInCache(answerTextFile.Sha256, textFileCachePath)
 		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
 			return err
 		}
 		if !isAnswerTextFileInCache {
@@ -154,12 +162,79 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 			log.Println("Saving answer file to cache...", test.TestFilename)
 			err = saveTextFileToCache(answerTextFile, textFileCachePath)
 			if err != nil {
+				gatherer.FinishWithInternalServerError(err)
 				return err
 			}
 			log.Println("Saved answer file to cache:", test.TestFilename)
 		}
 	}
 	log.Println("Downloaded missing text files to cache")
+
+	gatherer.StartTesting(len(taskVersionTests))
+	for _, test := range taskVersionTests {
+		gatherer.StartTest(test.ID)
+		log.Println("Starting test:", test.ID)
+		// create a new box
+		// place the executable in the box
+		// read stdin from the input file
+		// run the executable
+
+		// collect runtime data
+		// compare stdout with the answer file
+		// compare runtime data with the limits
+
+		log.Println("Creating isolate box...")
+		box, err := isolateInstance.NewBox()
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		log.Println("Created isolate box:", box.Path())
+
+		log.Println("Adding executable to isolate box...")
+		if language.CompiledFilename != nil {
+			err := box.AddFile(*language.CompiledFilename, evalReadyFile)
+			if err != nil {
+				gatherer.FinishWithInternalServerError(err)
+				return err
+			}
+		} else {
+			err := box.AddFile(language.CodeFilename, evalReadyFile)
+			if err != nil {
+				gatherer.FinishWithInternalServerError(err)
+				return err
+			}
+		}
+		log.Println("Added executable to isolate box")
+
+		log.Println("Creating input reader...")
+		inputBytes, err := os.ReadFile(filepath.Join(textFileCachePath, testInputTextFiles[test.ID].Sha256))
+		reader := bytes.NewReader(inputBytes)
+		readCloser := io.NopCloser(reader)
+		log.Println("Created input reader")
+
+		log.Println("Running process...")
+		process, err := box.Run(language.ExecuteCmd, readCloser, nil)
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		log.Println("Ran process")
+
+		log.Println("Collecting process runtime data...")
+		data, err := collectProcessRuntimeData(process)
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		log.Println("Collected process runtime data")
+
+		log.Println("Results:", data.Output.ExitCode, data.Metrics.CpuTimeMillis, data.Metrics.MemoryKBytes)
+		log.Println("Stdin:", string(inputBytes))
+		log.Println("Stdout:", data.Output.Stdout)
+		log.Println("Stderr:", data.Output.Stderr)
+
+	}
 
 	log.Println(len(evalReadyFile))
 
