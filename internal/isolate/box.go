@@ -136,3 +136,9 @@ func (box *Box) GetFile(path string) ([]byte, error) {
 	path = filepath.Join(box.path, "box", path)
 	return os.ReadFile(path)
 }
+
+func (box *Box) HasFile(path string) bool {
+	path = filepath.Join(box.path, "box", path)
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
+}

@@ -13,85 +13,20 @@ import (
 	"path/filepath"
 )
 
+const textFileCachePath = "cache/text_files"
+
 func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGatherer, postgres *sqlx.DB) error {
 	log.Println("Starting evaluation...")
 	gatherer.StartEvaluation()
 	isolateInstance := isolate.GetInstance()
 
+	log.Println("Selecting task version...")
 	taskVersion, err := database.SelectTaskVersionById(postgres, request.TaskVersionId)
 	if err != nil {
 		gatherer.FinishWithInternalServerError(err)
 		return err
 	}
-
-	log.Println("Getting programming language...")
-	language, err := getProgrammingLanguage(request, postgres)
-	if err != nil {
-		return err
-	}
-	log.Println("Got programming language:", language.FullName)
-
-	var evalReadyFile []byte
-
-	if language.CompileCmd == nil {
-		log.Println("No compilation needed")
-		evalReadyFile = []byte(request.Submission.SourceCode)
-	} else {
-		log.Println("Creating isolate box...")
-		box, err := isolateInstance.NewBox()
-		if err != nil {
-			return err
-		}
-		log.Println("Created isolate box:", box.Path())
-
-		log.Println("Adding source code to isolate box...")
-		codeBytes := []byte(request.Submission.SourceCode)
-		err = box.AddFile(language.CodeFilename, codeBytes)
-		if err != nil {
-			return err
-		}
-		log.Println("Added source code to isolate box")
-
-		log.Println("Starting compilation...")
-		gatherer.StartCompilation()
-
-		log.Println("Running compilation...")
-		process, err := box.Run(*language.CompileCmd, nil, nil)
-		if err != nil {
-			return err
-		}
-		log.Println("Ran compilation")
-
-		log.Println("Collecting compilation runtime data...")
-		data, err := collectProcessRuntimeData(process)
-		if err != nil {
-			return err
-		}
-		log.Println("Collected compilation runtime data")
-
-		log.Println(
-			"Compilation finished. Stdout length",
-			len(data.Output.Stdout),
-			"Stderr length",
-			len(data.Output.Stderr),
-		)
-		gatherer.FinishCompilation(data)
-
-		if data.Output.ExitCode != 0 {
-			log.Println("Compilation failed with exit code:", data.Output.ExitCode)
-			gatherer.FinishWithCompilationError()
-			return nil
-		}
-
-		log.Println("Compilation finished successfully")
-
-		log.Println("Retrieving compiled executable...")
-		evalReadyFile, err = box.GetFile(*language.CompiledFilename)
-		if err != nil {
-			return err
-		}
-		log.Println("Retrieved compiled executable")
-	}
+	log.Println("Selected task version:", taskVersion.ID)
 
 	log.Println("Selecting task version checker...")
 	if taskVersion.CheckerID == nil {
@@ -99,12 +34,57 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		gatherer.FinishWithInternalServerError(err)
 		return err
 	}
-	checker, err := database.SelectTestlibCheckerById(postgres, *taskVersion.CheckerID)
+	var checker *database.TestlibChecker
+	checker, err = database.SelectTestlibCheckerById(postgres, *taskVersion.CheckerID)
 	if err != nil {
 		gatherer.FinishWithInternalServerError(err)
 		return err
 	}
 	log.Println("Selected task version checker:", checker.ID)
+
+	log.Println("Getting programming language...")
+	language, err := getProgrammingLanguage(request, postgres)
+	if err != nil {
+		gatherer.FinishWithInternalServerError(err)
+		return err
+	}
+	log.Println("Got programming language:", language.FullName)
+
+	var compiledSubmission []byte
+	if language.CompileCmd == nil {
+		log.Println("No compilation needed")
+	} else {
+		log.Println("Starting compilation...")
+		gatherer.StartCompilation()
+		var compilationRuntimeData *RuntimeData
+		compiledSubmission, compilationRuntimeData, err = compileSourceCode(language, request.Submission.SourceCode)
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		gatherer.FinishCompilation(compilationRuntimeData)
+
+		if compilationRuntimeData.Output.ExitCode != 0 || compiledSubmission == nil {
+			log.Println("Compilation failed with exit code:", compilationRuntimeData.Output.ExitCode)
+			gatherer.FinishWithCompilationError()
+			return nil
+		}
+
+		log.Println("Compilation finished successfully")
+	}
+
+	log.Println("Compiling checker...")
+	var compiledChecker []byte
+	var checkerCompilationData *RuntimeData
+	compiledChecker, checkerCompilationData, err = compileSourceCode(language, checker.Code)
+	if err != nil || compiledChecker == nil {
+		log.Println("stdout:", checkerCompilationData.Output.Stdout)
+		log.Println("stderr:", checkerCompilationData.Output.Stderr)
+		log.Println("exit code:", checkerCompilationData.Output.ExitCode)
+		gatherer.FinishWithInternalServerError(err)
+		return err
+	}
+	log.Println("Compiled checker")
 
 	log.Println("Selecting task version tests...")
 	taskVersionTests, err := database.SelectTaskVersionTestsByTaskVersionId(postgres, request.TaskVersionId)
@@ -115,6 +95,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	log.Printf("Selected %d tests.\n", len(taskVersionTests))
 
 	log.Println("Linking task version tests to text files...")
+	// TODO: shorten this code, create a function
 	testInputTextFiles := make(map[int64]*database.TextFileWithoutContent)
 	testAnswerTextFiles := make(map[int64]*database.TextFileWithoutContent)
 
@@ -134,15 +115,14 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	}
 	log.Println("Linked task version tests to text files")
 
-	textFileCachePath := "cache/text_files"
-
 	log.Println("Downloading missing text files to cache...")
+	// TODO: shorten this code, create a function
 	for _, test := range taskVersionTests {
 		inputTextFile, ok := testInputTextFiles[test.ID]
 		if !ok {
 			return fmt.Errorf("could not find input text file for test %d", test.ID)
 		}
-		isInputTextFileInCache, err := isTextFileInCache(inputTextFile.Sha256, textFileCachePath)
+		isInputTextFileInCache, err := isTextFileInCache(inputTextFile.Sha256)
 		if err != nil {
 			gatherer.FinishWithInternalServerError(err)
 			return err
@@ -155,7 +135,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 				return err
 			}
 			log.Println("Saving test file to cache...", test.TestFilename)
-			err = saveTextFileToCache(inputTextFile, textFileCachePath)
+			err = saveTextFileToCache(inputTextFile)
 			if err != nil {
 				gatherer.FinishWithInternalServerError(err)
 				return err
@@ -167,7 +147,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		if !ok {
 			return fmt.Errorf("could not find answer text file for test %d", test.ID)
 		}
-		isAnswerTextFileInCache, err := isTextFileInCache(answerTextFile.Sha256, textFileCachePath)
+		isAnswerTextFileInCache, err := isTextFileInCache(answerTextFile.Sha256)
 		if err != nil {
 			gatherer.FinishWithInternalServerError(err)
 			return err
@@ -179,7 +159,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 				return err
 			}
 			log.Println("Saving answer file to cache...", test.TestFilename)
-			err = saveTextFileToCache(answerTextFile, textFileCachePath)
+			err = saveTextFileToCache(answerTextFile)
 			if err != nil {
 				gatherer.FinishWithInternalServerError(err)
 				return err
@@ -212,13 +192,13 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 
 		log.Println("Adding executable to isolate box...")
 		if language.CompiledFilename != nil {
-			err := box.AddFile(*language.CompiledFilename, evalReadyFile)
+			err := box.AddFile(*language.CompiledFilename, compiledSubmission)
 			if err != nil {
 				gatherer.FinishWithInternalServerError(err)
 				return err
 			}
 		} else {
-			err := box.AddFile(language.CodeFilename, evalReadyFile)
+			err := box.AddFile(language.CodeFilename, []byte(request.Submission.SourceCode))
 			if err != nil {
 				gatherer.FinishWithInternalServerError(err)
 				return err
@@ -254,21 +234,74 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		log.Println("Stderr:", data.Output.Stderr)
 		gatherer.ReportTestSubmissionRuntimeData(test.ID, *data)
 
+		// TODO: add checker here
 	}
+	log.Println(len(compiledChecker))
 
-	log.Println(len(evalReadyFile))
+	gatherer.FinishEvaluation()
 
 	return nil
 }
 
-func saveTextFileToCache(textFile *database.TextFile, cachePath string) error {
-	err := os.MkdirAll(cachePath, 0755)
+func compileSourceCode(language *database.ProgrammingLanguage, sourceCode string) (
+	compiled []byte,
+	runData *RuntimeData,
+	err error,
+) {
+	isolateInstance := isolate.GetInstance()
+
+	log.Println("Creating isolate box...")
+	var box *isolate.Box
+	box, err = isolateInstance.NewBox()
+	if err != nil {
+		return
+	}
+	log.Println("Created isolate box:", box.Path())
+
+	log.Println("Adding source code to isolate box...")
+	err = box.AddFile(language.CodeFilename, []byte(sourceCode))
+	if err != nil {
+		return
+	}
+	log.Println("Added source code to isolate box")
+
+	log.Println("Running compilation...")
+	var process *isolate.Process
+	process, err = box.Run(*language.CompileCmd, nil, nil)
+	if err != nil {
+		return
+	}
+	log.Println("Ran compilation command")
+
+	log.Println("Collecting compilation runtime data...")
+	runData, err = collectProcessRuntimeData(process)
+	if err != nil {
+		return
+	}
+	log.Println("Collected compilation runtime data")
+
+	log.Println("Compilation finished")
+
+	if box.HasFile(*language.CompiledFilename) {
+		log.Println("Retrieving compiled executable...")
+		compiled, err = box.GetFile(*language.CompiledFilename)
+		if err != nil {
+			return
+		}
+		log.Println("Retrieved compiled executable")
+	}
+
+	return
+}
+
+func saveTextFileToCache(textFile *database.TextFile) error {
+	err := os.MkdirAll(textFileCachePath, 0755)
 	if err != nil {
 		return err
 	}
 
 	fileName := textFile.Sha256
-	filePath := filepath.Join(cachePath, fileName)
+	filePath := filepath.Join(textFileCachePath, fileName)
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -283,9 +316,9 @@ func saveTextFileToCache(textFile *database.TextFile, cachePath string) error {
 	return nil
 }
 
-func isTextFileInCache(sha256 string, cachePath string) (bool, error) {
+func isTextFileInCache(sha256 string) (bool, error) {
 	fileName := sha256
-	filePath := filepath.Join(cachePath, fileName)
+	filePath := filepath.Join(textFileCachePath, fileName)
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return false, nil
