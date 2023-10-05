@@ -9,9 +9,13 @@ import (
 	"github.com/programme-lv/tester/internal/messaging"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 )
+
+const testLibCachePath = "cache/testlib.h"
+const testLibUrl = "https://raw.githubusercontent.com/MikeMirzayanov/testlib/master/testlib.h"
 
 const textFileCachePath = "cache/text_files"
 
@@ -19,6 +23,14 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	log.Println("Starting evaluation...")
 	gatherer.StartEvaluation()
 	isolateInstance := isolate.GetInstance()
+
+	log.Println("Ensuring testLib exists...")
+	err := ensureTestlibExists()
+	if err != nil {
+		gatherer.FinishWithInternalServerError(err)
+		return err
+	}
+	log.Println("TestLib exists / was downloaded")
 
 	log.Println("Selecting task version...")
 	taskVersion, err := database.SelectTaskVersionById(postgres, request.TaskVersionId)
@@ -239,6 +251,43 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	log.Println(len(compiledChecker))
 
 	gatherer.FinishEvaluation()
+
+	return nil
+}
+
+func ensureTestlibExists() error {
+	// Check if the file already exists
+	if _, err := os.Stat(testLibCachePath); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err // Return here on other errors besides "not exists"
+	}
+
+	// Create the file
+	out, err := os.Create(testLibCachePath)
+	if err != nil {
+		return err
+	}
+	defer func(out *os.File) {
+		_ = out.Close()
+	}(out)
+
+	resp, err := http.Get(testLibUrl)
+	if err != nil {
+		return err
+	}
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
