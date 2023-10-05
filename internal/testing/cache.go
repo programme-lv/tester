@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 )
 
+const testLibCachePath = "cache/testlib.h"
+const textFileCachePath = "cache/text_files"
+
 func saveTextFileToCache(textFile *database.TextFile) error {
 	err := os.MkdirAll(textFileCachePath, 0755)
 	if err != nil {

@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+const testLibUrl = "https://raw.githubusercontent.com/MikeMirzayanov/testlib/master/testlib.h"
+
 func compileSourceCode(language *database.ProgrammingLanguage, sourceCode string) (
 	compiled []byte,
 	runData *RuntimeData,

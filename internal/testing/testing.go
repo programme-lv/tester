@@ -13,11 +13,6 @@ import (
 	"path/filepath"
 )
 
-const testLibCachePath = "cache/testlib.h"
-const testLibUrl = "https://raw.githubusercontent.com/MikeMirzayanov/testlib/master/testlib.h"
-
-const textFileCachePath = "cache/text_files"
-
 func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGatherer, postgres *sqlx.DB) error {
 	log.Println("Starting evaluation...")
 	gatherer.StartEvaluation()
