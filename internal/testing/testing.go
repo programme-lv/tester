@@ -9,7 +9,6 @@ import (
 	"github.com/programme-lv/tester/internal/messaging"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 )
@@ -47,7 +46,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	log.Println("Selected task version checker:", checker.ID)
 
 	log.Println("Getting programming language...")
-	language, err := getProgrammingLanguage(request, postgres)
+	language, err := database.SelectProgrammingLanguageById(postgres, request.Submission.LanguageId)
 	if err != nil {
 		gatherer.FinishWithInternalServerError(err)
 		return err
@@ -81,10 +80,10 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	var compiledChecker []byte
 	var checkerCompilationData *RuntimeData
 	compiledChecker, checkerCompilationData, err = compileTestlibChecker(checker.Code)
+	log.Println("checker compilation stdout:", checkerCompilationData.Output.Stdout)
+	log.Println("checker compilation stderr:", checkerCompilationData.Output.Stderr)
+	log.Println("checker compilation exit code:", checkerCompilationData.Output.ExitCode)
 	if err != nil || compiledChecker == nil {
-		log.Println("stdout:", checkerCompilationData.Output.Stdout)
-		log.Println("stderr:", checkerCompilationData.Output.Stderr)
-		log.Println("exit code:", checkerCompilationData.Output.ExitCode)
 		gatherer.FinishWithInternalServerError(err)
 		return err
 	}
@@ -247,209 +246,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	return nil
 }
 
-func ensureTestlibExists() error {
-	// Check if the file already exists
-	if _, err := os.Stat(testLibCachePath); err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
-		return err // Return here on other errors besides "not exists"
-	}
-
-	// Create the file
-	out, err := os.Create(testLibCachePath)
-	if err != nil {
-		return err
-	}
-	defer func(out *os.File) {
-		_ = out.Close()
-	}(out)
-
-	resp, err := http.Get(testLibUrl)
-	if err != nil {
-		return err
-	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
-	}
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func compileSourceCode(language *database.ProgrammingLanguage, sourceCode string) (
-	compiled []byte,
-	runData *RuntimeData,
-	err error,
-) {
-	isolateInstance := isolate.GetInstance()
-
-	log.Println("Creating isolate box...")
-	var box *isolate.Box
-	box, err = isolateInstance.NewBox()
-	if err != nil {
-		return
-	}
-	log.Println("Created isolate box:", box.Path())
-
-	log.Println("Adding source code to isolate box...")
-	err = box.AddFile(language.CodeFilename, []byte(sourceCode))
-	if err != nil {
-		return
-	}
-	log.Println("Added source code to isolate box")
-
-	log.Println("Running compilation...")
-	var process *isolate.Process
-	process, err = box.Run(*language.CompileCmd, nil, nil)
-	if err != nil {
-		return
-	}
-	log.Println("Ran compilation command")
-
-	log.Println("Collecting compilation runtime data...")
-	runData, err = collectProcessRuntimeData(process)
-	if err != nil {
-		return
-	}
-	log.Println("Collected compilation runtime data")
-
-	log.Println("Compilation finished")
-
-	if box.HasFile(*language.CompiledFilename) {
-		log.Println("Retrieving compiled executable...")
-		compiled, err = box.GetFile(*language.CompiledFilename)
-		if err != nil {
-			return
-		}
-		log.Println("Retrieved compiled executable")
-	}
-
-	return
-}
-
-func compileTestlibChecker(code string) (
-	compiled []byte,
-	runData *RuntimeData,
-	err error,
-) {
-	codeFilename := "main.cpp"
-	compileCmd := "g++ -std=c++17 -o main main.cpp -I . -I /usr/include"
-	compiledFilename := "main"
-
-	log.Println("Ensuring testLib exists...")
-	err = ensureTestlibExists()
-	if err != nil {
-		return
-	}
-	log.Println("TestLib exists / was downloaded")
-
-	isolateInstance := isolate.GetInstance()
-
-	log.Println("Creating isolate box...")
-	var box *isolate.Box
-	box, err = isolateInstance.NewBox()
-	if err != nil {
-		return
-	}
-	log.Println("Created isolate box:", box.Path())
-
-	log.Println("Adding checker code to isolate box...")
-	err = box.AddFile(codeFilename, []byte(code))
-	if err != nil {
-		return
-	}
-	log.Println("Added checker code to isolate box")
-
-	log.Println("Adding testLib to isolate box...")
-	var testlibBytes []byte
-	testlibBytes, err = os.ReadFile(testLibCachePath)
-	if err != nil {
-		return
-	}
-	err = box.AddFile("testlib.h", testlibBytes)
-	if err != nil {
-		return
-	}
-
-	log.Println("Running checker compilation...")
-	var process *isolate.Process
-	process, err = box.Run(compileCmd, nil, nil)
-	if err != nil {
-		return
-	}
-	log.Println("Ran checker compilation command")
-
-	log.Println("Collecting compilation runtime data...")
-	runData, err = collectProcessRuntimeData(process)
-	if err != nil {
-		return
-	}
-	log.Println("Collected compilation runtime data")
-
-	log.Println("Compilation finished")
-
-	if box.HasFile(compiledFilename) {
-		log.Println("Retrieving compiled executable...")
-		compiled, err = box.GetFile(compiledFilename)
-		if err != nil {
-			return
-		}
-		log.Println("Retrieved compiled executable")
-	}
-	return
-}
-
-func saveTextFileToCache(textFile *database.TextFile) error {
-	err := os.MkdirAll(textFileCachePath, 0755)
-	if err != nil {
-		return err
-	}
-
-	fileName := textFile.Sha256
-	filePath := filepath.Join(textFileCachePath, fileName)
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer func(file *os.File) {
-		_ = file.Close()
-	}(file)
-	_, err = file.Write([]byte(textFile.Content))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func isTextFileInCache(sha256 string) (bool, error) {
-	fileName := sha256
-	filePath := filepath.Join(textFileCachePath, fileName)
-	_, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func getProgrammingLanguage(request messaging.EvaluationRequest, postgres *sqlx.DB) (*database.ProgrammingLanguage, error) {
-	programmingLanguageId := request.Submission.LanguageId
-	programmingLanguage, err := database.SelectProgrammingLanguageById(postgres, programmingLanguageId)
-	return programmingLanguage, err
-}
-
 func collectProcessRuntimeData(process *isolate.Process) (*RuntimeData, error) {
-
 	stdout, err := io.ReadAll(process.Stdout())
 	if err != nil {
 		return nil, err
