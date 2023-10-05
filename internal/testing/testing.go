@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/programme-lv/tester/internal/database"
 	"github.com/programme-lv/tester/internal/isolate"
@@ -92,37 +93,75 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	}
 	log.Printf("Selected %d tests.\n", len(taskVersionTests))
 
-	textFileCachePath := "cache/tester/text_files"
+	log.Println("Linking task version tests to text files...")
+	testInputTextFiles := make(map[int64]*database.TextFileWithoutContent)
+	testAnswerTextFiles := make(map[int64]*database.TextFileWithoutContent)
 
 	for _, test := range taskVersionTests {
-		log.Println("Downloading test file to cache...", test.TestFilename)
-		inputTextFile, err := database.SelectTextFileById(postgres, test.InputTextFileID)
+		inputTextFile, err := database.SelectTextFileByIdWithoutContent(postgres, test.InputTextFileID)
 		if err != nil {
 			return err
 		}
-		log.Println("Saving test file to cache...", test.TestFilename)
-		err = saveTextFileToCache(inputTextFile, textFileCachePath)
+		testInputTextFiles[test.ID] = inputTextFile
+		answerTextFile, err := database.SelectTextFileByIdWithoutContent(postgres, test.AnswerTextFileID)
 		if err != nil {
 			return err
 		}
-		log.Println("Saved test file to cache:", test.TestFilename)
-
-		log.Println("Downloading answer file to cache...", test.TestFilename)
-		answerTextFile, err := database.SelectTextFileById(postgres, test.AnswerTextFileID)
-		if err != nil {
-			return err
-		}
-		log.Println("Saving answer file to cache...", test.TestFilename)
-		err = saveTextFileToCache(answerTextFile, textFileCachePath)
-		if err != nil {
-			return err
-		}
-		log.Println("Saved answer file to cache:", test.TestFilename)
+		testAnswerTextFiles[test.ID] = answerTextFile
 	}
+	log.Println("Linked task version tests to text files")
+
+	textFileCachePath := "cache/text_files"
+
+	log.Println("Downloading missing text files to cache...")
+	for _, test := range taskVersionTests {
+		inputTextFile, ok := testInputTextFiles[test.ID]
+		if !ok {
+			return fmt.Errorf("could not find input text file for test %d", test.ID)
+		}
+		isInputTextFileInCache, err := isTextFileInCache(inputTextFile.Sha256, textFileCachePath)
+		if err != nil {
+			return err
+		}
+		if !isInputTextFileInCache {
+			log.Println("Downloading test file to cache...", test.TestFilename)
+			inputTextFile, err := database.SelectTextFileById(postgres, test.InputTextFileID)
+			if err != nil {
+				return err
+			}
+			log.Println("Saving test file to cache...", test.TestFilename)
+			err = saveTextFileToCache(inputTextFile, textFileCachePath)
+			if err != nil {
+				return err
+			}
+			log.Println("Downloaded & saved test file to cache:", test.TestFilename)
+		}
+
+		answerTextFile, ok := testAnswerTextFiles[test.ID]
+		if !ok {
+			return fmt.Errorf("could not find answer text file for test %d", test.ID)
+		}
+		isAnswerTextFileInCache, err := isTextFileInCache(answerTextFile.Sha256, textFileCachePath)
+		if err != nil {
+			return err
+		}
+		if !isAnswerTextFileInCache {
+			log.Println("Downloading answer file to cache...", test.TestFilename)
+			answerTextFile, err := database.SelectTextFileById(postgres, test.AnswerTextFileID)
+			if err != nil {
+				return err
+			}
+			log.Println("Saving answer file to cache...", test.TestFilename)
+			err = saveTextFileToCache(answerTextFile, textFileCachePath)
+			if err != nil {
+				return err
+			}
+			log.Println("Saved answer file to cache:", test.TestFilename)
+		}
+	}
+	log.Println("Downloaded missing text files to cache")
 
 	log.Println(len(evalReadyFile))
-	// download to /tmp/tester, move to /var/cache/tester
-	// store the tests by their respective sha values in the database
 
 	return nil
 }
@@ -147,6 +186,19 @@ func saveTextFileToCache(textFile *database.TextFile, cachePath string) error {
 		return err
 	}
 	return nil
+}
+
+func isTextFileInCache(sha256 string, cachePath string) (bool, error) {
+	fileName := sha256
+	filePath := filepath.Join(cachePath, fileName)
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func getProgrammingLanguage(request messaging.EvaluationRequest, postgres *sqlx.DB) (*database.ProgrammingLanguage, error) {

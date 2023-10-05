@@ -56,3 +56,16 @@ func SelectTextFileById(
 	)
 	return &textFile, err
 }
+
+func SelectTextFileByIdWithoutContent(
+	db *sqlx.DB,
+	textFileId int64,
+) (*TextFileWithoutContent, error) {
+	var textFile TextFileWithoutContent
+	err := db.Get(
+		&textFile,
+		"SELECT id, sha256, created_at FROM text_files WHERE id = $1",
+		textFileId,
+	)
+	return &textFile, err
+}

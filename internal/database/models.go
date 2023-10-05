@@ -55,9 +55,13 @@ type TaskVersionTest struct {
 	AnswerTextFileID int64  `db:"answer_text_file_id"`
 }
 
-type TextFile struct {
+type TextFileWithoutContent struct {
 	ID        int64     `db:"id"`
 	Sha256    string    `db:"sha256"`
-	Content   string    `db:"content"`
 	CreatedAt time.Time `db:"created_at"`
+}
+
+type TextFile struct {
+	TextFileWithoutContent
+	Content string `db:"content"`
 }
