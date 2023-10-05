@@ -233,6 +233,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		log.Println("Stdin:", string(inputBytes))
 		log.Println("Stdout:", data.Output.Stdout)
 		log.Println("Stderr:", data.Output.Stderr)
+		gatherer.ReportTestSubmissionRuntimeData(test.ID, *data)
 
 	}
 

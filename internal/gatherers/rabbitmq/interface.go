@@ -118,10 +118,16 @@ func (r *Gatherer) StartTest(testId int64) {
 }
 
 func (r *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd testing.RuntimeData) {
+	if r.testRuntimeDataCache[testId] == nil {
+		r.testRuntimeDataCache[testId] = &testRuntimeData{}
+	}
 	r.testRuntimeDataCache[testId].submissionRuntimeData = rd
 }
 
 func (r *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd testing.RuntimeData) {
+	if r.testRuntimeDataCache[testId] == nil {
+		r.testRuntimeDataCache[testId] = &testRuntimeData{}
+	}
 	r.testRuntimeDataCache[testId].checkerRuntimeData = rd
 }
 
