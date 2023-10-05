@@ -113,11 +113,19 @@ func newTempIsolateFilePath() (string, error) {
 
 func (box *Box) AddFile(path string, content []byte) error {
 	path = filepath.Join(box.path, "box", path)
-	_, err := os.Create(path)
+	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(path, content, 0644)
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+	err = os.Chmod(path, 0777)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(path, content, 0777)
 	if err != nil {
 		return err
 	}
