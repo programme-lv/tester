@@ -36,12 +36,12 @@ type EvalResGatherer interface {
 	IgnoreTest(testId int64)
 
 	StartTest(testId int64)
-	ReportTestSubmissionRuntimeData(testId int64, rd RuntimeData)
+	ReportTestSubmissionRuntimeData(testId int64, rd *RuntimeData)
 
 	FinishTestWithLimitExceeded(testId int64, flags RuntimeExceededFlags)
 	FinishTestWithRuntimeError(testId int64)
 
-	ReportTestCheckerRuntimeData(testId int64, rd RuntimeData)
+	ReportTestCheckerRuntimeData(testId int64, rd *RuntimeData)
 
 	FinishTestWithVerdictAccepted(testId int64)
 	FinishTestWithVerdictWrongAnswer(testId int64)

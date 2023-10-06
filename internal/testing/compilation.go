@@ -9,6 +9,10 @@ import (
 
 const testLibUrl = "https://raw.githubusercontent.com/MikeMirzayanov/testlib/master/testlib.h"
 
+const testlibCodeFilename = "main.cpp"
+const testlibCompileCmd = "g++ -std=c++17 -o main main.cpp -I . -I /usr/include"
+const testlibCompiledFilename = "main"
+
 func compileSourceCode(language *database.ProgrammingLanguage, sourceCode string) (
 	compiled []byte,
 	runData *RuntimeData,
@@ -23,6 +27,9 @@ func compileSourceCode(language *database.ProgrammingLanguage, sourceCode string
 		return
 	}
 	log.Println("Created isolate box:", box.Path())
+	defer func(box *isolate.Box) {
+		_ = box.Close()
+	}(box)
 
 	log.Println("Adding source code to isolate box...")
 	err = box.AddFile(language.CodeFilename, []byte(sourceCode))
@@ -65,9 +72,6 @@ func compileTestlibChecker(code string) (
 	runData *RuntimeData,
 	err error,
 ) {
-	codeFilename := "main.cpp"
-	compileCmd := "g++ -std=c++17 -o main main.cpp -I . -I /usr/include"
-	compiledFilename := "main"
 
 	log.Println("Ensuring testLib exists...")
 	err = ensureTestlibExistsInCache()
@@ -85,9 +89,12 @@ func compileTestlibChecker(code string) (
 		return
 	}
 	log.Println("Created isolate box:", box.Path())
+	defer func(box *isolate.Box) {
+		_ = box.Close()
+	}(box)
 
 	log.Println("Adding checker code to isolate box...")
-	err = box.AddFile(codeFilename, []byte(code))
+	err = box.AddFile(testlibCodeFilename, []byte(code))
 	if err != nil {
 		return
 	}
@@ -106,7 +113,7 @@ func compileTestlibChecker(code string) (
 
 	log.Println("Running checker compilation...")
 	var process *isolate.Process
-	process, err = box.Run(compileCmd, nil, nil)
+	process, err = box.Run(testlibCompileCmd, nil, nil)
 	if err != nil {
 		return
 	}
@@ -121,9 +128,9 @@ func compileTestlibChecker(code string) (
 
 	log.Println("Compilation finished")
 
-	if box.HasFile(compiledFilename) {
+	if box.HasFile(testlibCompiledFilename) {
 		log.Println("Retrieving compiled executable...")
-		compiled, err = box.GetFile(compiledFilename)
+		compiled, err = box.GetFile(testlibCompiledFilename)
 		if err != nil {
 			return
 		}

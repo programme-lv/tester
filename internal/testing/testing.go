@@ -230,9 +230,76 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		log.Println("Stdin:", string(inputBytes))
 		log.Println("Stdout:", data.Output.Stdout)
 		log.Println("Stderr:", data.Output.Stderr)
-		gatherer.ReportTestSubmissionRuntimeData(test.ID, *data)
+		gatherer.ReportTestSubmissionRuntimeData(test.ID, data)
 
-		// TODO: add checker here
+		err = box.Close()
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+
+		log.Println("Creating isolate box for checker...")
+		box, err = isolateInstance.NewBox()
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		log.Println("Created isolate box for checker:", box.Path())
+
+		log.Println("Adding checker to isolate box...")
+		err = box.AddFile("checker", compiledChecker)
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		log.Println("Added checker to isolate box")
+
+		log.Println("Adding input file to isolate box...")
+		err = box.AddFile("input.txt", inputBytes)
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		log.Println("Added input file to isolate box")
+
+		log.Println("Adding output file to isolate box...")
+		err = box.AddFile("output.txt", []byte(data.Output.Stdout))
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		log.Println("Added output file to isolate box")
+
+		log.Println("Adding answer file to isolate box...")
+		answerBytes, err := os.ReadFile(filepath.Join(textFileCachePath, testAnswerTextFiles[test.ID].Sha256))
+		err = box.AddFile("answer.txt", answerBytes)
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+
+		log.Println("Running checker command...")
+		process, err = box.Run("./checker input.txt output.txt answer.txt", nil, nil)
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		log.Println("Ran checker command")
+
+		log.Println("Collecting checker runtime data...")
+		data, err = collectProcessRuntimeData(process)
+		if err != nil {
+			gatherer.FinishWithInternalServerError(err)
+			return err
+		}
+		log.Println("Collected checker runtime data")
+
+		log.Println("Results:", data.Output.ExitCode, data.Metrics.CpuTimeMillis, data.Metrics.MemoryKBytes)
+		log.Println("Stdin:", string(inputBytes))
+		log.Println("Stdout:", data.Output.Stdout)
+		log.Println("Stderr:", data.Output.Stderr)
+		gatherer.ReportTestCheckerRuntimeData(test.ID, data)
+
 	}
 	log.Println(len(compiledChecker))
 

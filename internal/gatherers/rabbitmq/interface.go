@@ -117,18 +117,18 @@ func (r *Gatherer) StartTest(testId int64) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd testing.RuntimeData) {
+func (r *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.RuntimeData) {
 	if r.testRuntimeDataCache[testId] == nil {
 		r.testRuntimeDataCache[testId] = &testRuntimeData{}
 	}
-	r.testRuntimeDataCache[testId].submissionRuntimeData = rd
+	r.testRuntimeDataCache[testId].submissionRuntimeData = *rd
 }
 
-func (r *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd testing.RuntimeData) {
+func (r *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *testing.RuntimeData) {
 	if r.testRuntimeDataCache[testId] == nil {
 		r.testRuntimeDataCache[testId] = &testRuntimeData{}
 	}
-	r.testRuntimeDataCache[testId].checkerRuntimeData = rd
+	r.testRuntimeDataCache[testId].checkerRuntimeData = *rd
 }
 
 func toMessagingRuntimeData(rd *testing.RuntimeData) *messaging.RuntimeData {
