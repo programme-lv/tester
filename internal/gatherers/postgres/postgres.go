@@ -3,8 +3,8 @@ package postgres
 import (
 	"github.com/jmoiron/sqlx"
 	"github.com/programme-lv/tester/internal/database"
-	"github.com/programme-lv/tester/internal/messaging/statuses"
 	"github.com/programme-lv/tester/internal/testing"
+	"github.com/programme-lv/tester/pkg/messaging/statuses"
 )
 
 type Gatherer struct {

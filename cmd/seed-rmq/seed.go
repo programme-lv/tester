@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/programme-lv/tester/internal/messaging"
+	"github.com/programme-lv/tester/pkg/messaging"
 	"log"
 	"math/rand"
 	"time"

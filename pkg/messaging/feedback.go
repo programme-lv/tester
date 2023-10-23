@@ -1,6 +1,8 @@
 package messaging
 
-import "github.com/programme-lv/tester/internal/messaging/statuses"
+import (
+	"github.com/programme-lv/tester/pkg/messaging/statuses"
+)
 
 type FeedbackType string
 

@@ -6,7 +6,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/programme-lv/tester/internal/database"
 	"github.com/programme-lv/tester/internal/isolate"
-	"github.com/programme-lv/tester/internal/messaging"
+	"github.com/programme-lv/tester/pkg/messaging"
 	"io"
 	"log"
 	"os"

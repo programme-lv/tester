@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"github.com/programme-lv/tester/internal/gatherers/rabbitmq"
-	"github.com/programme-lv/tester/internal/messaging"
 	"github.com/programme-lv/tester/internal/testing"
+	"github.com/programme-lv/tester/pkg/messaging"
 	"log"
 
 	"github.com/jmoiron/sqlx"

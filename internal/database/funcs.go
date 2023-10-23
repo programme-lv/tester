@@ -2,7 +2,7 @@ package database
 
 import (
 	"github.com/jmoiron/sqlx"
-	"github.com/programme-lv/tester/internal/messaging/statuses"
+	"github.com/programme-lv/tester/pkg/messaging/statuses"
 )
 
 func UpdateSubmissionEvaluationEvalStatusId(

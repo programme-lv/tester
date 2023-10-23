@@ -1,15 +1,15 @@
 package rabbitmq
 
 import (
-	"github.com/programme-lv/tester/internal/messaging"
-	"github.com/programme-lv/tester/internal/messaging/statuses"
 	"github.com/programme-lv/tester/internal/testing"
+	messaging2 "github.com/programme-lv/tester/pkg/messaging"
+	"github.com/programme-lv/tester/pkg/messaging/statuses"
 )
 
 func (r *Gatherer) StartEvaluation() {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.UpdateEvalStatus,
-		Data: messaging.UpdateEvalStatusData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.UpdateEvalStatus,
+		Data: messaging2.UpdateEvalStatusData{
 			Status: statuses.Received,
 		},
 	}
@@ -17,17 +17,17 @@ func (r *Gatherer) StartEvaluation() {
 }
 
 func (r *Gatherer) StartTesting(maxScore int) {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.UpdateEvalStatus,
-		Data: messaging.UpdateEvalStatusData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.UpdateEvalStatus,
+		Data: messaging2.UpdateEvalStatusData{
 			Status: statuses.Testing,
 		},
 	}
 	r.sendEvalResponse(msg)
 
-	msg = &messaging.EvaluationResponse{
-		FeedbackType: messaging.SetMaxScore,
-		Data: messaging.SetMaxScoreData{
+	msg = &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.SetMaxScore,
+		Data: messaging2.SetMaxScoreData{
 			MaxScore: maxScore,
 		},
 	}
@@ -35,9 +35,9 @@ func (r *Gatherer) StartTesting(maxScore int) {
 }
 
 func (r *Gatherer) IncrementScore(delta int) {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.IncrementScore,
-		Data: messaging.IncrementScoreData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.IncrementScore,
+		Data: messaging2.IncrementScoreData{
 			Delta: delta,
 		},
 	}
@@ -45,9 +45,9 @@ func (r *Gatherer) IncrementScore(delta int) {
 }
 
 func (r *Gatherer) FinishWithInternalServerError(err error) {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.UpdateEvalStatus,
-		Data: messaging.UpdateEvalStatusData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.UpdateEvalStatus,
+		Data: messaging2.UpdateEvalStatusData{
 			Status: statuses.InternalServerError,
 		},
 	}
@@ -55,9 +55,9 @@ func (r *Gatherer) FinishWithInternalServerError(err error) {
 }
 
 func (r *Gatherer) FinishEvaluation() {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.UpdateEvalStatus,
-		Data: messaging.UpdateEvalStatusData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.UpdateEvalStatus,
+		Data: messaging2.UpdateEvalStatusData{
 			Status: statuses.Finished,
 		},
 	}
@@ -65,9 +65,9 @@ func (r *Gatherer) FinishEvaluation() {
 }
 
 func (r *Gatherer) StartCompilation() {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.UpdateEvalStatus,
-		Data: messaging.UpdateEvalStatusData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.UpdateEvalStatus,
+		Data: messaging2.UpdateEvalStatusData{
 			Status: statuses.Compiling,
 		},
 	}
@@ -75,9 +75,9 @@ func (r *Gatherer) StartCompilation() {
 }
 
 func (r *Gatherer) FinishCompilation(data *testing.RuntimeData) {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.CompilationFinished,
-		Data: messaging.CompilationFinishedData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.CompilationFinished,
+		Data: messaging2.CompilationFinishedData{
 			RuntimeData: toMessagingRuntimeData(data),
 		},
 	}
@@ -85,9 +85,9 @@ func (r *Gatherer) FinishCompilation(data *testing.RuntimeData) {
 }
 
 func (r *Gatherer) FinishWithCompilationError() {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.UpdateEvalStatus,
-		Data: messaging.UpdateEvalStatusData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.UpdateEvalStatus,
+		Data: messaging2.UpdateEvalStatusData{
 			Status: statuses.CompilationError,
 		},
 	}
@@ -95,9 +95,9 @@ func (r *Gatherer) FinishWithCompilationError() {
 }
 
 func (r *Gatherer) IgnoreTest(testId int64) {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.TestFinished,
-		Data: messaging.TestFinishedData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.TestFinished,
+		Data: messaging2.TestFinishedData{
 			TestId:                testId,
 			Verdict:               statuses.Ignored,
 			SubmissionRuntimeData: nil,
@@ -108,9 +108,9 @@ func (r *Gatherer) IgnoreTest(testId int64) {
 }
 
 func (r *Gatherer) StartTest(testId int64) {
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.TestStarted,
-		Data: messaging.TestStartedData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.TestStarted,
+		Data: messaging2.TestStartedData{
 			TestId: testId,
 		},
 	}
@@ -131,14 +131,14 @@ func (r *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *testing.Runtim
 	r.testRuntimeDataCache[testId].checkerRuntimeData = *rd
 }
 
-func toMessagingRuntimeData(rd *testing.RuntimeData) *messaging.RuntimeData {
-	return &messaging.RuntimeData{
-		Output: messaging.RuntimeOutput{
+func toMessagingRuntimeData(rd *testing.RuntimeData) *messaging2.RuntimeData {
+	return &messaging2.RuntimeData{
+		Output: messaging2.RuntimeOutput{
 			Stdout:   rd.Output.Stdout,
 			Stderr:   rd.Output.Stderr,
 			ExitCode: rd.Output.ExitCode,
 		},
-		Metrics: messaging.RuntimeMetrics{
+		Metrics: messaging2.RuntimeMetrics{
 			CpuTimeMillis:  rd.Metrics.CpuTimeMillis,
 			WallTimeMillis: rd.Metrics.WallTimeMillis,
 			MemoryKBytes:   rd.Metrics.MemoryKBytes,
@@ -149,9 +149,9 @@ func toMessagingRuntimeData(rd *testing.RuntimeData) *messaging.RuntimeData {
 func (r *Gatherer) FinishTest(testId int64) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.TestFinished,
-		Data: messaging.TestFinishedData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.TestFinished,
+		Data: messaging2.TestFinishedData{
 			TestId:                testId,
 			Verdict:               "",
 			SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
@@ -170,9 +170,9 @@ func (r *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.Runti
 	} else if flags.MemoryLimitExceeded {
 		verdict = statuses.MemoryLimitExceeded
 	}
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.TestFinished,
-		Data: messaging.TestFinishedData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.TestFinished,
+		Data: messaging2.TestFinishedData{
 			TestId:                testId,
 			Verdict:               verdict,
 			SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
@@ -185,9 +185,9 @@ func (r *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.Runti
 func (r *Gatherer) FinishTestWithRuntimeError(testId int64) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.TestFinished,
-		Data: messaging.TestFinishedData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.TestFinished,
+		Data: messaging2.TestFinishedData{
 			TestId:                testId,
 			Verdict:               statuses.RuntimeError,
 			SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
@@ -200,9 +200,9 @@ func (r *Gatherer) FinishTestWithRuntimeError(testId int64) {
 func (r *Gatherer) FinishTestWithVerdictAccepted(testId int64) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.TestFinished,
-		Data: messaging.TestFinishedData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.TestFinished,
+		Data: messaging2.TestFinishedData{
 			TestId:                testId,
 			Verdict:               statuses.Accepted,
 			SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
@@ -215,9 +215,9 @@ func (r *Gatherer) FinishTestWithVerdictAccepted(testId int64) {
 func (r *Gatherer) FinishTestWithVerdictWrongAnswer(testId int64) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	msg := &messaging.EvaluationResponse{
-		FeedbackType: messaging.TestFinished,
-		Data: messaging.TestFinishedData{
+	msg := &messaging2.EvaluationResponse{
+		FeedbackType: messaging2.TestFinished,
+		Data: messaging2.TestFinishedData{
 			TestId:                testId,
 			Verdict:               statuses.WrongAnswer,
 			SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),

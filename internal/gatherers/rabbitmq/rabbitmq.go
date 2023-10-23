@@ -3,8 +3,8 @@ package rabbitmq
 import (
 	"context"
 	"encoding/json"
-	"github.com/programme-lv/tester/internal/messaging"
 	"github.com/programme-lv/tester/internal/testing"
+	messaging2 "github.com/programme-lv/tester/pkg/messaging"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"time"
 )
@@ -16,14 +16,14 @@ type testRuntimeData struct {
 
 type Gatherer struct {
 	amqpChannel          *amqp.Channel
-	correlation          messaging.Correlation
+	correlation          messaging2.Correlation
 	replyTo              string
 	testRuntimeDataCache map[int64]*testRuntimeData
 }
 
 var _ testing.EvalResGatherer = (*Gatherer)(nil)
 
-func NewRabbitMQGatherer(ch *amqp.Channel, correlation messaging.Correlation, replyTo string) *Gatherer {
+func NewRabbitMQGatherer(ch *amqp.Channel, correlation messaging2.Correlation, replyTo string) *Gatherer {
 	return &Gatherer{
 		amqpChannel:          ch,
 		correlation:          correlation,
@@ -44,7 +44,7 @@ func (r *Gatherer) declareReplyToQueue() {
 	panicOnError(err)
 }
 
-func (r *Gatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
+func (r *Gatherer) sendEvalResponse(msg *messaging2.EvaluationResponse) {
 	r.declareReplyToQueue()
 
 	marshalled, err := json.Marshal(msg)
