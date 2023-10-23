@@ -57,10 +57,10 @@ func main() {
 	defer cancel()
 
 	correlation := messaging.Correlation{
-		IsEvaluation: false,
-		EvaluationId: 0,
-		UnixMillis:   time.Now().UnixMilli(),
-		RandomInt63:  rand.Int63(),
+		HasEvaluationId: false,
+		EvaluationId:    0,
+		UnixMillis:      time.Now().UnixMilli(),
+		RandomInt63:     rand.Int63(),
 	}
 	correlationJson, err := json.Marshal(correlation)
 	panicOnError(err)

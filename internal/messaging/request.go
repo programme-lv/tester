@@ -11,8 +11,8 @@ type EvaluationRequest struct {
 }
 
 type Correlation struct {
-	IsEvaluation bool  `json:"is_evaluation"`
-	EvaluationId int64 `json:"evaluation_id,omitempty"`
-	UnixMillis   int64 `json:"unix_millis"`
-	RandomInt63  int64 `json:"random_int_63"`
+	HasEvaluationId bool  `json:"has_evaluation_id"`
+	EvaluationId    int64 `json:"evaluation_id,omitempty"`
+	UnixMillis      int64 `json:"unix_millis"`
+	RandomInt63     int64 `json:"random_int_63"`
 }
