@@ -7,9 +7,9 @@ type RuntimeOutput struct {
 }
 
 type RuntimeMetrics struct {
-	CpuTimeMillis  float64 `json:"cpu_time_millis"`
-	WallTimeMillis float64 `json:"wall_time_millis"`
-	MemoryKBytes   int64   `json:"memory_k_bytes"`
+	CpuTimeMillis  int64 `json:"cpu_time_millis"`
+	WallTimeMillis int64 `json:"wall_time_millis"`
+	MemoryKBytes   int64 `json:"memory_k_bytes"`
 }
 
 type RuntimeData struct {

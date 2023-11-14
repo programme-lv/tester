@@ -1,10 +1,13 @@
 package postgres
 
 import (
+	"github.com/go-jet/jet/v2/postgres"
 	"github.com/jmoiron/sqlx"
-	"github.com/programme-lv/tester/internal/database"
+	"github.com/programme-lv/tester/internal/database/proglv/public/model"
+	"github.com/programme-lv/tester/internal/database/proglv/public/table"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/pkg/messaging/statuses"
+	"log/slog"
 )
 
 type Gatherer struct {
@@ -22,45 +25,60 @@ func NewPostgresGatherer(postgres *sqlx.DB, evaluationId int64, evalRandInt63 in
 }
 
 func (g *Gatherer) StartEvaluation() {
-	err := database.UpdateSubmissionEvaluationEvalStatusId(
-		g.postgres,
-		statuses.Received,
-		g.evaluationId,
-	)
+	stmt := table.Evaluations.UPDATE(table.Evaluations.EvalStatusID).
+		SET(statuses.Received).
+		WHERE(table.Evaluations.ID.EQ(postgres.Int64(g.evaluationId)))
+
+	_, err := stmt.Exec(g.postgres)
 	panicOnError(err)
 }
 
-func (g *Gatherer) FinishWithInternalServerError(err error) {
-	err2 := database.UpdateSubmissionEvaluationEvalStatusId(
-		g.postgres,
-		statuses.InternalServerError,
-		g.evaluationId,
-	)
+func (g *Gatherer) FinishWithInternalServerError(testingErr error) {
+	slog.Error(testingErr.Error())
+	stmt := table.Evaluations.UPDATE(table.Evaluations.EvalStatusID).
+		SET(statuses.InternalServerError).
+		WHERE(table.Evaluations.ID.EQ(postgres.Int64(g.evaluationId)))
+	_, err := stmt.Exec(g.postgres)
 	panicOnError(err)
-	panicOnError(err2)
 }
 
 func (g *Gatherer) FinishEvaluation() {
-	err := database.UpdateSubmissionEvaluationEvalStatusId(
-		g.postgres,
-		statuses.Finished,
-		g.evaluationId,
-	)
+	stmt := table.Evaluations.UPDATE(table.Evaluations.EvalStatusID).
+		SET(statuses.Finished).
+		WHERE(table.Evaluations.ID.EQ(postgres.Int64(g.evaluationId)))
+	_, err := stmt.Exec(g.postgres)
 	panicOnError(err)
 }
 
 func (g *Gatherer) StartCompilation() {
-	err := database.UpdateSubmissionEvaluationEvalStatusId(
-		g.postgres,
-		statuses.Compiling,
-		g.evaluationId,
-	)
+	stmt := table.Evaluations.UPDATE(table.Evaluations.EvalStatusID).
+		SET(statuses.Compiling).
+		WHERE(table.Evaluations.ID.EQ(postgres.Int64(g.evaluationId)))
+	_, err := stmt.Exec(g.postgres)
 	panicOnError(err)
 }
 
 func (g *Gatherer) FinishCompilation(data *testing.RuntimeData) {
-	// create a new row in runtime_data table
-	panic("implement me")
+	runtimeData := &model.RuntimeData{
+		Stdout:          &data.Output.Stdout,
+		Stderr:          &data.Output.Stderr,
+		TimeMillis:      &data.Metrics.CpuTimeMillis,
+		MemoryKibibytes: &data.Metrics.MemoryKBytes,
+		TimeWallMillis:  &data.Metrics.WallTimeMillis,
+		ExitCode:        &data.Output.ExitCode,
+	}
+	err := table.RuntimeData.INSERT(table.RuntimeData.AllColumns).
+		MODEL(runtimeData).
+		RETURNING(table.RuntimeData.ID).
+		Query(g.postgres, runtimeData)
+	panicOnError(err)
+
+	stmt := table.Evaluations.UPDATE(table.Evaluations.CompilationDataID).
+		SET(runtimeData.ID).
+		WHERE(table.Evaluations.ID.EQ(postgres.Int64(g.evaluationId)))
+
+	_, err = stmt.Exec(g.postgres)
+	panicOnError(err)
 }
 
 func (g *Gatherer) FinishWithCompilationError() {

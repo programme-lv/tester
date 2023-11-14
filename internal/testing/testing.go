@@ -331,8 +331,8 @@ func collectProcessRuntimeData(process *isolate.Process) (*RuntimeData, error) {
 			ExitCode: metrics.ExitCode,
 		},
 		Metrics: RuntimeMetrics{
-			CpuTimeMillis:  metrics.TimeSec * 1000,
-			WallTimeMillis: metrics.TimeWallSec * 1000,
+			CpuTimeMillis:  int64(metrics.TimeSec * 1000),
+			WallTimeMillis: int64(metrics.TimeWallSec * 1000),
 			MemoryKBytes:   metrics.CgMemKb,
 		},
 	}, nil

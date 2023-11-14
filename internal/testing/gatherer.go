@@ -1,8 +1,8 @@
 package testing
 
 type RuntimeMetrics struct {
-	CpuTimeMillis  float64
-	WallTimeMillis float64
+	CpuTimeMillis  int64
+	WallTimeMillis int64
 	MemoryKBytes   int64
 }
 
