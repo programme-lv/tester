@@ -8,14 +8,16 @@ import (
 )
 
 type Gatherer struct {
-	postgres         *sqlx.DB
-	submissionEvalId int64
+	postgres      *sqlx.DB
+	evaluationId  int64
+	evalRandInt63 int64 // TODO: add column to submission_evaluations table & utilize it
 }
 
-func NewPostgresGatherer(postgres *sqlx.DB, submissionEvalId int64) *Gatherer {
+func NewPostgresGatherer(postgres *sqlx.DB, evaluationId int64, evalRandInt63 int64) *Gatherer {
 	return &Gatherer{
-		postgres:         postgres,
-		submissionEvalId: submissionEvalId,
+		postgres:      postgres,
+		evaluationId:  evaluationId,
+		evalRandInt63: evalRandInt63,
 	}
 }
 
@@ -23,7 +25,7 @@ func (g *Gatherer) StartEvaluation() {
 	err := database.UpdateSubmissionEvaluationEvalStatusId(
 		g.postgres,
 		statuses.Received,
-		g.submissionEvalId,
+		g.evaluationId,
 	)
 	panicOnError(err)
 }
@@ -32,7 +34,7 @@ func (g *Gatherer) FinishWithInternalServerError(err error) {
 	err2 := database.UpdateSubmissionEvaluationEvalStatusId(
 		g.postgres,
 		statuses.InternalServerError,
-		g.submissionEvalId,
+		g.evaluationId,
 	)
 	panicOnError(err)
 	panicOnError(err2)
@@ -42,7 +44,7 @@ func (g *Gatherer) FinishEvaluation() {
 	err := database.UpdateSubmissionEvaluationEvalStatusId(
 		g.postgres,
 		statuses.Finished,
-		g.submissionEvalId,
+		g.evaluationId,
 	)
 	panicOnError(err)
 }
@@ -51,14 +53,13 @@ func (g *Gatherer) StartCompilation() {
 	err := database.UpdateSubmissionEvaluationEvalStatusId(
 		g.postgres,
 		statuses.Compiling,
-		g.submissionEvalId,
+		g.evaluationId,
 	)
 	panicOnError(err)
 }
 
 func (g *Gatherer) FinishCompilation(data *testing.RuntimeData) {
-	//TODO implement me
-	// update compilation_stdout, compilation_stderr, and so on
+	// create a new row in runtime_data table
 	panic("implement me")
 }
 
@@ -83,7 +84,7 @@ func (g *Gatherer) StartTest(testId int64) {
 	panic("implement me")
 }
 
-func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd testing.RuntimeData) {
+func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.RuntimeData) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -98,7 +99,7 @@ func (g *Gatherer) FinishTestWithRuntimeError(testId int64) {
 	panic("implement me")
 }
 
-func (g *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd testing.RuntimeData) {
+func (g *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *testing.RuntimeData) {
 	//TODO implement me
 	panic("implement me")
 }
