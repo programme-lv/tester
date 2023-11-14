@@ -1,4 +1,4 @@
-package postgres
+package pgdirect
 
 import (
 	"github.com/go-jet/jet/v2/postgres"

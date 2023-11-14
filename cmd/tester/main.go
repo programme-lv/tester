@@ -2,7 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/programme-lv/tester/internal/gatherers/rabbitmq"
+	"github.com/programme-lv/tester/internal/gatherers/pgdirect"
+
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/pkg/messaging"
 	"log"
@@ -82,9 +83,9 @@ func main() {
 		replyTo := d.ReplyTo
 		log.Printf("ReplyTo: %s", replyTo)
 
-		rmqGatherer := rabbitmq.NewRabbitMQGatherer(ch, correlation, replyTo)
+		pgGatherer := pgdirect.NewPostgresGatherer(postgres, correlation.EvaluationId, correlation.RandomInt63)
 
-		err = testing.EvaluateSubmission(request, rmqGatherer, postgres)
+		err = testing.EvaluateSubmission(request, pgGatherer, postgres)
 		panicOnError(err)
 	}
 
