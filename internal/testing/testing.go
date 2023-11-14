@@ -167,7 +167,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	}
 	log.Println("Downloaded missing text files to cache")
 
-	gatherer.StartTesting(len(taskVersionTests))
+	gatherer.StartTesting(int64(len(taskVersionTests)))
 	for _, test := range taskVersionTests {
 		gatherer.StartTest(test.ID)
 		log.Println("Starting test:", test.ID)

@@ -32,7 +32,7 @@ type EvalResGatherer interface {
 	FinishCompilation(data *RuntimeData)
 	FinishWithCompilationError()
 
-	StartTesting(maxScore int)
+	StartTesting(maxScore int64)
 	IgnoreTest(testId int64)
 
 	StartTest(testId int64)
@@ -46,7 +46,7 @@ type EvalResGatherer interface {
 	FinishTestWithVerdictAccepted(testId int64)
 	FinishTestWithVerdictWrongAnswer(testId int64)
 
-	IncrementScore(delta int)
+	IncrementScore(delta int64)
 }
 
 // TODO: add reporting tester information somewhere
