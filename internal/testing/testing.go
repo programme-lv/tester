@@ -3,8 +3,11 @@ package testing
 import (
 	"bytes"
 	"fmt"
+	jet "github.com/go-jet/jet/v2/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/programme-lv/tester/internal/database"
+	"github.com/programme-lv/tester/internal/database/proglv/public/model"
+	"github.com/programme-lv/tester/internal/database/proglv/public/table"
 	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/pkg/messaging"
 	"io"
@@ -19,12 +22,16 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 	isolateInstance := isolate.GetInstance()
 
 	log.Println("Selecting task version...")
-	taskVersion, err := database.SelectTaskVersionById(postgres, request.TaskVersionId)
+	selectTaskVersionStmt := jet.SELECT(table.TaskVersions.AllColumns).FROM(table.TaskVersions).
+		WHERE(table.TaskVersions.ID.EQ(jet.Int64(request.TaskVersionId)))
+	taskVersion := model.TaskVersions{}
+	err := selectTaskVersionStmt.Query(postgres, &taskVersion)
 	if err != nil {
 		gatherer.FinishWithInternalServerError(err)
 		return err
 	}
 	log.Println("Selected task version:", taskVersion.ID)
+	log.Println("Selecting task version tests...")
 
 	log.Println("Selecting task version checker...")
 	if taskVersion.CheckerID == nil {
@@ -211,7 +218,14 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		log.Println("Created input reader")
 
 		log.Println("Running process...")
-		process, err := box.Run(language.ExecuteCmd, readCloser, nil)
+		process, err := box.Run(language.ExecuteCmd, readCloser, &isolate.Constraints{
+			CpuTimeLimInSec:      float64(taskVersion.TimeLimMs) / 1000.0,
+			ExtraCpuTimeLimInSec: 1,
+			WallTimeLimInSec:     10 + 5*float64(taskVersion.TimeLimMs)/1000.0,
+			MemoryLimitInKB:      taskVersion.MemLimKb,
+			MaxProcesses:         128,
+			MaxOpenFiles:         128,
+		})
 		if err != nil {
 			gatherer.FinishWithInternalServerError(err)
 			return err
@@ -232,6 +246,19 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		log.Println("Stderr:", data.Output.Stderr)
 		gatherer.ReportTestSubmissionRuntimeData(test.ID, data)
 
+		timeLimitExceeded := data.Metrics.CpuTimeMillis >= taskVersion.TimeLimMs
+		memoryLimitExceeded := data.Metrics.MemoryKBytes >= taskVersion.MemLimKb
+		idlenessLimitExceeded := data.Metrics.WallTimeMillis >= taskVersion.TimeLimMs*2
+
+		if timeLimitExceeded || memoryLimitExceeded || idlenessLimitExceeded {
+			log.Println("Test failed with time limit exceeded")
+			gatherer.FinishTestWithLimitExceeded(test.ID, RuntimeExceededFlags{
+				TimeLimitExceeded:     timeLimitExceeded,
+				MemoryLimitExceeded:   memoryLimitExceeded,
+				IdlenessLimitExceeded: idlenessLimitExceeded,
+			})
+			continue
+		}
 		if data.Output.ExitCode != 0 {
 			log.Println("Test failed with exit code:", data.Output.ExitCode)
 			gatherer.FinishTestWithRuntimeError(test.ID)

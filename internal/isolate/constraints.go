@@ -8,9 +8,9 @@ type Constraints struct {
 	CpuTimeLimInSec      float64
 	ExtraCpuTimeLimInSec float64
 	WallTimeLimInSec     float64
-	MemoryLimitInKB      int
-	MaxProcesses         int
-	MaxOpenFiles         int
+	MemoryLimitInKB      int64
+	MaxProcesses         int64
+	MaxOpenFiles         int64
 }
 
 func DefaultConstraints() Constraints {

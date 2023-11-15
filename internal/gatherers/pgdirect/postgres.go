@@ -164,8 +164,16 @@ func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.Run
 }
 
 func (g *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
+	status := statuses.IdlenessLimitExceeded
+	if flags.MemoryLimitExceeded {
+		status = statuses.MemoryLimitExceeded
+	}
+	if flags.TimeLimitExceeded {
+		status = statuses.TimeLimitExceeded
+	}
+
 	stmt := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.EvalStatusID).
-		SET(statuses.TimeLimitExceeded).
+		SET(status).
 		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId)).AND(
 			table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId))))
 	_, err := stmt.Exec(g.postgres)
