@@ -134,22 +134,28 @@ func (g *Gatherer) StartTest(testId int64) {
 }
 
 func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.RuntimeData) {
-	stmt := table.RuntimeData.INSERT(table.RuntimeData.AllColumns).
-		MODEL(&model.RuntimeData{
-			Stdout:          &rd.Output.Stdout,
-			Stderr:          &rd.Output.Stderr,
-			TimeMillis:      &rd.Metrics.CpuTimeMillis,
-			MemoryKibibytes: &rd.Metrics.MemoryKBytes,
-			TimeWallMillis:  &rd.Metrics.WallTimeMillis,
-			ExitCode:        &rd.Output.ExitCode,
-		}).
+	mrd := model.RuntimeData{
+		Stdout:          &rd.Output.Stdout,
+		Stderr:          &rd.Output.Stderr,
+		TimeMillis:      &rd.Metrics.CpuTimeMillis,
+		MemoryKibibytes: &rd.Metrics.MemoryKBytes,
+		TimeWallMillis:  &rd.Metrics.WallTimeMillis,
+		ExitCode:        &rd.Output.ExitCode,
+	}
+	stmt := table.RuntimeData.INSERT(table.RuntimeData.Stdout,
+		table.RuntimeData.Stderr,
+		table.RuntimeData.TimeMillis,
+		table.RuntimeData.MemoryKibibytes,
+		table.RuntimeData.TimeWallMillis,
+		table.RuntimeData.ExitCode,
+	).
+		MODEL(&mrd).
 		RETURNING(table.RuntimeData.ID)
-	var runtimeDataId int64
-	err := stmt.Query(g.postgres, &runtimeDataId)
+	err := stmt.Query(g.postgres, &mrd)
 	panicOnError(err)
 
 	stmt2 := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.ExecRDataID).
-		SET(runtimeDataId).
+		SET(mrd.ID).
 		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId))).
 		WHERE(table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId)))
 	_, err = stmt2.Exec(g.postgres)
@@ -175,22 +181,28 @@ func (g *Gatherer) FinishTestWithRuntimeError(testId int64) {
 }
 
 func (g *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *testing.RuntimeData) {
-	stmt := table.RuntimeData.INSERT(table.RuntimeData.AllColumns).
-		MODEL(&model.RuntimeData{
-			Stdout:          &rd.Output.Stdout,
-			Stderr:          &rd.Output.Stderr,
-			TimeMillis:      &rd.Metrics.CpuTimeMillis,
-			MemoryKibibytes: &rd.Metrics.MemoryKBytes,
-			TimeWallMillis:  &rd.Metrics.WallTimeMillis,
-			ExitCode:        &rd.Output.ExitCode,
-		}).
+	mrd := model.RuntimeData{
+		Stdout:          &rd.Output.Stdout,
+		Stderr:          &rd.Output.Stderr,
+		TimeMillis:      &rd.Metrics.CpuTimeMillis,
+		MemoryKibibytes: &rd.Metrics.MemoryKBytes,
+		TimeWallMillis:  &rd.Metrics.WallTimeMillis,
+		ExitCode:        &rd.Output.ExitCode,
+	}
+	stmt := table.RuntimeData.INSERT(
+		table.RuntimeData.Stdout,
+		table.RuntimeData.Stderr,
+		table.RuntimeData.TimeMillis,
+		table.RuntimeData.MemoryKibibytes,
+		table.RuntimeData.TimeWallMillis,
+		table.RuntimeData.ExitCode).
+		MODEL(&mrd).
 		RETURNING(table.RuntimeData.ID)
-	var runtimeDataId int64
-	err := stmt.Query(g.postgres, &runtimeDataId)
+	err := stmt.Query(g.postgres, &mrd)
 	panicOnError(err)
 
 	stmt2 := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.CheckerRDataID).
-		SET(runtimeDataId).
+		SET(mrd.ID).
 		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId))).
 		WHERE(table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId)))
 	_, err = stmt2.Exec(g.postgres)
