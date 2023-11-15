@@ -232,6 +232,11 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		log.Println("Stderr:", data.Output.Stderr)
 		gatherer.ReportTestSubmissionRuntimeData(test.ID, data)
 
+		if data.Output.ExitCode != 0 {
+			log.Println("Test failed with exit code:", data.Output.ExitCode)
+			gatherer.FinishTestWithRuntimeError(test.ID)
+			continue
+		}
 		err = box.Close()
 		if err != nil {
 			gatherer.FinishWithInternalServerError(err)
@@ -300,6 +305,12 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		log.Println("Stderr:", data.Output.Stderr)
 		gatherer.ReportTestCheckerRuntimeData(test.ID, data)
 
+		if data.Output.ExitCode == 0 {
+			gatherer.FinishTestWithVerdictAccepted(test.ID)
+			gatherer.IncrementScore(1)
+		} else {
+			gatherer.FinishTestWithVerdictWrongAnswer(test.ID)
+		}
 	}
 	log.Println(len(compiledChecker))
 
