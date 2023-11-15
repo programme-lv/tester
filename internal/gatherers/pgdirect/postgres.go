@@ -7,6 +7,7 @@ import (
 	"github.com/programme-lv/tester/internal/database/proglv/public/table"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/pkg/messaging/statuses"
+	"log"
 	"log/slog"
 )
 
@@ -156,8 +157,8 @@ func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.Run
 
 	stmt2 := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.ExecRDataID).
 		SET(mrd.ID).
-		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId))).
-		WHERE(table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId)))
+		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId)).AND(
+			table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId))))
 	_, err = stmt2.Exec(g.postgres)
 	panicOnError(err)
 }
@@ -165,8 +166,8 @@ func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.Run
 func (g *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
 	stmt := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.EvalStatusID).
 		SET(statuses.TimeLimitExceeded).
-		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId))).
-		WHERE(table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId)))
+		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId)).AND(
+			table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId))))
 	_, err := stmt.Exec(g.postgres)
 	panicOnError(err)
 }
@@ -174,8 +175,8 @@ func (g *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.Runti
 func (g *Gatherer) FinishTestWithRuntimeError(testId int64) {
 	stmt := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.EvalStatusID).
 		SET(statuses.RuntimeError).
-		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId))).
-		WHERE(table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId)))
+		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId)).AND(
+			table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId))))
 	_, err := stmt.Exec(g.postgres)
 	panicOnError(err)
 }
@@ -203,8 +204,8 @@ func (g *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *testing.Runtim
 
 	stmt2 := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.CheckerRDataID).
 		SET(mrd.ID).
-		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId))).
-		WHERE(table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId)))
+		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId)).AND(
+			table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId))))
 	_, err = stmt2.Exec(g.postgres)
 	panicOnError(err)
 }
@@ -212,8 +213,8 @@ func (g *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *testing.Runtim
 func (g *Gatherer) FinishTestWithVerdictAccepted(testId int64) {
 	stmt := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.EvalStatusID).
 		SET(statuses.Accepted).
-		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId))).
-		WHERE(table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId)))
+		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId)).AND(
+			table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId))))
 	_, err := stmt.Exec(g.postgres)
 	panicOnError(err)
 }
@@ -221,8 +222,8 @@ func (g *Gatherer) FinishTestWithVerdictAccepted(testId int64) {
 func (g *Gatherer) FinishTestWithVerdictWrongAnswer(testId int64) {
 	stmt := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.EvalStatusID).
 		SET(statuses.WrongAnswer).
-		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId))).
-		WHERE(table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId)))
+		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId)).AND(
+			table.EvaluationTestResults.TaskVTestID.EQ(postgres.Int64(testId))))
 	_, err := stmt.Exec(g.postgres)
 	panicOnError(err)
 }
@@ -231,6 +232,7 @@ func (g *Gatherer) IncrementScore(delta int64) {
 	stmt := table.Evaluations.UPDATE(table.Evaluations.EvalTotalScore).
 		SET(table.Evaluations.EvalTotalScore.ADD(postgres.Int(delta))).
 		WHERE(table.Evaluations.ID.EQ(postgres.Int64(g.evaluationId)))
+	log.Println(stmt.Sql())
 	_, err := stmt.Exec(g.postgres)
 	panicOnError(err)
 }
