@@ -222,7 +222,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 			CpuTimeLimInSec:      float64(taskVersion.TimeLimMs) / 1000.0,
 			ExtraCpuTimeLimInSec: 1,
 			WallTimeLimInSec:     10 + 5*float64(taskVersion.TimeLimMs)/1000.0,
-			MemoryLimitInKB:      taskVersion.MemLimKb,
+			MemoryLimitInKB:      taskVersion.MemLimKibibytes,
 			MaxProcesses:         128,
 			MaxOpenFiles:         128,
 		})
@@ -247,7 +247,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		gatherer.ReportTestSubmissionRuntimeData(test.ID, data)
 
 		timeLimitExceeded := data.Metrics.CpuTimeMillis >= taskVersion.TimeLimMs
-		memoryLimitExceeded := data.Metrics.MemoryKBytes >= taskVersion.MemLimKb
+		memoryLimitExceeded := data.Metrics.MemoryKBytes >= taskVersion.MemLimKibibytes
 		idlenessLimitExceeded := data.Metrics.WallTimeMillis >= taskVersion.TimeLimMs*2
 
 		if timeLimitExceeded || memoryLimitExceeded || idlenessLimitExceeded {
@@ -347,6 +347,11 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 }
 
 func collectProcessRuntimeData(process *isolate.Process) (*RuntimeData, error) {
+	err := process.Start()
+	if err != nil {
+		return nil, err
+	}
+
 	stdout, err := io.ReadAll(process.Stdout())
 	if err != nil {
 		return nil, err
