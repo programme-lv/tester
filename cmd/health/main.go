@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	jet "github.com/go-jet/jet/v2/postgres"
 	pretty_table "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -24,26 +25,54 @@ type feedbackRow struct {
 }
 
 func main() {
-	ensureIsolateOk()
-	ensureLanguagesOk()
+	feedback := make([]feedbackRow, 0)
 
-	feedback := []feedbackRow{
-		{
-			unit:    "isolate",
-			health:  0,
-			message: "",
-		},
+	isolateRow := ensureIsolateOk()
+	feedback = append(feedback, isolateRow)
+
+	if isolateRow.health != 2 {
+		langRows := ensureLanguagesOk()
+		feedback = append(feedback, langRows...)
 	}
 
 	outputFeedback(feedback)
 }
 
-func ensureIsolateOk() {
+func ensureIsolateOk() feedbackRow {
 	isolateCmd := exec.Command("isolate", "--cg", "--cleanup")
 	log.Printf("Running %v...", isolateCmd.Args)
-	err := isolateCmd.Run()
-	panicOnError(err)
-	log.Printf("Finished %v OK", isolateCmd.Args)
+	out, err := isolateCmd.CombinedOutput()
+	if err != nil {
+		var exitError *exec.ExitError
+		ok := errors.As(err, &exitError)
+		if !ok {
+			return feedbackRow{
+				unit:    "Isolate",
+				health:  2,
+				message: err.Error(),
+			}
+		}
+	}
+
+	log.Printf("Ran %v", isolateCmd.Args)
+	if err != nil {
+		log.Printf("Failed to run %v: %v", isolateCmd.Args, err)
+		msg := err.Error()
+		if out != nil && len(out) > 0 {
+			msg = msg + ": " + string(out)
+		}
+		return feedbackRow{
+			unit:    "Isolate",
+			health:  2,
+			message: msg,
+		}
+	} else {
+		return feedbackRow{
+			unit:    "Isolate",
+			health:  0,
+			message: string(out),
+		}
+	}
 }
 
 func ensureLanguagesOk() []feedbackRow {
@@ -51,6 +80,7 @@ func ensureLanguagesOk() []feedbackRow {
 
 	isolateInstance := isolate.GetInstance()
 
+	res := make([]feedbackRow, 0)
 	for _, language := range languages {
 		box, err := isolateInstance.NewBox()
 		panicOnError(err)
@@ -61,30 +91,21 @@ func ensureLanguagesOk() []feedbackRow {
 		var process *isolate.Process
 		process, err = box.Run(language.ExecuteCmd, io.NopCloser(strings.NewReader("")), nil)
 
-		stdout := process.Stdout()
-		stderr := process.Stderr()
-
-		var stdoutBytes []byte
-		stdoutBytes, err = io.ReadAll(stdout)
-		panicOnError(err)
-		stdoutStr := string(stdoutBytes)
-
-		var stderrBytes []byte
-		stderrBytes, err = io.ReadAll(stderr)
-		panicOnError(err)
-		stderrStr := string(stderrBytes)
-
 		var metrics *isolate.Metrics
-		metrics, err = process.Wait()
+		var out []byte
+		metrics, out, err = process.CombinedOutput()
 		panicOnError(err)
 
+		healthInt := 0
 		if metrics.ExitCode != 0 {
-			log.Printf("Language %v failed to run. Exit code: %v. Stdout: %v. Stderr: %v", language.FullName, metrics.ExitCode, stdoutStr, stderrStr)
-		} else {
-			log.Printf("Language %v ran OK. Stdout: %v. Stderr: %v", language.FullName, stdoutStr, stderrStr)
+			healthInt = 2
 		}
-		// create isolate bo
-		//ensureLanguageOk(language)
+
+		res = append(res, feedbackRow{
+			unit:    language.FullName,
+			health:  healthInt,
+			message: string(out),
+		})
 	}
 	return nil
 }
@@ -136,14 +157,22 @@ func outputFeedback(feedback []feedbackRow) {
 			})
 	}
 	t.SetStyle(pretty_table.StyleColoredDark)
-	textColorer := text.Transformer(func(s interface{}) string {
-		return text.FgHiGreen.Sprint(s)
+	textColor := text.Transformer(func(s interface{}) string {
+		switch s.(string) {
+		case "OKAY":
+			return text.FgHiGreen.Sprint(s)
+		case "WARN":
+			return text.FgHiYellow.Sprint(s)
+		case "ERROR":
+			return text.FgHiRed.Sprint(s)
+		}
+		return ""
 	})
 
 	t.SetColumnConfigs([]pretty_table.ColumnConfig{
 		{
 			Name:        "Health",
-			Transformer: textColorer,
+			Transformer: textColor,
 			Align:       text.AlignCenter,
 		},
 	})
