@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	jet "github.com/go-jet/jet/v2/postgres"
 	pretty_table "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -82,11 +83,50 @@ func ensureLanguagesOk() []feedbackRow {
 
 	res := make([]feedbackRow, 0)
 	for _, language := range languages {
+		var readyFile []byte
+		if language.CompileCmd != nil {
+			compileBox, err := isolateInstance.NewBox()
+			panicOnError(err)
+
+			err = compileBox.AddFile(language.CodeFilename, []byte(*language.HelloWorldCode))
+			panicOnError(err)
+
+			process, err := compileBox.Run(*language.CompileCmd, io.NopCloser(strings.NewReader("")), nil)
+			panicOnError(err)
+
+			metrics, out, err := process.CombinedOutput()
+			panicOnError(err)
+
+			if metrics.ExitCode != 0 {
+				res = append(res, feedbackRow{
+					unit:    language.FullName,
+					health:  2,
+					message: string(out),
+				})
+				err = compileBox.Close()
+				panicOnError(err)
+				continue
+			}
+
+			bytes, err := compileBox.GetFile(*language.CompiledFilename)
+			panicOnError(err)
+
+			readyFile = bytes
+
+			err = compileBox.Close()
+			panicOnError(err)
+		}
+
 		box, err := isolateInstance.NewBox()
 		panicOnError(err)
 
-		err = box.AddFile(language.CodeFilename, []byte(*language.HelloWorldCode))
-		panicOnError(err)
+		if language.CompileCmd != nil {
+			err = box.AddFile(*language.CompiledFilename, readyFile)
+			panicOnError(err)
+		} else {
+			err = box.AddFile(language.CodeFilename, []byte(*language.HelloWorldCode))
+			panicOnError(err)
+		}
 
 		var process *isolate.Process
 		process, err = box.Run(language.ExecuteCmd, io.NopCloser(strings.NewReader("")), nil)
@@ -97,17 +137,29 @@ func ensureLanguagesOk() []feedbackRow {
 		panicOnError(err)
 
 		healthInt := 0
+		msg := ""
+		expectedOutput := "Hello, World!"
 		if metrics.ExitCode != 0 {
 			healthInt = 2
+		} else {
+			if strings.Contains(string(out), expectedOutput) {
+				healthInt = 0
+			} else {
+				healthInt = 1
+				msg = fmt.Sprintf("Output does not contain \"%v\"\nOutput: %s", expectedOutput, string(out))
+			}
 		}
 
 		res = append(res, feedbackRow{
 			unit:    language.FullName,
 			health:  healthInt,
-			message: string(out),
+			message: msg,
 		})
+
+		err = box.Close()
+		panicOnError(err)
 	}
-	return nil
+	return res
 }
 
 func fetchLanguages() []model.ProgrammingLanguages {
@@ -156,7 +208,9 @@ func outputFeedback(feedback []feedbackRow) {
 				row.message,
 			})
 	}
-	t.SetStyle(pretty_table.StyleColoredDark)
+	style := pretty_table.StyleColoredDark
+	style.Color.RowAlternate[0] = style.Color.Row[0]
+	t.SetStyle(style)
 	textColor := text.Transformer(func(s interface{}) string {
 		switch s.(string) {
 		case "OKAY":

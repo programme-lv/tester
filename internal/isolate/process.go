@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"syscall"
 )
 
 type Process struct {
@@ -57,13 +56,7 @@ func (process *Process) Wait() (*Metrics, error) {
 
 	if err != nil {
 		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			if _, ok := exitErr.Sys().(syscall.WaitStatus); ok {
-				// fmt.Printf("Exit Status: %d\n", status.ExitStatus())
-			} else {
-				// fmt.Println("Cmd failed but was unable to determine exit status.")
-			}
-		} else {
+		if !errors.As(err, &exitErr) {
 			return nil, err
 		}
 	}
