@@ -21,7 +21,7 @@ import (
 
 type feedbackRow struct {
 	unit    string
-	health  int // 0 - OK, 1 - Warning, 2 - Error
+	health  int // 0 - OK, 1 - Warning, 2 - Error, 3 - Ignored
 	message string
 }
 
@@ -83,7 +83,17 @@ func ensureLanguagesOk() []feedbackRow {
 
 	res := make([]feedbackRow, 0)
 	for _, language := range languages {
+		if language.Enabled == false {
+			res = append(res, feedbackRow{
+				unit:    language.FullName,
+				health:  3,
+				message: "Language is disabled",
+			})
+			continue
+		}
+
 		var readyFile []byte
+		log.Println("Compiling", language.FullName)
 		if language.CompileCmd != nil {
 			compileBox, err := isolateInstance.NewBox()
 			panicOnError(err)
@@ -116,6 +126,7 @@ func ensureLanguagesOk() []feedbackRow {
 			err = compileBox.Close()
 			panicOnError(err)
 		}
+		log.Println("Compiled", language.FullName)
 
 		box, err := isolateInstance.NewBox()
 		panicOnError(err)
@@ -199,6 +210,8 @@ func outputFeedback(feedback []feedbackRow) {
 			healthCode = "WARN"
 		case 2:
 			healthCode = "ERROR"
+		case 3:
+			healthCode = "PASS"
 		}
 
 		t.AppendRow(
@@ -219,6 +232,8 @@ func outputFeedback(feedback []feedbackRow) {
 			return text.FgHiYellow.Sprint(s)
 		case "ERROR":
 			return text.FgHiRed.Sprint(s)
+		case "PASS":
+			return text.FgHiBlue.Sprint(s)
 		}
 		return ""
 	})
