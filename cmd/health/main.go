@@ -2,6 +2,8 @@ package main
 
 import (
 	jet "github.com/go-jet/jet/v2/postgres"
+	pretty_table "github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/programme-lv/tester/internal/database/proglv/public/model"
@@ -10,21 +12,30 @@ import (
 	"github.com/programme-lv/tester/internal/isolate"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 )
 
 type feedbackRow struct {
 	unit    string
-	health  int
+	health  int // 0 - OK, 1 - Warning, 2 - Error
 	message string
 }
 
 func main() {
 	ensureIsolateOk()
-
 	ensureLanguagesOk()
 
+	feedback := []feedbackRow{
+		{
+			unit:    "isolate",
+			health:  0,
+			message: "",
+		},
+	}
+
+	outputFeedback(feedback)
 }
 
 func ensureIsolateOk() {
@@ -35,7 +46,7 @@ func ensureIsolateOk() {
 	log.Printf("Finished %v OK", isolateCmd.Args)
 }
 
-func ensureLanguagesOk() {
+func ensureLanguagesOk() []feedbackRow {
 	languages := fetchLanguages()
 
 	isolateInstance := isolate.GetInstance()
@@ -75,6 +86,7 @@ func ensureLanguagesOk() {
 		// create isolate bo
 		//ensureLanguageOk(language)
 	}
+	return nil
 }
 
 func fetchLanguages() []model.ProgrammingLanguages {
@@ -99,6 +111,43 @@ func fetchLanguages() []model.ProgrammingLanguages {
 	log.Printf("Selected %v languages", len(res))
 
 	return res
+}
+
+func outputFeedback(feedback []feedbackRow) {
+	t := pretty_table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(pretty_table.Row{"Unit", "Health", "Message"})
+	for _, row := range feedback {
+		healthCode := ""
+		switch row.health {
+		case 0:
+			healthCode = "OKAY"
+		case 1:
+			healthCode = "WARN"
+		case 2:
+			healthCode = "ERROR"
+		}
+
+		t.AppendRow(
+			pretty_table.Row{
+				row.unit,
+				healthCode,
+				row.message,
+			})
+	}
+	t.SetStyle(pretty_table.StyleColoredDark)
+	textColorer := text.Transformer(func(s interface{}) string {
+		return text.FgHiGreen.Sprint(s)
+	})
+
+	t.SetColumnConfigs([]pretty_table.ColumnConfig{
+		{
+			Name:        "Health",
+			Transformer: textColorer,
+			Align:       text.AlignCenter,
+		},
+	})
+	t.Render()
 }
 
 func panicOnError(err error) {
