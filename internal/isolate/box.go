@@ -73,19 +73,8 @@ func (box *Box) Run(
 	log.Println("Running command:", cmdStr)
 	cmd := exec.Command("/usr/bin/bash", "-c", cmdStr)
 	cmd.Stdin = stdin
-	process.stdout, err = cmd.StdoutPipe()
-	if err != nil {
-		return process, err
-	}
-	process.stderr, err = cmd.StderrPipe()
-	if err != nil {
-		return process, err
-	}
-	process.cmd = cmd
 
-	if err = cmd.Start(); err != nil {
-		return process, err
-	}
+	process.cmd = cmd
 
 	return process, err
 }
