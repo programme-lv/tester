@@ -241,9 +241,9 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		log.Println("Collected process runtime data")
 
 		log.Println("Results:", data.Output.ExitCode, data.Metrics.CpuTimeMillis, data.Metrics.MemoryKBytes)
-		log.Println("Stdin:", string(inputBytes))
-		log.Println("Stdout:", data.Output.Stdout)
-		log.Println("Stderr:", data.Output.Stderr)
+		//log.Println("Stdin:", string(inputBytes))
+		//log.Println("Stdout:", data.Output.Stdout)
+		//log.Println("Stderr:", data.Output.Stderr)
 		gatherer.ReportTestSubmissionRuntimeData(test.ID, data)
 
 		timeLimitExceeded := data.Metrics.CpuTimeMillis >= taskVersion.TimeLimMs

@@ -190,7 +190,16 @@ func (g *Gatherer) StartTest(testId int64) {
 	panicOnError(err)
 }
 
+func limitLength1000(str string) string {
+	if len(str) > 1000 {
+		return str[:1000] + "..."
+	}
+	return str
+}
+
 func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.RuntimeData) {
+	rd.Output.Stdout = limitLength1000(rd.Output.Stdout)
+	rd.Output.Stderr = limitLength1000(rd.Output.Stderr)
 	mrd := model.RuntimeData{
 		Stdout:          &rd.Output.Stdout,
 		Stderr:          &rd.Output.Stderr,
@@ -246,6 +255,8 @@ func (g *Gatherer) FinishTestWithRuntimeError(testId int64) {
 }
 
 func (g *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *testing.RuntimeData) {
+	limitLength1000(rd.Output.Stdout)
+	limitLength1000(rd.Output.Stderr)
 	mrd := model.RuntimeData{
 		Stdout:          &rd.Output.Stdout,
 		Stderr:          &rd.Output.Stderr,
