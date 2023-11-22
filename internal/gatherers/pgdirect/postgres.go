@@ -44,10 +44,66 @@ func (g *Gatherer) FinishWithInternalServerError(testingErr error) {
 }
 
 func (g *Gatherer) FinishEvaluation() {
-	stmt := table.Evaluations.UPDATE(table.Evaluations.EvalStatusID).
-		SET(statuses.Finished).
+	var testTimeAndMemory []struct {
+		model.RuntimeData
+	}
+	err := table.EvaluationTestResults.SELECT(
+		table.RuntimeData.TimeMillis, table.RuntimeData.MemoryKibibytes).
+		FROM(table.EvaluationTestResults.LEFT_JOIN(table.RuntimeData,
+			table.RuntimeData.ID.EQ(table.EvaluationTestResults.ExecRDataID))).
+		WHERE(table.EvaluationTestResults.EvaluationID.EQ(postgres.Int64(g.evaluationId))).
+		Query(g.postgres, &testTimeAndMemory)
+	panicOnError(err)
+
+	maxTimeMillis := int64(0)
+	maxMemoryKibibytes := int64(0)
+	totalTimeMillis := int64(0)
+	totalMemoryKibibytes := int64(0)
+	for _, t := range testTimeAndMemory {
+		if t.TimeMillis != nil && *t.TimeMillis > maxTimeMillis {
+			maxTimeMillis = *t.TimeMillis
+		}
+		if t.MemoryKibibytes != nil && *t.MemoryKibibytes > maxMemoryKibibytes {
+			maxMemoryKibibytes = *t.MemoryKibibytes
+		}
+		if t.TimeMillis != nil {
+			totalTimeMillis += *t.TimeMillis
+		}
+		if t.MemoryKibibytes != nil {
+			totalMemoryKibibytes += *t.MemoryKibibytes
+		}
+	}
+	var avgTimeMillis float64 = 0
+	var avgMemoryKibibytes float64 = 0
+	if len(testTimeAndMemory) > 0 {
+		avgTimeMillis = float64(totalTimeMillis) / float64(len(testTimeAndMemory))
+	}
+	if len(testTimeAndMemory) > 0 {
+		avgMemoryKibibytes = float64(totalMemoryKibibytes) / float64(len(testTimeAndMemory))
+	}
+
+	var runtimeStatistics model.RuntimeStatistics
+	err = table.RuntimeStatistics.INSERT(
+		table.RuntimeStatistics.MaximumTimeMillis,
+		table.RuntimeStatistics.MaximumMemoryKibibytes,
+		table.RuntimeStatistics.TotalTimeMillis,
+		table.RuntimeStatistics.TotalMemoryKibibytes,
+		table.RuntimeStatistics.AvgTimeMillis,
+		table.RuntimeStatistics.AvgMemoryKibibytes,
+	).VALUES(
+		maxTimeMillis,
+		maxMemoryKibibytes,
+		totalTimeMillis,
+		totalMemoryKibibytes,
+		avgTimeMillis,
+		avgMemoryKibibytes,
+	).RETURNING(table.RuntimeStatistics.ID).Query(g.postgres, &runtimeStatistics)
+	panicOnError(err)
+
+	stmt := table.Evaluations.UPDATE(table.Evaluations.EvalStatusID, table.Evaluations.TestRuntimeStatisticsID).
+		SET(statuses.Finished, runtimeStatistics.ID).
 		WHERE(table.Evaluations.ID.EQ(postgres.Int64(g.evaluationId)))
-	_, err := stmt.Exec(g.postgres)
+	_, err = stmt.Exec(g.postgres)
 	panicOnError(err)
 }
 
