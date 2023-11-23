@@ -15,12 +15,12 @@ type Constraints struct {
 
 func DefaultConstraints() Constraints {
 	return Constraints{
-		CpuTimeLimInSec:      50.0,
+		CpuTimeLimInSec:      15.0,
 		ExtraCpuTimeLimInSec: 0.5,
-		WallTimeLimInSec:     10.0,
-		MemoryLimitInKB:      2048000,
-		MaxProcesses:         128,
-		MaxOpenFiles:         128,
+		WallTimeLimInSec:     20.0,
+		MemoryLimitInKB:      2000000,
+		MaxProcesses:         256,
+		MaxOpenFiles:         256,
 	}
 }
 

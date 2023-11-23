@@ -2,6 +2,7 @@ package isolate
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
 	"strings"
 )
@@ -16,6 +17,7 @@ type Metrics struct {
 	ExitCode     int64
 	Status       string
 	Message      string
+	Killed       int64
 }
 
 func parseMetaFile(metaFileBytes []byte) (*Metrics, error) {
@@ -32,6 +34,7 @@ func parseMetaFile(metaFileBytes []byte) (*Metrics, error) {
 
 		key, value := parts[0], parts[1]
 		if err := parseLine(key, value, metrics); err != nil {
+			log.Println("Error parsing meta file: ", string(metaFileBytes))
 			return nil, err
 		}
 	}
@@ -56,12 +59,15 @@ func parseLine(key, value string, metrics *Metrics) error {
 		return sscanfErr(fmt.Sscanf(value, "%d", &metrics.ExitCode))
 	case "status":
 		metrics.Status = value
+	case "killed":
+		return sscanfErr(fmt.Sscanf(value, "%d", &metrics.Killed))
 	case "message":
 		metrics.Message = value
 	case "":
 		// ignore
 	default:
 		slog.Info("unknown meta file line", slog.String("line", key+":"+value))
+		return fmt.Errorf("unknown meta file line: %s", key+":"+value)
 	}
 	return nil
 }

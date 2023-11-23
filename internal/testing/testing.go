@@ -222,7 +222,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 			CpuTimeLimInSec:      float64(taskVersion.TimeLimMs) / 1000.0,
 			ExtraCpuTimeLimInSec: 1,
 			WallTimeLimInSec:     10 + 5*float64(taskVersion.TimeLimMs)/1000.0,
-			MemoryLimitInKB:      taskVersion.MemLimKibibytes,
+			MemoryLimitInKB:      taskVersion.MemLimKibibytes + 2*1024*1024, // + 2 GB TODO: reduce this
 			MaxProcesses:         128,
 			MaxOpenFiles:         128,
 		})
@@ -251,7 +251,15 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 		idlenessLimitExceeded := data.Metrics.WallTimeMillis >= taskVersion.TimeLimMs*2
 
 		if timeLimitExceeded || memoryLimitExceeded || idlenessLimitExceeded {
-			log.Println("Test failed with time limit exceeded")
+			if timeLimitExceeded {
+				log.Println("Test failed with time limit exceeded")
+			}
+			if memoryLimitExceeded {
+				log.Println("Test failed with memory limit exceeded")
+			}
+			if idlenessLimitExceeded {
+				log.Println("Test failed with idleness limit exceeded")
+			}
 			gatherer.FinishTestWithLimitExceeded(test.ID, RuntimeExceededFlags{
 				TimeLimitExceeded:     timeLimitExceeded,
 				MemoryLimitExceeded:   memoryLimitExceeded,

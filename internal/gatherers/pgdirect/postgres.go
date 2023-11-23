@@ -230,11 +230,11 @@ func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.Run
 
 func (g *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
 	status := statuses.IdlenessLimitExceeded
-	if flags.MemoryLimitExceeded {
-		status = statuses.MemoryLimitExceeded
-	}
 	if flags.TimeLimitExceeded {
 		status = statuses.TimeLimitExceeded
+	}
+	if flags.MemoryLimitExceeded {
+		status = statuses.MemoryLimitExceeded
 	}
 
 	stmt := table.EvaluationTestResults.UPDATE(table.EvaluationTestResults.EvalStatusID).
