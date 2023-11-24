@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/programme-lv/tester/internal/database"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -50,8 +51,10 @@ func isTextFileInCache(sha256 string) (bool, error) {
 func ensureTestlibExistsInCache() error {
 	// Check if the file already exists
 	if _, err := os.Stat(testLibCachePath); err == nil {
+		log.Println("Testlib already exists in cache")
 		return nil
 	} else if !os.IsNotExist(err) {
+		log.Println("Error while checking if testlib exists in cache")
 		return err // Return here on other errors besides "not exists"
 	}
 
