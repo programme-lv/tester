@@ -18,7 +18,7 @@ func DefaultConstraints() Constraints {
 		CpuTimeLimInSec:      15.0,
 		ExtraCpuTimeLimInSec: 0.5,
 		WallTimeLimInSec:     20.0,
-		MemoryLimitInKB:      2000000,
+		MemoryLimitInKB:      4 * 1024 * 1024, // 4 GB
 		MaxProcesses:         256,
 		MaxOpenFiles:         256,
 	}

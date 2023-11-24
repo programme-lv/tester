@@ -222,7 +222,7 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gatherer EvalResGat
 			CpuTimeLimInSec:      float64(taskVersion.TimeLimMs) / 1000.0,
 			ExtraCpuTimeLimInSec: 1,
 			WallTimeLimInSec:     10 + 5*float64(taskVersion.TimeLimMs)/1000.0,
-			MemoryLimitInKB:      taskVersion.MemLimKibibytes + 2*1024*1024, // + 2 GB TODO: reduce this
+			MemoryLimitInKB:      taskVersion.MemLimKibibytes + 4*1024*1024, // + 4 GB TODO: reduce this
 			MaxProcesses:         128,
 			MaxOpenFiles:         128,
 		})
