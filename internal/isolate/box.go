@@ -54,6 +54,7 @@ func (box *Box) Run(
 	}
 
 	var args []string
+	args = append(args, "-s")
 	args = append(args, "--cg")
 	args = append(args, fmt.Sprintf("--box-id=%d", box.id))
 
