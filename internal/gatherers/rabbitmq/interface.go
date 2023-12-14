@@ -16,7 +16,7 @@ func (r *Gatherer) StartEvaluation() {
 	r.sendEvalResponse(msg)
 }
 
-func (r *Gatherer) StartTesting(maxScore int) {
+func (r *Gatherer) StartTesting(maxScore int64) {
 	msg := &messaging2.EvaluationResponse{
 		FeedbackType: messaging2.UpdateEvalStatus,
 		Data: messaging2.UpdateEvalStatusData{
@@ -28,17 +28,17 @@ func (r *Gatherer) StartTesting(maxScore int) {
 	msg = &messaging2.EvaluationResponse{
 		FeedbackType: messaging2.SetMaxScore,
 		Data: messaging2.SetMaxScoreData{
-			MaxScore: maxScore,
+			MaxScore: int(maxScore),
 		},
 	}
 	r.sendEvalResponse(msg)
 }
 
-func (r *Gatherer) IncrementScore(delta int) {
+func (r *Gatherer) IncrementScore(delta int64) {
 	msg := &messaging2.EvaluationResponse{
 		FeedbackType: messaging2.IncrementScore,
 		Data: messaging2.IncrementScoreData{
-			Delta: delta,
+			Delta: int(delta),
 		},
 	}
 	r.sendEvalResponse(msg)
