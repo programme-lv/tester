@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/programme-lv/tester/pkg/messaging"
 	"log"
 	"math/rand"
 	"time"
+
+	"github.com/programme-lv/tester/pkg/messaging"
 
 	_ "github.com/lib/pq"
 	"github.com/programme-lv/tester/internal/environment"
@@ -56,7 +57,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	correlation := messaging.Correlation{
+	correlation := messaging.ResponseCorrelation{
 		HasEvaluationId: false,
 		EvaluationId:    0,
 		UnixMillis:      time.Now().UnixMilli(),
