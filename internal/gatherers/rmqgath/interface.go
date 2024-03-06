@@ -1,7 +1,7 @@
 package rmqgath
 
 import (
-	"github.com/programme-lv/tester/internal/testing"
+	"github.com/programme-lv/tester/internal/testing/models"
 	messaging2 "github.com/programme-lv/tester/pkg/messaging"
 	"github.com/programme-lv/tester/pkg/messaging/statuses"
 )
@@ -74,7 +74,7 @@ func (r *Gatherer) StartCompilation() {
 	r.sendEvalResponse(msg)
 }
 
-func (r *Gatherer) FinishCompilation(data *testing.RuntimeData) {
+func (r *Gatherer) FinishCompilation(data *models.RuntimeData) {
 	msg := &messaging2.EvaluationResponse{
 		FeedbackType: messaging2.CompilationFinished,
 		Data: messaging2.CompilationFinishedData{
@@ -117,21 +117,21 @@ func (r *Gatherer) StartTest(testId int64) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.RuntimeData) {
+func (r *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *models.RuntimeData) {
 	if r.testRuntimeDataCache[testId] == nil {
 		r.testRuntimeDataCache[testId] = &testRuntimeData{}
 	}
 	r.testRuntimeDataCache[testId].submissionRuntimeData = *rd
 }
 
-func (r *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *testing.RuntimeData) {
+func (r *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *models.RuntimeData) {
 	if r.testRuntimeDataCache[testId] == nil {
 		r.testRuntimeDataCache[testId] = &testRuntimeData{}
 	}
 	r.testRuntimeDataCache[testId].checkerRuntimeData = *rd
 }
 
-func toMessagingRuntimeData(rd *testing.RuntimeData) *messaging2.RuntimeData {
+func toMessagingRuntimeData(rd *models.RuntimeData) *messaging2.RuntimeData {
 	return &messaging2.RuntimeData{
 		Output: messaging2.RuntimeOutput{
 			Stdout:   rd.Output.Stdout,
@@ -161,7 +161,7 @@ func (r *Gatherer) FinishTest(testId int64) {
 	r.sendEvalResponse(msg)
 }
 
-func (r *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
+func (r *Gatherer) FinishTestWithLimitExceeded(testId int64, flags models.RuntimeExceededFlags) {
 	submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
 	checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
 	verdict := statuses.IdlenessLimitExceeded

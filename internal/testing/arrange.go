@@ -20,7 +20,10 @@ func ArrangeEvalRequest(req messaging.EvaluationRequest,
 		Subtasks:    []models.Subtask{},
 	}
 
-	// isolateInstance := isolate.GetInstance()
+	res.SubmConstrs = models.Constraints{
+		CpuTimeLimInSec: float64(req.Limits.CPUTimeMillis * 1000),
+		MemoryLimitInKB: int64(req.Limits.MemKibibytes),
+	}
 
 	errs, _ := errgroup.WithContext(context.Background())
 
@@ -29,25 +32,40 @@ func ArrangeEvalRequest(req messaging.EvaluationRequest,
 		return nil
 	})
 
+	var resSubm models.ExecutableFile
 	errs.Go(func() error {
 		gath.StartCompilation()
 		code := req.Submission
 		pLang := req.PLanguage
-		submission, runData, err := compilation.CompileSourceCode(pLang, code)
+		compiled, runData, err := compilation.CompileSourceCode(pLang, code)
 		if err != nil {
 			gath.FinishWithCompilationError()
 			return err
 		}
+		resSubm = models.ExecutableFile{
+			Content: compiled,
+			ExecCmd: pLang.ExecCmd,
+		}
 		gath.FinishCompilation(runData)
 		return nil
 	})
+	res.Submission = resSubm
 
+	var resChecker models.ExecutableFile
 	errs.Go(func() error {
 		checker := req.TestlibChecker
-
-		// start compiling checker
+		compiled, _, err := compilation.CompileTestlibChecker(checker)
+		if err != nil {
+			gath.FinishWithInternalServerError(err)
+			return err
+		}
+		resChecker = models.ExecutableFile{
+			Content: compiled,
+			ExecCmd: "./checker input.txt output.txt answer.txt",
+		}
 		return nil
 	})
+	res.Checker = resChecker
 
 	err := errs.Wait()
 	return res, err

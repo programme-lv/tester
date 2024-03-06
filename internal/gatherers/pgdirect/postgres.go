@@ -1,14 +1,16 @@
 package pgdirect
 
 import (
+	"log"
+	"log/slog"
+
 	"github.com/go-jet/jet/v2/postgres"
 	"github.com/jmoiron/sqlx"
 	"github.com/programme-lv/tester/internal/database/proglv/public/model"
 	"github.com/programme-lv/tester/internal/database/proglv/public/table"
 	"github.com/programme-lv/tester/internal/testing"
+	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/pkg/messaging/statuses"
-	"log"
-	"log/slog"
 )
 
 type Gatherer struct {
@@ -115,7 +117,7 @@ func (g *Gatherer) StartCompilation() {
 	panicOnError(err)
 }
 
-func (g *Gatherer) FinishCompilation(data *testing.RuntimeData) {
+func (g *Gatherer) FinishCompilation(data *models.RuntimeData) {
 	runtimeData := &model.RuntimeData{
 		Stdout:          &data.Output.Stdout,
 		Stderr:          &data.Output.Stderr,
@@ -197,7 +199,7 @@ func limitLength1000(str string) string {
 	return str
 }
 
-func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.RuntimeData) {
+func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *models.RuntimeData) {
 	rd.Output.Stdout = limitLength1000(rd.Output.Stdout)
 	rd.Output.Stderr = limitLength1000(rd.Output.Stderr)
 	mrd := model.RuntimeData{
@@ -228,7 +230,7 @@ func (g *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *testing.Run
 	panicOnError(err)
 }
 
-func (g *Gatherer) FinishTestWithLimitExceeded(testId int64, flags testing.RuntimeExceededFlags) {
+func (g *Gatherer) FinishTestWithLimitExceeded(testId int64, flags models.RuntimeExceededFlags) {
 	status := statuses.IdlenessLimitExceeded
 	if flags.TimeLimitExceeded {
 		status = statuses.TimeLimitExceeded
@@ -254,7 +256,7 @@ func (g *Gatherer) FinishTestWithRuntimeError(testId int64) {
 	panicOnError(err)
 }
 
-func (g *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *testing.RuntimeData) {
+func (g *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *models.RuntimeData) {
 	limitLength1000(rd.Output.Stdout)
 	limitLength1000(rd.Output.Stderr)
 	mrd := model.RuntimeData{

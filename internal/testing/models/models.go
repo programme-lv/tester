@@ -1,9 +1,8 @@
 package models
 
 type ExecutableFile struct {
-	Content  []byte
-	Filename string
-	ExecCmd  string
+	Content []byte
+	ExecCmd string
 }
 
 type TestPaths struct {

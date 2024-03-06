@@ -44,7 +44,7 @@ type EvaluationRequest struct {
 	Tests    []TestRef `json:"tests"`
 	Subtasks []Subtask `json:"subtasks"`
 
-	TestlibChecker *string `json:"testlib_checker"`
+	TestlibChecker string `json:"testlib_checker"`
 
 	DOSpacesAuth *DOSpacesAuth `json:"do_spaces_auth"`
 }

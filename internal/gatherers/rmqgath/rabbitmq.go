@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/programme-lv/tester/internal/testing"
+	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/pkg/messaging"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type testRuntimeData struct {
-	submissionRuntimeData testing.RuntimeData
-	checkerRuntimeData    testing.RuntimeData
+	submissionRuntimeData models.RuntimeData
+	checkerRuntimeData    models.RuntimeData
 }
 
 type Gatherer struct {
