@@ -10,9 +10,9 @@ func ArrangeEvalRequest(req messaging.EvaluationRequest,
 	gath EvalResGatherer) (ArrangedEvaluationReq, error) {
 
 	res := ArrangedEvaluationReq{
-		Submission:  CompiledFile{},
+		Submission:  ExecutableFile{},
 		SubmConstrs: Constraints{},
-		Checker:     CompiledFile{},
+		Checker:     ExecutableFile{},
 		Tests:       []TestPaths{},
 		Subtasks:    []Subtask{},
 	}

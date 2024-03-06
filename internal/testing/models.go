@@ -1,6 +1,6 @@
 package testing
 
-type CompiledFile struct {
+type ExecutableFile struct {
 	Content  []byte
 	Filename string
 	ExecCmd  string
@@ -24,9 +24,9 @@ type Constraints struct {
 }
 
 type ArrangedEvaluationReq struct {
-	Submission  CompiledFile
+	Submission  ExecutableFile
 	SubmConstrs Constraints
-	Checker     CompiledFile
+	Checker     ExecutableFile
 
 	Tests    []TestPaths
 	Subtasks []Subtask
