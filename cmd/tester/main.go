@@ -48,7 +48,7 @@ func main() {
 
 		rmqGatherer := rmqgath.NewRabbitMQGatherer(ch, correlation, d.ReplyTo)
 
-		err = testing.EvaluateRequest(request, rmqGatherer)
+		err = testing.EvaluateSubmission(request, rmqGatherer)
 		panicOnError(err)
 
 		err = d.Ack(false)

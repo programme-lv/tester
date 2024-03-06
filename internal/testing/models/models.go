@@ -1,4 +1,4 @@
-package testing
+package models
 
 type ExecutableFile struct {
 	Content  []byte
@@ -30,4 +30,27 @@ type ArrangedEvaluationReq struct {
 
 	Tests    []TestPaths
 	Subtasks []Subtask
+}
+
+type RuntimeMetrics struct {
+	CpuTimeMillis  int64
+	WallTimeMillis int64
+	MemoryKBytes   int64
+}
+
+type RuntimeOutput struct {
+	Stdout   string
+	Stderr   string
+	ExitCode int64
+}
+
+type RuntimeData struct {
+	Output  RuntimeOutput
+	Metrics RuntimeMetrics
+}
+
+type RuntimeExceededFlags struct {
+	TimeLimitExceeded     bool
+	MemoryLimitExceeded   bool
+	IdlenessLimitExceeded bool
 }

@@ -1,51 +1,27 @@
-package testing
+package storage
 
 import (
 	"fmt"
-	"github.com/programme-lv/tester/internal/database"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 )
 
+const testLibUrl = "https://raw.githubusercontent.com/MikeMirzayanov/testlib/master/testlib.h"
 const testLibCachePath = "cache/testlib.h"
-const textFileCachePath = "cache/text_files"
 
-func saveTextFileToCache(textFile *database.TextFile) error {
-	err := os.MkdirAll(textFileCachePath, 0755)
-	if err != nil {
-		return err
+func GetTestlib() ([]byte, error) {
+	if err := ensureTestlibExistsInCache(); err != nil {
+		return nil, fmt.Errorf("failed to ensure testlib exists in cache: %w", err)
 	}
 
-	fileName := textFile.Sha256
-	filePath := filepath.Join(textFileCachePath, fileName)
-	file, err := os.Create(filePath)
+	testlibBytes, err := os.ReadFile(testLibCachePath)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to read testlib from cache: %w", err)
 	}
-	defer func(file *os.File) {
-		_ = file.Close()
-	}(file)
-	_, err = file.Write([]byte(textFile.Content))
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
-func isTextFileInCache(sha256 string) (bool, error) {
-	fileName := sha256
-	filePath := filepath.Join(textFileCachePath, fileName)
-	_, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
+	return testlibBytes, nil
 }
 
 func ensureTestlibExistsInCache() error {

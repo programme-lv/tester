@@ -28,11 +28,11 @@ type Subtask struct {
 
 // PLanguage is used to specify the programming language
 type PLanguage struct {
-	ID           string `json:"id"`
-	FullName     string `json:"full_name"`
-	CodeFilename string `json:"code_filename"`
-	CompileCmd   string `json:"compile_cmd"`
-	ExecCmd      string `json:"exec_cmd"`
+	ID           string  `json:"id"`
+	FullName     string  `json:"full_name"`
+	CodeFilename string  `json:"code_filename"`
+	CompileCmd   *string `json:"compile_cmd"`
+	ExecCmd      string  `json:"exec_cmd"`
 }
 
 type EvaluationRequest struct {

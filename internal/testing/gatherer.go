@@ -1,27 +1,6 @@
 package testing
 
-type RuntimeMetrics struct {
-	CpuTimeMillis  int64
-	WallTimeMillis int64
-	MemoryKBytes   int64
-}
-
-type RuntimeOutput struct {
-	Stdout   string
-	Stderr   string
-	ExitCode int64
-}
-
-type RuntimeData struct {
-	Output  RuntimeOutput
-	Metrics RuntimeMetrics
-}
-
-type RuntimeExceededFlags struct {
-	TimeLimitExceeded     bool
-	MemoryLimitExceeded   bool
-	IdlenessLimitExceeded bool
-}
+import "github.com/programme-lv/tester/internal/testing/models"
 
 type EvalResGatherer interface {
 	StartEvaluation()
@@ -29,19 +8,19 @@ type EvalResGatherer interface {
 	FinishEvaluation()
 
 	StartCompilation()
-	FinishCompilation(data *RuntimeData)
+	FinishCompilation(data *models.RuntimeData)
 	FinishWithCompilationError()
 
 	StartTesting(maxScore int64)
 	IgnoreTest(testId int64)
 
 	StartTest(testId int64)
-	ReportTestSubmissionRuntimeData(testId int64, rd *RuntimeData)
+	ReportTestSubmissionRuntimeData(testId int64, rd *models.RuntimeData)
 
-	FinishTestWithLimitExceeded(testId int64, flags RuntimeExceededFlags)
+	FinishTestWithLimitExceeded(testId int64, flags models.RuntimeExceededFlags)
 	FinishTestWithRuntimeError(testId int64)
 
-	ReportTestCheckerRuntimeData(testId int64, rd *RuntimeData)
+	ReportTestCheckerRuntimeData(testId int64, rd *models.RuntimeData)
 
 	FinishTestWithVerdictAccepted(testId int64)
 	FinishTestWithVerdictWrongAnswer(testId int64)

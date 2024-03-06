@@ -1,43 +1,54 @@
 package testing
 
 import (
-	"sync"
+	"context"
 
+	"github.com/programme-lv/tester/internal/testing/compilation"
+	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/pkg/messaging"
+	"golang.org/x/sync/errgroup"
 )
 
 func ArrangeEvalRequest(req messaging.EvaluationRequest,
-	gath EvalResGatherer) (ArrangedEvaluationReq, error) {
+	gath EvalResGatherer) (models.ArrangedEvaluationReq, error) {
 
-	res := ArrangedEvaluationReq{
-		Submission:  ExecutableFile{},
-		SubmConstrs: Constraints{},
-		Checker:     ExecutableFile{},
-		Tests:       []TestPaths{},
-		Subtasks:    []Subtask{},
+	res := models.ArrangedEvaluationReq{
+		Submission:  models.ExecutableFile{},
+		SubmConstrs: models.Constraints{},
+		Checker:     models.ExecutableFile{},
+		Tests:       []models.TestPaths{},
+		Subtasks:    []models.Subtask{},
 	}
 
 	// isolateInstance := isolate.GetInstance()
 
-	var wg sync.WaitGroup
-	wg.Add(3)
+	errs, _ := errgroup.WithContext(context.Background())
 
-	go func() {
-		defer wg.Done()
+	errs.Go(func() error {
 		// start downloading tests
-	}()
+		return nil
+	})
 
-	go func() {
-		defer wg.Done()
-		// start compiling submission
-	}()
+	errs.Go(func() error {
+		gath.StartCompilation()
+		code := req.Submission
+		pLang := req.PLanguage
+		submission, runData, err := compilation.CompileSourceCode(pLang, code)
+		if err != nil {
+			gath.FinishWithCompilationError()
+			return err
+		}
+		gath.FinishCompilation(runData)
+		return nil
+	})
 
-	go func() {
-		defer wg.Done()
+	errs.Go(func() error {
+		checker := req.TestlibChecker
+
 		// start compiling checker
-	}()
+		return nil
+	})
 
-	wg.Wait()
-
-	return res, nil
+	err := errs.Wait()
+	return res, err
 }
