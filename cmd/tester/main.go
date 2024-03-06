@@ -3,10 +3,9 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/programme-lv/tester/internal/gatherers/pgdirect"
-
 	"log"
 
+	"github.com/programme-lv/tester/internal/gatherers/rmqgath"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/pkg/messaging"
 
@@ -18,7 +17,7 @@ import (
 func main() {
 	cfg := environment.ReadEnvConfig()
 
-	rabbit, err := connectToRabbit(cfg)
+	rabbit, err := amqp.Dial(cfg.AMQPConnString)
 	panicOnError(err)
 	defer func(rabbit *amqp.Connection) {
 		err := rabbit.Close()
@@ -39,9 +38,6 @@ func main() {
 	panicOnError(err)
 
 	for d := range msgs {
-		err = d.Ack(false)
-		panicOnError(err)
-
 		request := messaging.EvaluationRequest{}
 		err := json.Unmarshal(d.Body, &request)
 		panicOnError(err)
@@ -50,18 +46,16 @@ func main() {
 		err = json.Unmarshal([]byte(d.CorrelationId), &correlation)
 		panicOnError(err)
 
-		replyTo := d.ReplyTo
-		pgGatherer := pgdirect.NewPostgresGatherer(postgres, correlation.EvaluationId, correlation.RandomInt63)
+		rmqGatherer := rmqgath.NewRabbitMQGatherer(ch, correlation, d.ReplyTo)
 
-		err = testing.EvaluateSubmission(request, pgGatherer, postgres)
+		err = testing.EvaluateRequest(request, rmqGatherer)
+		panicOnError(err)
+
+		err = d.Ack(false)
 		panicOnError(err)
 	}
 
 	log.Println("Exiting...")
-}
-
-func connectToRabbit(cfg *environment.EnvConfig) (*amqp.Connection, error) {
-	return amqp.Dial(cfg.AMQPConnString)
 }
 
 func openChannel(rabbit *amqp.Connection) (*amqp.Channel, error) {

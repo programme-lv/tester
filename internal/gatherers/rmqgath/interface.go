@@ -1,4 +1,4 @@
-package rabbitmq
+package rmqgath
 
 import (
 	"github.com/programme-lv/tester/internal/testing"

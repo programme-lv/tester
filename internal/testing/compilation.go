@@ -1,10 +1,11 @@
 package testing
 
 import (
-	"github.com/programme-lv/tester/internal/database"
-	"github.com/programme-lv/tester/internal/isolate"
 	"log"
 	"os"
+
+	"github.com/programme-lv/tester/internal/database"
+	"github.com/programme-lv/tester/internal/isolate"
 )
 
 const testLibUrl = "https://raw.githubusercontent.com/MikeMirzayanov/testlib/master/testlib.h"
