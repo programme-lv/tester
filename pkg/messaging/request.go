@@ -5,19 +5,17 @@ type Limits struct {
 	MemKibibytes  int `json:"mem_kibibytes"`
 }
 
-// TestRef is used to reference input and answer
-// text files stored on DigitalOcean Spaces
-// with their respective SHA256 hash values
 type TestRef struct {
-	ID        int    `json:"id"`
-	InSHA256  string `json:"in_sha256"`
-	AnsSHA256 string `json:"ans_sha256"`
-}
+	ID int `json:"id"`
 
-// DOSpacesAuth is used to authenticate with DigitalOcean Spaces
-type DOSpacesAuth struct {
-	AccessKey string `json:"access_key"`
-	SecretKey string `json:"secret_key"`
+	InContent  *string `json:"in_content"`
+	InSHA256   *string `json:"in_sha256"`    // obligatory if InContent is nil
+	InDownlUrl *string `json:"in_downl_url"` // maybe pre-signed s3 req url
+
+	AnsContent  *string `json:"ans_content"`
+	AnsSHA256   *string `json:"ans_sha256"`    // obligatory if AnsContent is nil
+	AnsDownlUrl *string `json:"ans_downl_url"` // maybe pre-signed s3 req url
+
 }
 
 type Subtask struct {
@@ -45,8 +43,6 @@ type EvaluationRequest struct {
 	Subtasks []Subtask `json:"subtasks"`
 
 	TestlibChecker string `json:"testlib_checker"`
-
-	DOSpacesAuth *DOSpacesAuth `json:"do_spaces_auth"`
 }
 
 type ResponseCorrelation struct {
