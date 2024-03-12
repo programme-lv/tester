@@ -2,14 +2,27 @@ package storage
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/programme-lv/tester/internal/database"
 )
 
-const textFileCachePath = "cache/text_files"
+var textFileCachePath string = path.Join(GetCacheDir(), "text_files")
 
-func saveTextFileToCache(textFile *database.TextFile) error {
+func GetCacheDir() string {
+	return path.Join(MustGetUserHomeDir(), ".cache", "tester")
+}
+
+func MustGetUserHomeDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	return home
+}
+
+func SaveTextFileToCache(textFile *database.TextFile) error {
 	err := os.MkdirAll(textFileCachePath, 0755)
 	if err != nil {
 		return err
@@ -31,7 +44,7 @@ func saveTextFileToCache(textFile *database.TextFile) error {
 	return nil
 }
 
-func isTextFileInCache(sha256 string) (bool, error) {
+func IsTextFileInCache(sha256 string) (bool, error) {
 	fileName := sha256
 	filePath := filepath.Join(textFileCachePath, fileName)
 	_, err := os.Stat(filePath)

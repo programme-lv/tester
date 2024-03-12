@@ -9,6 +9,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/rabbitmq/amqp091-go v1.8.1
+	go.uber.org/mock v0.4.0
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 )
 

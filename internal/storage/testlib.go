@@ -6,10 +6,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 )
 
 const testLibUrl = "https://raw.githubusercontent.com/MikeMirzayanov/testlib/master/testlib.h"
-const testLibCachePath = "cache/testlib.h"
+
+var testLibCachePath string = path.Join(GetCacheDir(), "testlib.h")
 
 func GetTestlib() ([]byte, error) {
 	if err := ensureTestlibExistsInCache(); err != nil {
@@ -34,6 +37,11 @@ func ensureTestlibExistsInCache() error {
 		return err // Return here on other errors besides "not exists"
 	}
 
+	dir := filepath.Dir(testLibCachePath)
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		return err
+	}
 	// Create the file
 	out, err := os.Create(testLibCachePath)
 	if err != nil {
