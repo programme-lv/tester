@@ -22,7 +22,7 @@ type Constraints struct {
 	MemoryLimitInKB int64
 }
 
-type ArrangedEvaluationReq struct {
+type PreparedEvaluationReq struct {
 	Submission  ExecutableFile
 	SubmConstrs Constraints
 	Checker     ExecutableFile

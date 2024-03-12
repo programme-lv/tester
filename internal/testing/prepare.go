@@ -9,10 +9,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func ArrangeEvalRequest(req messaging.EvaluationRequest,
-	gath EvalResGatherer) (models.ArrangedEvaluationReq, error) {
+func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
+	models.PreparedEvaluationReq, error) {
 
-	res := models.ArrangedEvaluationReq{
+	res := models.PreparedEvaluationReq{
 		Submission:  models.ExecutableFile{},
 		SubmConstrs: models.Constraints{},
 		Checker:     models.ExecutableFile{},
