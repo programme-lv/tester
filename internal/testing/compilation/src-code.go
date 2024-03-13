@@ -21,8 +21,8 @@ func CompileSourceCode(code, fname, compileCmd, cFname string) (
 	if err != nil {
 		return
 	}
-
 	log.Println("Created isolate box:", box.Path())
+
 	defer func(box *isolate.Box) {
 		err = box.Close()
 		if err != nil {

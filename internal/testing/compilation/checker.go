@@ -27,6 +27,7 @@ func CompileTestlibChecker(code string) (
 		return
 	}
 	log.Println("Created isolate box:", box.Path())
+
 	defer func(box *isolate.Box) {
 		_ = box.Close()
 	}(box)
@@ -36,7 +37,6 @@ func CompileTestlibChecker(code string) (
 	if err != nil {
 		return
 	}
-	log.Println("Added checker code to isolate box")
 
 	log.Println("Adding testLib to isolate box...")
 	var testlibBytes []byte
@@ -55,24 +55,19 @@ func CompileTestlibChecker(code string) (
 	if err != nil {
 		return
 	}
-	log.Println("Ran checker compilation command")
 
 	log.Println("Collecting compilation runtime data...")
 	runData, err = utils.CollectProcessRuntimeData(process)
 	if err != nil {
 		return
 	}
-	log.Println("Collected compilation runtime data")
 
-	log.Println("Compilation finished")
-
-	if box.HasFile(testlibCompiledFilename) {
-		log.Println("Retrieving compiled executable...")
-		compiled, err = box.GetFile(testlibCompiledFilename)
-		if err != nil {
-			return
-		}
-		log.Println("Retrieved compiled executable")
+	log.Println("Retrieving compiled executable...")
+	compiled, err = box.GetFile(testlibCompiledFilename)
+	if err != nil {
+		return
 	}
+	log.Println("Checker compilation finished!")
+
 	return
 }
