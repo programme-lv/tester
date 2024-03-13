@@ -6,10 +6,9 @@ import (
 	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/internal/testing/utils"
-	"github.com/programme-lv/tester/pkg/messaging"
 )
 
-func CompileSourceCode(language messaging.PLanguage, sourceCode string) (
+func CompileSourceCode(code, fname, compileCmd, cFname string) (
 	compiled []byte,
 	runData *models.RuntimeData,
 	err error,
@@ -22,43 +21,40 @@ func CompileSourceCode(language messaging.PLanguage, sourceCode string) (
 	if err != nil {
 		return
 	}
+
 	log.Println("Created isolate box:", box.Path())
 	defer func(box *isolate.Box) {
-		_ = box.Close()
+		err = box.Close()
+		if err != nil {
+			log.Printf("Failed to close isolate box: %v", err)
+		}
 	}(box)
 
 	log.Println("Adding source code to isolate box...")
-	err = box.AddFile(language.CodeFilename, []byte(sourceCode))
+	err = box.AddFile(fname, []byte(code))
 	if err != nil {
 		return
 	}
-	log.Println("Added source code to isolate box")
 
 	log.Println("Running compilation...")
 	var process *isolate.Process
-	process, err = box.Run(*language.CompileCmd, nil, nil)
+	process, err = box.Run(compileCmd, nil, nil)
 	if err != nil {
 		return
 	}
-	log.Println("Ran compilation command")
 
 	log.Println("Collecting compilation runtime data...")
 	runData, err = utils.CollectProcessRuntimeData(process)
 	if err != nil {
 		return
 	}
-	log.Println("Collected compilation runtime data")
 
-	log.Println("Compilation finished")
-
-	if box.HasFile(language.CodeFilename) {
-		log.Println("Retrieving compiled executable...")
-		compiled, err = box.GetFile(language.CodeFilename)
-		if err != nil {
-			return
-		}
-		log.Println("Retrieved compiled executable")
+	log.Println("Retrieving compiled executable...")
+	compiled, err = box.GetFile(cFname)
+	if err != nil {
+		return
 	}
 
+	log.Println("Compilation finished!")
 	return
 }
