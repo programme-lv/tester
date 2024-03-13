@@ -9,9 +9,9 @@ import (
 	"github.com/programme-lv/tester/internal/testing/utils"
 )
 
-const testlibCodeFilename = "main.cpp"
-const testlibCompileCmd = "g++ -std=c++17 -o main main.cpp -I . -I /usr/include"
-const testlibCompiledFilename = "main"
+const testlibCheckerCodeFilename = "checker.cpp"
+const testlibCheckerCompileCmd = "g++ -std=c++17 -o checker checker.cpp -I . -I /usr/include"
+const testlibCheckerCompiledFilename = "checker"
 
 func CompileTestlibChecker(code string) (
 	compiled []byte,
@@ -33,7 +33,7 @@ func CompileTestlibChecker(code string) (
 	}(box)
 
 	log.Println("Adding checker code to isolate box...")
-	err = box.AddFile(testlibCodeFilename, []byte(code))
+	err = box.AddFile(testlibCheckerCodeFilename, []byte(code))
 	if err != nil {
 		return
 	}
@@ -51,7 +51,7 @@ func CompileTestlibChecker(code string) (
 
 	log.Println("Running checker compilation...")
 	var process *isolate.Process
-	process, err = box.Run(testlibCompileCmd, nil, nil)
+	process, err = box.Run(testlibCheckerCompileCmd, nil, nil)
 	if err != nil {
 		return
 	}
@@ -63,7 +63,7 @@ func CompileTestlibChecker(code string) (
 	}
 
 	log.Println("Retrieving compiled executable...")
-	compiled, err = box.GetFile(testlibCompiledFilename)
+	compiled, err = box.GetFile(testlibCheckerCompiledFilename)
 	if err != nil {
 		return
 	}

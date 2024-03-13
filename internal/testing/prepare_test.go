@@ -3,6 +3,7 @@ package testing_test
 import (
 	gt "testing"
 
+	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testing/mocks"
 	"github.com/programme-lv/tester/pkg/messaging"
@@ -87,10 +88,14 @@ func TestPrepareEvalRequest_Success(t *gt.T) {
 	gathMock.EXPECT().StartCompilation().Times(1)
 	gathMock.EXPECT().FinishCompilation(gomock.Any()).Times(1)
 
-	_, err := testing.PrepareEvalRequest(req, gathMock)
+	pReq, err := testing.PrepareEvalRequest(req, gathMock)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+
+	ii := isolate.GetInstance()
+	box, err := ii.NewBox()
+	box.AddFile("main", pReq.Submission.Content)
 
 	// try to run the compiled submission & code
 	// verify that the tests correspond to their SHA
