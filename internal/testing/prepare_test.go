@@ -81,6 +81,42 @@ func TestPrepareEvalRequest_Success(t *gt.T) {
 	}
 }
 
+func TestPrepareEvalRequest_BadSubmission(t *gt.T) {
+	req := getSuccessPrepareEvalRequest()
+	req.Submission = "invalid submission"
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	gathMock := mocks.NewMockEvalResGatherer(ctrl)
+
+	gathMock.EXPECT().StartCompilation().Times(1)
+	gathMock.EXPECT().FinishCompilation(gomock.Any()).Times(1)
+	gathMock.EXPECT().FinishWithCompilationError().Times(1)
+
+	_, err := testing.PrepareEvalRequest(req, gathMock)
+	if err == nil {
+		t.Error("expected error, but got nil")
+	}
+}
+
+func TestPrepareEvalRequest_BadChecker(t *gt.T) {
+	req := getSuccessPrepareEvalRequest()
+	req.TestlibChecker = "invalid checker"
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	gathMock := mocks.NewMockEvalResGatherer(ctrl)
+
+	gathMock.EXPECT().StartCompilation().Times(1)
+	gathMock.EXPECT().FinishCompilation(gomock.Any()).Times(1)
+	gathMock.EXPECT().FinishWithInternalServerError(gomock.Any()).Times(1)
+
+	_, err := testing.PrepareEvalRequest(req, gathMock)
+	if err == nil {
+		t.Error("expected error, but got nil")
+	}
+}
+
 func getSuccessPrepareEvalRequest() messaging.EvaluationRequest {
 	compileCmd := "g++ -std=c++17 -O2 -o main main.cpp"
 	cFname := "main"

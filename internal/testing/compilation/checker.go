@@ -66,10 +66,12 @@ func CompileTestlibChecker(code string) (
 		return
 	}
 
-	log.Println("Retrieving compiled executable...")
-	compiled, err = box.GetFile(testlibCheckerCompiledFilename)
-	if err != nil {
-		return
+	if box.HasFile(testlibCheckerCompiledFilename) {
+		log.Println("Retrieving compiled executable...")
+		compiled, err = box.GetFile(testlibCheckerCompiledFilename)
+		if err != nil {
+			return
+		}
 	}
 	log.Println("Checker compilation finished!")
 

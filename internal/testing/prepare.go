@@ -3,8 +3,6 @@ package testing
 import (
 	"context"
 	"fmt"
-	"log"
-	"os/exec"
 	"sync"
 
 	"github.com/programme-lv/tester/internal/storage"
@@ -37,6 +35,7 @@ func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
 	errs.Go(func() error {
 		tests, err := downloadTests(req.Tests)
 		if err != nil {
+			gath.FinishWithInternalServerError(fmt.Errorf("failed to download tests: %v", err))
 			return err
 		}
 
@@ -50,13 +49,19 @@ func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
 	errs.Go(func() error {
 		gath.StartCompilation()
 		cRes, runData, err := compileSubmission(req)
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			log.Println("Exit code:", exiterr.ExitCode())
-			return err // TODO: handle compilation errors
-		} else if err != nil {
+
+		if err != nil {
+			err = fmt.Errorf("submission compilation failed: %v", err)
+			gath.FinishWithInternalServerError(err)
 			return err
 		}
+
 		gath.FinishCompilation(runData)
+
+		if runData.Output.ExitCode != 0 || runData.Output.Stderr != "" || cRes == nil {
+			gath.FinishWithCompilationError()
+			return fmt.Errorf("compilation failed: %s", runData.Output.Stderr)
+		}
 
 		resMu.Lock()
 		res.Submission = *cRes
@@ -67,10 +72,20 @@ func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
 	var resChecker models.ExecutableFile
 	errs.Go(func() error {
 		checker := req.TestlibChecker
-		compiled, _, err := compilation.CompileTestlibChecker(checker)
+		compiled, runData, err := compilation.CompileTestlibChecker(checker)
+
 		if err != nil {
+			err = fmt.Errorf("checker compilation failed: %v", err)
+			gath.FinishWithInternalServerError(err)
 			return err
 		}
+
+		if runData.Output.ExitCode != 0 || runData.Output.Stderr != "" || compiled == nil {
+			err = fmt.Errorf("checker compilation failed: %s", runData.Output.Stderr)
+			gath.FinishWithInternalServerError(err)
+			return err
+		}
+
 		resChecker = models.ExecutableFile{
 			Content:  compiled,
 			Filename: "checker",

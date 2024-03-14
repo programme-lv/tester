@@ -49,10 +49,12 @@ func CompileSourceCode(code, fname, compileCmd, cFname string) (
 		return
 	}
 
-	log.Println("Retrieving compiled executable...")
-	compiled, err = box.GetFile(cFname)
-	if err != nil {
-		return
+	if box.HasFile(cFname) {
+		log.Println("Retrieving compiled executable...")
+		compiled, err = box.GetFile(cFname)
+		if err != nil {
+			return
+		}
 	}
 
 	log.Println("Compilation finished!")
