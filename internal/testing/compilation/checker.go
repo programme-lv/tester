@@ -38,9 +38,13 @@ func CompileTestlibChecker(code string) (
 		return
 	}
 
-	log.Println("Adding testLib to isolate box...")
+	log.Println("Adding testlib.h to isolate box...")
 	var testlibBytes []byte
-	testlibBytes, err = storage.GetTestlib()
+	s, err := storage.GetInstance()
+	if err != nil {
+		return
+	}
+	testlibBytes, err = s.GetTestlib()
 	if err != nil {
 		return
 	}
