@@ -1,9 +1,13 @@
 package utils
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"fmt"
 	"io"
 
 	"github.com/programme-lv/tester/internal/isolate"
+	"github.com/programme-lv/tester/internal/storage"
 	"github.com/programme-lv/tester/internal/testing/models"
 )
 
@@ -40,4 +44,45 @@ func CollectProcessRuntimeData(process *isolate.Process) (*models.RuntimeData, e
 			MemoryKBytes:   metrics.CgMemKb,
 		},
 	}, nil
+}
+
+func VerifyContent(fname string, expected []byte) error {
+	s, err := storage.GetInstance()
+	if err != nil {
+		return err
+	}
+
+	content, err := s.GetTextFile(fname)
+	if err != nil {
+		return err
+	}
+	if string(content) != string(expected) {
+		return fmt.Errorf("file %s has content %s, but expected %s", fname, content, expected)
+	}
+
+	return nil
+}
+
+func VerifySha256(fname string, expected string) error {
+	s, err := storage.GetInstance()
+	if err != nil {
+		return err
+	}
+
+	file, err := s.GetTextFile(fname)
+	if err != nil {
+		return err
+	}
+
+	h := sha256.New()
+	if _, err := io.Copy(h, bytes.NewReader(file)); err != nil {
+		return err
+	}
+
+	sha256sum := fmt.Sprintf("%x", h.Sum(nil))
+	if sha256sum != expected {
+		return fmt.Errorf("file %s has sha256 %s, but expected %s", fname, sha256sum, expected)
+	}
+
+	return nil
 }

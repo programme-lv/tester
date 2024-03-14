@@ -8,6 +8,7 @@ import (
 	"github.com/programme-lv/tester/internal/storage"
 	"github.com/programme-lv/tester/internal/testing/compilation"
 	"github.com/programme-lv/tester/internal/testing/models"
+	"github.com/programme-lv/tester/internal/testing/utils"
 	"github.com/programme-lv/tester/pkg/messaging"
 	"golang.org/x/sync/errgroup"
 )
@@ -137,6 +138,12 @@ func downloadTests(tests []messaging.TestRef) ([]models.Test, error) {
 					return nil, err
 				}
 			}
+			// ensure input file SHA256 is correct
+			err = utils.VerifySha256(rTest.InSHA256, rTest.InSHA256)
+			if err != nil {
+				err = fmt.Errorf("input file SHA256 verification failed: %v", err)
+				return nil, err
+			}
 		}
 
 		ansIs, err := s.IsTextFileInCache(rTest.AnsSHA256)
@@ -161,6 +168,11 @@ func downloadTests(tests []messaging.TestRef) ([]models.Test, error) {
 					err = fmt.Errorf("failed to write answer file: %v", err)
 					return nil, err
 				}
+			}
+			err = utils.VerifySha256(rTest.AnsSHA256, rTest.AnsSHA256)
+			if err != nil {
+				err = fmt.Errorf("answer file SHA256 verification failed: %v", err)
+				return nil, err
 			}
 		}
 
