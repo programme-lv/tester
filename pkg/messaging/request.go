@@ -9,11 +9,11 @@ type TestRef struct {
 	ID int `json:"id"`
 
 	InContent  *string `json:"in_content"`
-	InSHA256   *string `json:"in_sha256"`    // obligatory if InContent is nil
+	InSHA256   string  `json:"in_sha256"`
 	InDownlUrl *string `json:"in_downl_url"` // maybe pre-signed s3 req url
 
 	AnsContent  *string `json:"ans_content"`
-	AnsSHA256   *string `json:"ans_sha256"`    // obligatory if AnsContent is nil
+	AnsSHA256   string  `json:"ans_sha256"`
 	AnsDownlUrl *string `json:"ans_downl_url"` // maybe pre-signed s3 req url
 
 }

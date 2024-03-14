@@ -74,7 +74,7 @@ func compileSubmission(req messaging.EvaluationRequest, gath EvalResGatherer) (
 	code := req.Submission
 	pLang := req.PLanguage
 
-	if pLang.CompileCmd != nil {
+	if pLang.CompileCmd == nil {
 		return &models.ExecutableFile{
 			Content:  []byte(code),
 			Filename: pLang.CodeFilename,
