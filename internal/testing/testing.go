@@ -75,7 +75,19 @@ func EvaluateSubmission(rawReq messaging.EvaluationRequest, gath EvalResGatherer
 			gath.FinishTestWithRuntimeError(int64(test.ID))
 			continue
 		}
-		// TODO: report time limit exceeded & memory limit exceeded
+
+		timeLimitExceeded := float64(submRunData.Metrics.CpuTimeMillis) >= req.SubmConstrs.CpuTimeLimInSec*1000
+		memoryLimitExceeded := float64(submRunData.Metrics.MemoryKBytes) >= float64(req.SubmConstrs.MemoryLimitInKB)
+		wallTimeLimExceeded := float64(submRunData.Metrics.WallTimeMillis) >= submConstrs.WallTimeLimInSec*1000
+
+		if timeLimitExceeded || memoryLimitExceeded || wallTimeLimExceeded {
+			gath.FinishTestWithLimitExceeded(int64(test.ID), models.RuntimeExceededFlags{
+				TimeLimitExceeded:     timeLimitExceeded,
+				MemoryLimitExceeded:   memoryLimitExceeded,
+				IdlenessLimitExceeded: wallTimeLimExceeded,
+			})
+			continue
+		}
 
 		// run checker in a box
 		checkerBox, err := ii.NewBox()
