@@ -3,23 +3,22 @@ package storage
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 )
 
 const testLibUrl = "https://raw.githubusercontent.com/MikeMirzayanov/testlib/master/testlib.h"
 
-var testLibCachePath string = path.Join(GetCacheDir(), "testlib.h")
+func (s *Storage) GetTestlib() ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-func GetTestlib() ([]byte, error) {
-	if err := ensureTestlibExistsInCache(); err != nil {
+	if err := s.ensureTestlibExistsInCache(); err != nil {
 		return nil, fmt.Errorf("failed to ensure testlib exists in cache: %w", err)
 	}
 
-	testlibBytes, err := os.ReadFile(testLibCachePath)
+	testlibBytes, err := os.ReadFile(s.testlibCachePath())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read testlib from cache: %w", err)
 	}
@@ -27,23 +26,22 @@ func GetTestlib() ([]byte, error) {
 	return testlibBytes, nil
 }
 
-func ensureTestlibExistsInCache() error {
-	// Check if the file already exists
-	if _, err := os.Stat(testLibCachePath); err == nil {
-		log.Println("Testlib already exists in cache")
-		return nil
+func (s *Storage) ensureTestlibExistsInCache() error {
+	path := s.testlibCachePath()
+
+	if _, err := os.Stat(path); err == nil {
+		return nil // testlib already exists in cache
 	} else if !os.IsNotExist(err) {
-		log.Println("Error while checking if testlib exists in cache")
-		return err // Return here on other errors besides "not exists"
+		return fmt.Errorf("failed to check if testlib exists in cache: %w", err)
 	}
 
-	dir := filepath.Dir(testLibCachePath)
+	dir := filepath.Dir(path)
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return err
 	}
 	// Create the file
-	out, err := os.Create(testLibCachePath)
+	out, err := os.Create(path)
 	if err != nil {
 		return err
 	}

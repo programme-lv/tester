@@ -10,7 +10,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (models.PreparedEvaluationReq, error) {
+func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
+	models.PreparedEvaluationReq, error) {
 
 	res := models.PreparedEvaluationReq{
 		Submission:  models.ExecutableFile{},
