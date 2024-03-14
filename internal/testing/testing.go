@@ -9,7 +9,6 @@ func EvaluateSubmission(request messaging.EvaluationRequest, gath EvalResGathere
 
 	_, err := PrepareEvalRequest(request, gath)
 	if err != nil {
-		gath.FinishWithInternalServerError(err)
 		return err
 	}
 

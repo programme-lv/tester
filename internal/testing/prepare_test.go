@@ -10,8 +10,8 @@ import (
 	"github.com/programme-lv/tester/internal/storage"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testing/mocks"
+	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/pkg/messaging"
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
@@ -61,6 +61,27 @@ int main(int argc, char *argv[]) {
 `
 
 func TestPrepareEvalRequest_Success(t *gt.T) {
+	req := getSuccessPrepareEvalRequest()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	gathMock := mocks.NewMockEvalResGatherer(ctrl)
+
+	gathMock.EXPECT().StartCompilation().Times(1)
+	gathMock.EXPECT().FinishCompilation(gomock.Any()).Times(1)
+
+	preq, err := testing.PrepareEvalRequest(req, gathMock)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	err = compareTests(req.Tests, preq.Tests)
+	if err != nil {
+		t.Errorf("tests comparison failed: %v", err)
+	}
+}
+
+func getSuccessPrepareEvalRequest() messaging.EvaluationRequest {
 	compileCmd := "g++ -std=c++17 -O2 -o main main.cpp"
 	cFname := "main"
 	test0InpContent := "100 99\n"
@@ -92,48 +113,44 @@ func TestPrepareEvalRequest_Success(t *gt.T) {
 		},
 		TestlibChecker: testlibChecker,
 	}
+	return req
+}
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	gathMock := mocks.NewMockEvalResGatherer(ctrl)
-
-	gathMock.EXPECT().StartCompilation().Times(1)
-	gathMock.EXPECT().FinishCompilation(gomock.Any()).Times(1)
-
-	pReq, err := testing.PrepareEvalRequest(req, gathMock)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+func compareTests(original []messaging.TestRef, prepared []models.Test) error {
+	if len(original) != len(prepared) {
+		return fmt.Errorf("expected %d tests, but got %d", len(original), len(prepared))
 	}
 
-	assert.Equal(t, len(req.Tests), len(pReq.Tests))
-	for i := 0; i < len(req.Tests); i++ {
-		otest := req.Tests[i]  // original test
-		ptest := pReq.Tests[i] // prepared test
-		assert.Equal(t, otest.ID, ptest.ID)
+	for i := 0; i < len(original); i++ {
+		otest := original[i] // original test
+		ptest := prepared[i] // prepared test
+		if otest.ID != ptest.ID {
+			return fmt.Errorf("test %d: expected ID %d, but got %d", i, otest.ID, ptest.ID)
+		}
 
-		err = verifySha256(ptest.InputSHA, otest.InSHA256)
+		err := verifySha256(ptest.InputSHA, otest.InSHA256)
 		if err != nil {
-			t.Errorf("test %d input: %v", i, err)
-			return
+			return fmt.Errorf("test %d input: %v", i, err)
 		}
 		if otest.InContent != nil {
 			err = verifyContent(ptest.InputSHA, []byte(*otest.InContent))
 			if err != nil {
-				t.Errorf("test %d input: %v", i, err)
+				return fmt.Errorf("test %d input: %v", i, err)
 			}
 		}
 		err = verifySha256(ptest.AnswerSHA, otest.AnsSHA256)
 		if err != nil {
-			t.Errorf("test %d answer: %v", i, err)
-			return
+			return fmt.Errorf("test %d answer: %v", i, err)
 		}
 		if otest.AnsContent != nil {
 			err = verifyContent(ptest.AnswerSHA, []byte(*otest.AnsContent))
 			if err != nil {
-				t.Errorf("test %d answer: %v", i, err)
+				return fmt.Errorf("test %d answer: %v", i, err)
 			}
 		}
 	}
+
+	return nil
 }
 
 func verifyContent(fname string, expected []byte) error {
