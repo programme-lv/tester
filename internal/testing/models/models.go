@@ -6,10 +6,10 @@ type ExecutableFile struct {
 	ExecCmd  string
 }
 
-type TestPaths struct {
-	ID         int
-	InputPath  string
-	AnswerPath string
+type Test struct {
+	ID        int
+	InputSHA  string
+	AnswerSHA string
 }
 
 type Subtask struct {
@@ -28,7 +28,7 @@ type PreparedEvaluationReq struct {
 	SubmConstrs Constraints
 	Checker     ExecutableFile
 
-	Tests    []TestPaths
+	Tests    []Test
 	Subtasks []Subtask
 }
 

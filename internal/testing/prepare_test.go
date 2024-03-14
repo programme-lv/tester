@@ -1,12 +1,13 @@
 package testing_test
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"os"
 	gt "testing"
 
+	"github.com/programme-lv/tester/internal/storage"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testing/mocks"
 	"github.com/programme-lv/tester/pkg/messaging"
@@ -110,23 +111,24 @@ func TestPrepareEvalRequest_Success(t *gt.T) {
 		ptest := pReq.Tests[i] // prepared test
 		assert.Equal(t, otest.ID, ptest.ID)
 
-		err := verifySha256(ptest.InputPath, otest.InSHA256)
+		err = verifySha256(ptest.InputSHA, otest.InSHA256)
 		if err != nil {
 			t.Errorf("test %d input: %v", i, err)
+			return
 		}
 		if otest.InContent != nil {
-			err = verifyContent(ptest.InputPath, []byte(*otest.InContent))
+			err = verifyContent(ptest.InputSHA, []byte(*otest.InContent))
 			if err != nil {
 				t.Errorf("test %d input: %v", i, err)
 			}
 		}
-
-		err = verifySha256(ptest.AnswerPath, otest.AnsSHA256)
+		err = verifySha256(ptest.AnswerSHA, otest.AnsSHA256)
 		if err != nil {
 			t.Errorf("test %d answer: %v", i, err)
+			return
 		}
 		if otest.AnsContent != nil {
-			err = verifyContent(ptest.AnswerPath, []byte(*otest.AnsContent))
+			err = verifyContent(ptest.AnswerSHA, []byte(*otest.AnsContent))
 			if err != nil {
 				t.Errorf("test %d answer: %v", i, err)
 			}
@@ -134,40 +136,42 @@ func TestPrepareEvalRequest_Success(t *gt.T) {
 	}
 }
 
-func verifyContent(path string, expected []byte) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	content, err := io.ReadAll(file)
+func verifyContent(fname string, expected []byte) error {
+	s, err := storage.GetInstance()
 	if err != nil {
 		return err
 	}
 
+	content, err := s.GetTextFile(fname)
+	if err != nil {
+		return err
+	}
 	if string(content) != string(expected) {
-		return fmt.Errorf("file %s has content %s, but expected %s", path, content, expected)
+		return fmt.Errorf("file %s has content %s, but expected %s", fname, content, expected)
 	}
 
 	return nil
 }
 
-func verifySha256(path string, expected string) error {
-	file, err := os.Open(path)
+func verifySha256(fname string, expected string) error {
+	s, err := storage.GetInstance()
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+
+	file, err := s.GetTextFile(fname)
+	if err != nil {
+		return err
+	}
 
 	h := sha256.New()
-	if _, err := io.Copy(h, file); err != nil {
+	if _, err := io.Copy(h, bytes.NewReader(file)); err != nil {
 		return err
 	}
 
 	sha256sum := fmt.Sprintf("%x", h.Sum(nil))
 	if sha256sum != expected {
-		return fmt.Errorf("file %s has sha256 %s, but expected %s", path, sha256sum, expected)
+		return fmt.Errorf("file %s has sha256 %s, but expected %s", fname, sha256sum, expected)
 	}
 
 	return nil

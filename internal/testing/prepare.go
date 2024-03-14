@@ -2,8 +2,12 @@ package testing
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"os/exec"
 	"sync"
 
+	"github.com/programme-lv/tester/internal/storage"
 	"github.com/programme-lv/tester/internal/testing/compilation"
 	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/pkg/messaging"
@@ -17,7 +21,7 @@ func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
 		Submission:  models.ExecutableFile{},
 		SubmConstrs: models.Constraints{},
 		Checker:     models.ExecutableFile{},
-		Tests:       []models.TestPaths{},
+		Tests:       []models.Test{},
 		Subtasks:    []models.Subtask{},
 	}
 
@@ -31,15 +35,28 @@ func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
 	errs, _ := errgroup.WithContext(context.Background())
 
 	errs.Go(func() error {
-		// start downloading tests
+		tests, err := downloadTests(req.Tests)
+		if err != nil {
+			return err
+		}
+
+		resMu.Lock()
+		res.Tests = tests
+		resMu.Unlock()
+
 		return nil
 	})
 
 	errs.Go(func() error {
-		cRes, err := compileSubmission(req, gath)
-		if err != nil {
+		gath.StartCompilation()
+		cRes, runData, err := compileSubmission(req)
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			log.Println("Exit code:", exiterr.ExitCode())
+			return err // TODO: handle compilation errors
+		} else if err != nil {
 			return err
 		}
+		gath.FinishCompilation(runData)
 
 		resMu.Lock()
 		res.Submission = *cRes
@@ -52,7 +69,6 @@ func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
 		checker := req.TestlibChecker
 		compiled, _, err := compilation.CompileTestlibChecker(checker)
 		if err != nil {
-			gath.FinishWithInternalServerError(err)
 			return err
 		}
 		resChecker = models.ExecutableFile{
@@ -68,8 +84,78 @@ func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
 	return res, err
 }
 
-func compileSubmission(req messaging.EvaluationRequest, gath EvalResGatherer) (
-	*models.ExecutableFile, error) {
+func downloadTests(tests []messaging.TestRef) ([]models.Test, error) {
+	pTests := make([]models.Test, 0)
+	for _, rTest := range tests {
+		pTest := models.Test{
+			ID:        rTest.ID,
+			InputSHA:  rTest.InSHA256,
+			AnswerSHA: rTest.AnsSHA256,
+		}
+
+		s, err := storage.GetInstance()
+		if err != nil {
+			err = fmt.Errorf("failed to get storage instance: %v", err)
+			return nil, err
+		}
+
+		inIs, err := s.IsTextFileInCache(rTest.InSHA256)
+		if err != nil {
+			err = fmt.Errorf("failed to check if input file is in cache: %v", err)
+			return nil, err
+		}
+
+		if !inIs {
+			if rTest.InDownlUrl == nil && rTest.InContent == nil {
+				err = fmt.Errorf("input file is not in cache and no download url nor content provided")
+				return nil, err
+			} else if rTest.InDownlUrl != nil {
+				err := s.DownloadTextFile(rTest.InSHA256, *rTest.InDownlUrl)
+				if err != nil {
+					err = fmt.Errorf("failed to download input file: %v", err)
+					return nil, err
+				}
+			} else if rTest.InContent != nil {
+				err := s.SaveTextFileToCache(rTest.InSHA256, []byte(*rTest.InContent))
+				if err != nil {
+					err = fmt.Errorf("failed to write input file: %v", err)
+					return nil, err
+				}
+			}
+		}
+
+		ansIs, err := s.IsTextFileInCache(rTest.AnsSHA256)
+		if err != nil {
+			err = fmt.Errorf("failed to check if answer file is in cache: %v", err)
+			return nil, err
+		}
+
+		if !ansIs {
+			if rTest.AnsDownlUrl == nil && rTest.AnsContent == nil {
+				err = fmt.Errorf("answer file is not in cache and no download url nor content provided")
+				return nil, err
+			} else if rTest.AnsDownlUrl != nil {
+				err := s.DownloadTextFile(rTest.AnsSHA256, *rTest.AnsDownlUrl)
+				if err != nil {
+					err = fmt.Errorf("failed to download answer file: %v", err)
+					return nil, err
+				}
+			} else if rTest.AnsContent != nil {
+				err := s.SaveTextFileToCache(rTest.AnsSHA256, []byte(*rTest.AnsContent))
+				if err != nil {
+					err = fmt.Errorf("failed to write answer file: %v", err)
+					return nil, err
+				}
+			}
+		}
+
+		pTests = append(pTests, pTest)
+	}
+	return pTests, nil
+}
+
+func compileSubmission(req messaging.EvaluationRequest) (
+	*models.ExecutableFile, *models.RuntimeData, error) {
 
 	code := req.Submission
 	pLang := req.PLanguage
@@ -79,10 +165,8 @@ func compileSubmission(req messaging.EvaluationRequest, gath EvalResGatherer) (
 			Content:  []byte(code),
 			Filename: pLang.CodeFilename,
 			ExecCmd:  pLang.ExecCmd,
-		}, nil
+		}, nil, nil
 	}
-
-	gath.StartCompilation()
 
 	fname := pLang.CodeFilename
 	cCmd := *pLang.CompileCmd
@@ -92,14 +176,12 @@ func compileSubmission(req messaging.EvaluationRequest, gath EvalResGatherer) (
 		code, fname, cCmd, cFname)
 
 	if err != nil {
-		gath.FinishWithCompilationError()
-		return nil, err
+		return nil, nil, err
 	}
-	gath.FinishCompilation(runData)
 
 	return &models.ExecutableFile{
 		Content:  compiled,
 		Filename: *pLang.CompiledFilename,
 		ExecCmd:  pLang.ExecCmd,
-	}, nil
+	}, runData, nil
 }

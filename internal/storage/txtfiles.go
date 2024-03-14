@@ -1,9 +1,38 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
+
+func (s *Storage) GetTextFile(fname string) ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.ensureTextFileExistsInCache(fname); err != nil {
+		return nil, err
+	}
+
+	textFileBytes, err := os.ReadFile(filepath.Join(s.textFileCachePath(), fname))
+	if err != nil {
+		return nil, err
+	}
+
+	return textFileBytes, nil
+}
+
+func (s *Storage) ensureTextFileExistsInCache(fname string) error {
+	path := filepath.Join(s.textFileCachePath(), fname)
+
+	if _, err := os.Stat(path); err == nil {
+		return nil // text file already exists in cache
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to check if text file exists in cache: %w", err)
+	}
+
+	return fmt.Errorf("text file %s does not exist in cache", fname)
+}
 
 func (s *Storage) SaveTextFileToCache(fname string, content []byte) error {
 	s.mu.Lock()
