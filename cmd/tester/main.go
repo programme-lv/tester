@@ -48,6 +48,7 @@ func main() {
 		rmqGatherer := rmqgath.NewRabbitMQGatherer(ch, d.ReplyTo)
 
 		reqModel := translateMsgRequestToTestingModel(&request)
+		log.Printf("Received request: %+v", reqModel)
 		err = testing.EvaluateSubmission(&reqModel, rmqGatherer)
 		panicOnError(err)
 

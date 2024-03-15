@@ -32,29 +32,12 @@ func NewRabbitMQGatherer(ch *amqp.Channel, replyTo string) *Gatherer {
 	}
 }
 
-func (r *Gatherer) declareReplyToQueue() {
-	_, err := r.amqpChannel.QueueDeclare(
-		r.replyTo,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	panicOnError(err)
-}
-
 func (r *Gatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
-	r.declareReplyToQueue()
-
 	marshalled, err := json.Marshal(msg)
 	panicOnError(err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-
-	correlationJson, err := json.Marshal(r.correlation)
-	panicOnError(err)
 
 	err = r.amqpChannel.PublishWithContext(
 		ctx,
@@ -63,9 +46,8 @@ func (r *Gatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
 		false,
 		false,
 		amqp.Publishing{
-			ContentType:   "application/json",
-			CorrelationId: string(correlationJson),
-			Body:          marshalled,
+			ContentType: "application/json",
+			Body:        marshalled,
 		})
 	panicOnError(err)
 }
