@@ -26,7 +26,9 @@ func main() {
 	panicOnError(err)
 	defer conn.Close()
 
-	consumer, err := rabbitmq.NewConsumer(conn, "eval_q")
+	consumer, err := rabbitmq.NewConsumer(conn, "eval_q",
+		rabbitmq.WithConsumerOptionsQOSPrefetch(1),
+	)
 	panicOnError(err)
 	defer consumer.Close()
 
@@ -46,6 +48,7 @@ func main() {
 
 		return rabbitmq.Ack
 	})
+	panicOnError(err)
 }
 
 func translateMsgRequestToTestingModel(request *msg.EvaluationRequest) models.EvaluationRequest {
