@@ -1,15 +1,12 @@
 package rmqgath
 
 import (
-	"context"
 	"encoding/json"
-	"log"
-	"time"
 
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/pkg/messaging"
-	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/wagslane/go-rabbitmq"
 )
 
 type testRuntimeData struct {
@@ -18,16 +15,19 @@ type testRuntimeData struct {
 }
 
 type Gatherer struct {
-	amqpChannel          *amqp.Channel
+	publisher            *rabbitmq.Publisher
 	replyTo              string
 	testRuntimeDataCache map[int64]*testRuntimeData
 }
 
 var _ testing.EvalResGatherer = (*Gatherer)(nil)
 
-func NewRabbitMQGatherer(ch *amqp.Channel, replyTo string) *Gatherer {
+func NewRabbitMQGatherer(conn *rabbitmq.Conn, replyTo string) *Gatherer {
+	publisher, err := rabbitmq.NewPublisher(conn)
+	panicOnError(err)
+
 	return &Gatherer{
-		amqpChannel:          ch,
+		publisher:            publisher,
 		replyTo:              replyTo,
 		testRuntimeDataCache: make(map[int64]*testRuntimeData),
 	}
@@ -37,20 +37,12 @@ func (r *Gatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
 	marshalled, err := json.Marshal(msg)
 	panicOnError(err)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	err = r.publisher.Publish(
+		marshalled,
+		[]string{r.replyTo},
+		rabbitmq.WithPublishOptionsContentType("application/json"),
+	)
 
-	log.Println("Sending response to", r.replyTo)
-	err = r.amqpChannel.PublishWithContext(
-		ctx,       // context
-		"",        // exchange
-		r.replyTo, // routing key
-		true,      // mandatory
-		false,     // immediate
-		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        marshalled,
-		})
 	panicOnError(err)
 }
 

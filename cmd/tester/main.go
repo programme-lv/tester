@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/programme-lv/director/msg"
+	"github.com/wagslane/go-rabbitmq"
 	"google.golang.org/protobuf/proto"
 
 	_ "github.com/lib/pq"
@@ -18,45 +19,33 @@ import (
 func main() {
 	cfg := environment.ReadEnvConfig()
 
-	rabbit, err := amqp.Dial(cfg.AMQPConnString)
+	conn, err := rabbitmq.NewConn(
+		cfg.AMQPConnString,
+		rabbitmq.WithConnectionOptionsLogging,
+	)
 	panicOnError(err)
-	defer func(rabbit *amqp.Connection) {
-		err := rabbit.Close()
-		panicOnError(err)
-	}(rabbit)
+	defer conn.Close()
 
-	ch, err := openChannel(rabbit)
+	consumer, err := rabbitmq.NewConsumer(conn, "eval_q")
 	panicOnError(err)
-	defer func(ch *amqp.Channel) {
-		err := ch.Close()
-		panicOnError(err)
-	}(ch)
+	defer consumer.Close()
 
-	q, err := declareEvalQueue(ch)
-	panicOnError(err)
-
-	msgs, err := startConsuming(ch, q)
-	panicOnError(err)
-
-	for d := range msgs {
+	err = consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
 		decompressed, err := snappy.Decode(nil, d.Body)
 		panicOnError(err)
 		request := msg.EvaluationRequest{}
 		err = proto.Unmarshal(decompressed, &request)
 		panicOnError(err)
 
-		rmqGatherer := rmqgath.NewRabbitMQGatherer(ch, d.ReplyTo)
+		rmqGatherer := rmqgath.NewRabbitMQGatherer(conn, d.ReplyTo)
 
 		reqModel := translateMsgRequestToTestingModel(&request)
 		log.Printf("Received request: %+v", reqModel)
 		err = testing.EvaluateSubmission(&reqModel, rmqGatherer)
 		panicOnError(err)
 
-		err = d.Ack(false)
-		panicOnError(err)
-	}
-
-	log.Println("Exiting...")
+		return rabbitmq.Ack
+	})
 }
 
 func translateMsgRequestToTestingModel(request *msg.EvaluationRequest) models.EvaluationRequest {
