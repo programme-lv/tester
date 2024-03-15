@@ -3,6 +3,7 @@ package rmqgath
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/programme-lv/tester/internal/testing"
@@ -39,12 +40,13 @@ func (r *Gatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	log.Println("Sending response to", r.replyTo)
 	err = r.amqpChannel.PublishWithContext(
-		ctx,
-		"",
-		r.replyTo,
-		false,
-		false,
+		ctx,       // context
+		"",        // exchange
+		r.replyTo, // routing key
+		true,      // mandatory
+		false,     // immediate
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body:        marshalled,
