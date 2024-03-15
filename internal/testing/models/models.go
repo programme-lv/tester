@@ -12,12 +12,6 @@ type Test struct {
 	AnswerSHA string
 }
 
-type Subtask struct {
-	ID      int
-	Score   int
-	TestIDs []int
-}
-
 type Constraints struct {
 	CpuTimeLimInSec float64
 	MemoryLimitInKB int64

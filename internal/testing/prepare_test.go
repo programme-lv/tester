@@ -8,7 +8,6 @@ import (
 	"github.com/programme-lv/tester/internal/testing/mocks"
 	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/internal/testing/utils"
-	"github.com/programme-lv/tester/pkg/messaging"
 	"go.uber.org/mock/gomock"
 )
 
@@ -67,7 +66,7 @@ func TestPrepareEvalRequest_Success(t *gt.T) {
 	gathMock.EXPECT().StartCompilation().Times(1)
 	gathMock.EXPECT().FinishCompilation(gomock.Any()).Times(1)
 
-	preq, err := testing.PrepareEvalRequest(req, gathMock)
+	preq, err := testing.PrepareEvalRequest(&req, gathMock)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -90,7 +89,7 @@ func TestPrepareEvalRequest_BadSubmission(t *gt.T) {
 	gathMock.EXPECT().FinishCompilation(gomock.Any()).Times(1)
 	gathMock.EXPECT().FinishWithCompilationError().Times(1)
 
-	_, err := testing.PrepareEvalRequest(req, gathMock)
+	_, err := testing.PrepareEvalRequest(&req, gathMock)
 	if err == nil {
 		t.Error("expected error, but got nil")
 	}
@@ -108,20 +107,20 @@ func TestPrepareEvalRequest_BadChecker(t *gt.T) {
 	gathMock.EXPECT().FinishCompilation(gomock.Any()).Times(1)
 	gathMock.EXPECT().FinishWithInternalServerError(gomock.Any()).Times(1)
 
-	_, err := testing.PrepareEvalRequest(req, gathMock)
+	_, err := testing.PrepareEvalRequest(&req, gathMock)
 	if err == nil {
 		t.Error("expected error, but got nil")
 	}
 }
 
-func getSuccessPrepareEvalRequest() messaging.EvaluationRequest {
+func getSuccessPrepareEvalRequest() models.EvaluationRequest {
 	compileCmd := "g++ -std=c++17 -O2 -o main main.cpp"
 	cFname := "main"
 	test0InpContent := "100 99\n"
 	AnsDownlUrl := "https://proglv-dev.fra1.digitaloceanspaces.com/tests/29ef5f0b7fc0c2facd22af7e616542825331312745dfc31f37423ab0b5e005ee"
-	req := messaging.EvaluationRequest{
+	req := models.EvaluationRequest{
 		Submission: helloWorldCpp,
-		PLanguage: messaging.PLanguage{
+		PLanguage: models.PLanguage{
 			ID:               "cpp17",
 			FullName:         "C++17",
 			CodeFilename:     "main.cpp",
@@ -129,11 +128,11 @@ func getSuccessPrepareEvalRequest() messaging.EvaluationRequest {
 			CompiledFilename: &cFname,
 			ExecCmd:          "./main",
 		},
-		Limits: messaging.Limits{
+		Limits: models.Limits{
 			CPUTimeMillis: 1000,
 			MemKibibytes:  256 * 1024,
 		},
-		Tests: []messaging.TestRef{
+		Tests: []models.TestRef{
 			{
 				ID:          1,
 				InContent:   &test0InpContent,
@@ -149,7 +148,7 @@ func getSuccessPrepareEvalRequest() messaging.EvaluationRequest {
 	return req
 }
 
-func compareTests(original []messaging.TestRef, prepared []models.Test) error {
+func compareTests(original []models.TestRef, prepared []models.Test) error {
 	if len(original) != len(prepared) {
 		return fmt.Errorf("expected %d tests, but got %d", len(original), len(prepared))
 	}

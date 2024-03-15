@@ -18,17 +18,15 @@ type testRuntimeData struct {
 
 type Gatherer struct {
 	amqpChannel          *amqp.Channel
-	correlation          messaging.ResponseCorrelation
 	replyTo              string
 	testRuntimeDataCache map[int64]*testRuntimeData
 }
 
 var _ testing.EvalResGatherer = (*Gatherer)(nil)
 
-func NewRabbitMQGatherer(ch *amqp.Channel, correlation messaging.ResponseCorrelation, replyTo string) *Gatherer {
+func NewRabbitMQGatherer(ch *amqp.Channel, replyTo string) *Gatherer {
 	return &Gatherer{
 		amqpChannel:          ch,
-		correlation:          correlation,
 		replyTo:              replyTo,
 		testRuntimeDataCache: make(map[int64]*testRuntimeData),
 	}

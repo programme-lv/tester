@@ -9,10 +9,9 @@ import (
 	"github.com/programme-lv/tester/internal/storage"
 	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/internal/testing/utils"
-	"github.com/programme-lv/tester/pkg/messaging"
 )
 
-func EvaluateSubmission(rawReq messaging.EvaluationRequest, gath EvalResGatherer) error {
+func EvaluateSubmission(rawReq *models.EvaluationRequest, gath EvalResGatherer) error {
 	gath.StartEvaluation()
 
 	req, err := PrepareEvalRequest(rawReq, gath)

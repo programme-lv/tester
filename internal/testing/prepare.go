@@ -9,11 +9,10 @@ import (
 	"github.com/programme-lv/tester/internal/testing/compilation"
 	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/programme-lv/tester/internal/testing/utils"
-	"github.com/programme-lv/tester/pkg/messaging"
 	"golang.org/x/sync/errgroup"
 )
 
-func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
+func PrepareEvalRequest(req *models.EvaluationRequest, gath EvalResGatherer) (
 	models.PreparedEvaluationReq, error) {
 
 	res := models.PreparedEvaluationReq{
@@ -100,7 +99,7 @@ func PrepareEvalRequest(req messaging.EvaluationRequest, gath EvalResGatherer) (
 	return res, err
 }
 
-func downloadTests(tests []messaging.TestRef) ([]models.Test, error) {
+func downloadTests(tests []models.TestRef) ([]models.Test, error) {
 	pTests := make([]models.Test, 0)
 	for _, rTest := range tests {
 		pTest := models.Test{
@@ -181,7 +180,7 @@ func downloadTests(tests []messaging.TestRef) ([]models.Test, error) {
 	return pTests, nil
 }
 
-func compileSubmission(req messaging.EvaluationRequest) (
+func compileSubmission(req *models.EvaluationRequest) (
 	*models.ExecutableFile, *models.RuntimeData, error) {
 
 	code := req.Submission
