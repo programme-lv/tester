@@ -1,11 +1,11 @@
 package rmqgath
 
 import (
-	"encoding/json"
-
+	"github.com/gogo/protobuf/proto"
+	"github.com/klauspost/compress/snappy"
+	"github.com/programme-lv/director/msg"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testing/models"
-	"github.com/programme-lv/tester/pkg/messaging"
 	"github.com/wagslane/go-rabbitmq"
 )
 
@@ -33,16 +33,17 @@ func NewRabbitMQGatherer(conn *rabbitmq.Conn, replyTo string) *Gatherer {
 	}
 }
 
-func (r *Gatherer) sendEvalResponse(msg *messaging.EvaluationResponse) {
-	marshalled, err := json.Marshal(msg)
+func (r *Gatherer) sendEvalResponse(m *msg.EvaluationFeedback) {
+	marshalled, err := proto.Marshal(m)
 	panicOnError(err)
 
-	err = r.publisher.Publish(
-		marshalled,
-		[]string{r.replyTo},
-		rabbitmq.WithPublishOptionsContentType("application/json"),
-	)
+	compressed := snappy.Encode(nil, marshalled)
 
+	err = r.publisher.Publish(
+		compressed,
+		[]string{r.replyTo},
+		rabbitmq.WithPublishOptionsContentType("application/octet-stream"),
+	)
 	panicOnError(err)
 }
 
