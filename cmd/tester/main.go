@@ -13,7 +13,6 @@ import (
 	"github.com/programme-lv/tester/internal/gatherers/rmqgath"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testing/models"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func main() {
@@ -28,6 +27,7 @@ func main() {
 
 	consumer, err := rabbitmq.NewConsumer(conn, "eval_q",
 		rabbitmq.WithConsumerOptionsQOSPrefetch(1),
+		rabbitmq.WithConsumerOptionsConcurrency(1),
 	)
 	panicOnError(err)
 	defer consumer.Close()
@@ -44,7 +44,7 @@ func main() {
 		reqModel := translateMsgRequestToTestingModel(&request)
 		log.Printf("Received request: %+v", reqModel)
 		err = testing.EvaluateSubmission(&reqModel, rmqGatherer)
-		panicOnError(err)
+		log.Printf("Evaluation finished: %+v", err)
 
 		return rabbitmq.Ack
 	})
@@ -100,41 +100,41 @@ func translateMsgRequestToTestingModel(request *msg.EvaluationRequest) models.Ev
 	return result
 }
 
-func openChannel(rabbit *amqp.Connection) (*amqp.Channel, error) {
-	ch, err := rabbit.Channel()
-	if err != nil {
-		return nil, err
-	}
+// func openChannel(rabbit *amqp.Connection) (*amqp.Channel, error) {
+// 	ch, err := rabbit.Channel()
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	prefetchCount := 1 // process one message at a time
-	prefetchSize := 0  // don't limit the size of the message
-	global := false    // apply the settings to the current channel only
-	err = ch.Qos(prefetchCount, prefetchSize, global)
-	if err != nil {
-		return nil, err
-	}
+// 	prefetchCount := 1 // process one message at a time
+// 	prefetchSize := 0  // don't limit the size of the message
+// 	global := false    // apply the settings to the current channel only
+// 	err = ch.Qos(prefetchCount, prefetchSize, global)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return ch, nil
-}
+// 	return ch, nil
+// }
 
-func declareEvalQueue(ch *amqp.Channel) (amqp.Queue, error) {
-	durable := true     // queue will survive broker restarts
-	autoDelete := false // queue won't be deleted once the connection is closed
-	exclusive := false  // queue can be accessed by other connections
-	noWait := false     // don't wait for the server to confirm the queue creation
-	args := make(amqp.Table)
-	return ch.QueueDeclare("eval_q", durable, autoDelete, exclusive, noWait, args)
-}
+// func declareEvalQueue(ch *amqp.Channel) (amqp.Queue, error) {
+// 	durable := true     // queue will survive broker restarts
+// 	autoDelete := false // queue won't be deleted once the connection is closed
+// 	exclusive := false  // queue can be accessed by other connections
+// 	noWait := false     // don't wait for the server to confirm the queue creation
+// 	args := make(amqp.Table)
+// 	return ch.QueueDeclare("eval_q", durable, autoDelete, exclusive, noWait, args)
+// }
 
-func startConsuming(ch *amqp.Channel, q amqp.Queue) (<-chan amqp.Delivery, error) {
-	consumer := ""     // generate a unique consumer name
-	autoAck := false   // don't automatically acknowledge the messages
-	exclusive := false // queue can be accessed by other connections
-	noLocal := false   // don't deliver own messages
-	noWait := false    // don't wait for the server to confirm the consumer creation
-	args := make(amqp.Table)
-	return ch.Consume(q.Name, consumer, autoAck, exclusive, noLocal, noWait, args)
-}
+// func startConsuming(ch *amqp.Channel, q amqp.Queue) (<-chan amqp.Delivery, error) {
+// 	consumer := ""     // generate a unique consumer name
+// 	autoAck := false   // don't automatically acknowledge the messages
+// 	exclusive := false // queue can be accessed by other connections
+// 	noLocal := false   // don't deliver own messages
+// 	noWait := false    // don't wait for the server to confirm the consumer creation
+// 	args := make(amqp.Table)
+// 	return ch.Consume(q.Name, consumer, autoAck, exclusive, noLocal, noWait, args)
+// }
 
 func panicOnError(err error) {
 	if err != nil {
