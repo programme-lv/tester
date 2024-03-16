@@ -69,7 +69,6 @@ func PrepareEvalRequest(req *models.EvaluationRequest, gath EvalResGatherer) (
 		return nil
 	})
 
-	var resChecker models.ExecutableFile
 	errs.Go(func() error {
 		checker := req.TestlibChecker
 		compiled, runData, err := compilation.CompileTestlibChecker(checker)
@@ -86,14 +85,15 @@ func PrepareEvalRequest(req *models.EvaluationRequest, gath EvalResGatherer) (
 			return err
 		}
 
-		resChecker = models.ExecutableFile{
+		resMu.Lock()
+		res.Checker = models.ExecutableFile{
 			Content:  compiled,
 			Filename: "checker",
 			ExecCmd:  "./checker input.txt output.txt answer.txt",
 		}
+		resMu.Unlock()
 		return nil
 	})
-	res.Checker = resChecker
 
 	err := errs.Wait()
 	return res, err

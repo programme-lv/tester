@@ -1,6 +1,8 @@
 package rmqgath
 
 import (
+	"log"
+
 	"github.com/programme-lv/tester/internal/testing/models"
 	messaging2 "github.com/programme-lv/tester/pkg/messaging"
 	"github.com/programme-lv/tester/pkg/messaging/statuses"
@@ -45,6 +47,7 @@ func (r *Gatherer) IncrementScore(delta int64) {
 }
 
 func (r *Gatherer) FinishWithInternalServerError(err error) {
+	log.Printf("Internal server error: %v", err)
 	msg := &messaging2.EvaluationResponse{
 		FeedbackType: messaging2.UpdateEvalStatus,
 		Data: messaging2.UpdateEvalStatusData{
