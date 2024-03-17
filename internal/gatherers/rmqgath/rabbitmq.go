@@ -6,20 +6,13 @@ import (
 	"github.com/klauspost/compress/snappy"
 	"github.com/programme-lv/director/msg"
 	"github.com/programme-lv/tester/internal/testing"
-	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/wagslane/go-rabbitmq"
 	"google.golang.org/protobuf/proto"
 )
 
-type testRuntimeData struct {
-	submissionRuntimeData models.RuntimeData
-	checkerRuntimeData    models.RuntimeData
-}
-
 type Gatherer struct {
-	publisher            *rabbitmq.Publisher
-	replyTo              string
-	testRuntimeDataCache map[int64]*testRuntimeData
+	publisher *rabbitmq.Publisher
+	replyTo   string
 }
 
 var _ testing.EvalResGatherer = (*Gatherer)(nil)
@@ -29,9 +22,8 @@ func NewRabbitMQGatherer(conn *rabbitmq.Conn, replyTo string) *Gatherer {
 	panicOnError(err)
 
 	return &Gatherer{
-		publisher:            publisher,
-		replyTo:              replyTo,
-		testRuntimeDataCache: make(map[int64]*testRuntimeData),
+		publisher: publisher,
+		replyTo:   replyTo,
 	}
 }
 

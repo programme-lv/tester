@@ -43,6 +43,10 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/programme-lv/director v0.1.2 h1:/AYJOPpNdmQJLyv9nRYUy09bBpjGPRlTpCuPdotT2kw=
 github.com/programme-lv/director v0.1.2/go.mod h1:fHQBtt2U8f3KnmQFB42ZR/4bPBLzVgkSD0u9oJZfsWc=
+github.com/programme-lv/director v0.1.3 h1:j7pMtzx0ww7nI0SxomCwExPphn7BOXchMkdPKhmVpE0=
+github.com/programme-lv/director v0.1.3/go.mod h1:lopSRXRPGxAWljom2Cp2FHjG9RelR8NY1ObC8/Wmhlk=
+github.com/programme-lv/director v0.1.4 h1:cWxpsVxPTtyo43k0YOThG252UPgmNAR9rALyhPZSevs=
+github.com/programme-lv/director v0.1.4/go.mod h1:lopSRXRPGxAWljom2Cp2FHjG9RelR8NY1ObC8/Wmhlk=
 github.com/rabbitmq/amqp091-go v1.9.0 h1:qrQtyzB4H8BQgEuJwhmVQqVHB9O4+MNDJCCAcpc3Aoo=
 github.com/rabbitmq/amqp091-go v1.9.0/go.mod h1:+jPrT9iY2eLjRaMSRHUhc3z14E/l85kv/f+6luSD3pc=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=

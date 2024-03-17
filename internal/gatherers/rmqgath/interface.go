@@ -1,15 +1,16 @@
 package rmqgath
 
 import (
+	"fmt"
+
 	"github.com/programme-lv/director/msg"
 	"github.com/programme-lv/tester/internal/testing/models"
-	messaging2 "github.com/programme-lv/tester/pkg/messaging"
 )
 
 func (r *Gatherer) StartEvaluation() {
 	m := &msg.EvaluationFeedback{
-		FeedbackTypes: &msg.EvaluationFeedback_Start{
-			Start: &msg.StartEvaluation{},
+		FeedbackTypes: &msg.EvaluationFeedback_StartEvaluation{
+			StartEvaluation: &msg.StartEvaluation{},
 		},
 	}
 
@@ -17,213 +18,188 @@ func (r *Gatherer) StartEvaluation() {
 }
 
 func (r *Gatherer) StartTesting(maxScore int64) {
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.UpdateEvalStatus,
-	// 	Data: messaging2.UpdateEvalStatusData{
-	// 		Status: statuses.Testing,
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_StartTesting{
+			StartTesting: &msg.StartTesting{
+				MaxScore: maxScore,
+			},
+		},
+	}
 
-	// msg = &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.SetMaxScore,
-	// 	Data: messaging2.SetMaxScoreData{
-	// 		MaxScore: int(maxScore),
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) IncrementScore(delta int64) {
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.IncrementScore,
-	// 	Data: messaging2.IncrementScoreData{
-	// 		Delta: int(delta),
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_IncrementScore{
+			IncrementScore: &msg.IncrementScore{
+				Delta: delta,
+			},
+		},
+	}
+
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) FinishWithInternalServerError(err error) {
-	// log.Printf("Internal server error: %v", err)
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.UpdateEvalStatus,
-	// 	Data: messaging2.UpdateEvalStatusData{
-	// 		Status: statuses.InternalServerError,
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_FinishWithInernalServerError{
+			FinishWithInernalServerError: &msg.FinishWithInernalServerError{
+				ErrorMsg: fmt.Sprintf("%+v", err),
+			},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) FinishEvaluation() {
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.UpdateEvalStatus,
-	// 	Data: messaging2.UpdateEvalStatusData{
-	// 		Status: statuses.Finished,
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_FinishEvaluation{
+			FinishEvaluation: &msg.FinishEvaluation{},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) StartCompilation() {
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.UpdateEvalStatus,
-	// 	Data: messaging2.UpdateEvalStatusData{
-	// 		Status: statuses.Compiling,
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_StartCompilation{
+			StartCompilation: &msg.StartCompilation{},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) FinishCompilation(data *models.RuntimeData) {
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.CompilationFinished,
-	// 	Data: messaging2.CompilationFinishedData{
-	// 		RuntimeData: toMessagingRuntimeData(data),
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_FinishCompilation{
+			FinishCompilation: &msg.FinishCompilation{
+				CompilationRData: &msg.RuntimeData{
+					Stdout:         data.Output.Stdout,
+					Stderr:         data.Output.Stderr,
+					ExitCode:       data.Output.ExitCode,
+					CpuTimeMillis:  data.Metrics.CpuTimeMillis,
+					WallTimeMillis: data.Metrics.WallTimeMillis,
+					MemKibiBytes:   data.Metrics.MemoryKBytes,
+				},
+			},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) FinishWithCompilationError() {
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.UpdateEvalStatus,
-	// 	Data: messaging2.UpdateEvalStatusData{
-	// 		Status: statuses.CompilationError,
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_FinishWithCompilationError{
+			FinishWithCompilationError: &msg.FinishWithCompilationError{},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) IgnoreTest(testId int64) {
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.TestFinished,
-	// 	Data: messaging2.TestFinishedData{
-	// 		TestId:                testId,
-	// 		Verdict:               statuses.Ignored,
-	// 		SubmissionRuntimeData: nil,
-	// 		CheckerRuntimeData:    nil,
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_IgnoreTest{
+			IgnoreTest: &msg.IgnoreTest{
+				TestId: testId,
+			},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) StartTest(testId int64) {
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.TestStarted,
-	// 	Data: messaging2.TestStartedData{
-	// 		TestId: testId,
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_StartTest{
+			StartTest: &msg.StartTest{
+				TestId: testId,
+			},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *models.RuntimeData) {
-	// if r.testRuntimeDataCache[testId] == nil {
-	// 	r.testRuntimeDataCache[testId] = &testRuntimeData{}
-	// }
-	// r.testRuntimeDataCache[testId].submissionRuntimeData = *rd
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_ReportTestSubmissionRuntimeData{
+			ReportTestSubmissionRuntimeData: &msg.ReportTestSubmissionRuntimeData{
+				TestId: testId,
+				RData: &msg.RuntimeData{
+					Stdout:         rd.Output.Stdout,
+					Stderr:         rd.Output.Stderr,
+					ExitCode:       rd.Output.ExitCode,
+					CpuTimeMillis:  rd.Metrics.CpuTimeMillis,
+					WallTimeMillis: rd.Metrics.WallTimeMillis,
+					MemKibiBytes:   rd.Metrics.MemoryKBytes,
+				},
+			},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *models.RuntimeData) {
-	// if r.testRuntimeDataCache[testId] == nil {
-	// 	r.testRuntimeDataCache[testId] = &testRuntimeData{}
-	// }
-	// r.testRuntimeDataCache[testId].checkerRuntimeData = *rd
-}
-
-func toMessagingRuntimeData(rd *models.RuntimeData) *messaging2.RuntimeData {
-	return &messaging2.RuntimeData{
-		Output: messaging2.RuntimeOutput{
-			Stdout:   rd.Output.Stdout,
-			Stderr:   rd.Output.Stderr,
-			ExitCode: rd.Output.ExitCode,
-		},
-		Metrics: messaging2.RuntimeMetrics{
-			CpuTimeMillis:  rd.Metrics.CpuTimeMillis,
-			WallTimeMillis: rd.Metrics.WallTimeMillis,
-			MemoryKBytes:   rd.Metrics.MemoryKBytes,
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_ReportTestCheckerRuntimeData{
+			ReportTestCheckerRuntimeData: &msg.ReportTestCheckerRuntimeData{
+				TestId: testId,
+				RData: &msg.RuntimeData{
+					Stdout:         rd.Output.Stdout,
+					Stderr:         rd.Output.Stderr,
+					ExitCode:       rd.Output.ExitCode,
+					CpuTimeMillis:  rd.Metrics.CpuTimeMillis,
+					WallTimeMillis: rd.Metrics.WallTimeMillis,
+					MemKibiBytes:   rd.Metrics.MemoryKBytes,
+				},
+			},
 		},
 	}
-}
-
-func (r *Gatherer) FinishTest(testId int64) {
-	// submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
-	// checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.TestFinished,
-	// 	Data: messaging2.TestFinishedData{
-	// 		TestId:                testId,
-	// 		Verdict:               "",
-	// 		SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
-	// 		CheckerRuntimeData:    toMessagingRuntimeData(checkerRd),
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) FinishTestWithLimitExceeded(testId int64, flags models.RuntimeExceededFlags) {
-	// submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
-	// checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	// verdict := statuses.IdlenessLimitExceeded
-	// if flags.TimeLimitExceeded {
-	// 	verdict = statuses.TimeLimitExceeded
-	// } else if flags.MemoryLimitExceeded {
-	// 	verdict = statuses.MemoryLimitExceeded
-	// }
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.TestFinished,
-	// 	Data: messaging2.TestFinishedData{
-	// 		TestId:                testId,
-	// 		Verdict:               verdict,
-	// 		SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
-	// 		CheckerRuntimeData:    toMessagingRuntimeData(checkerRd),
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_FinishTestWithLimitExceeded{
+			FinishTestWithLimitExceeded: &msg.FinishTestWithLimitExceeded{
+				TestId:                testId,
+				IsCPUTimeExceeded:     flags.TimeLimitExceeded,
+				MemoryLimitExceeded:   flags.MemoryLimitExceeded,
+				IdlenessLimitExceeded: flags.IdlenessLimitExceeded,
+			},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) FinishTestWithRuntimeError(testId int64) {
-	// submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
-	// checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.TestFinished,
-	// 	Data: messaging2.TestFinishedData{
-	// 		TestId:                testId,
-	// 		Verdict:               statuses.RuntimeError,
-	// 		SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
-	// 		CheckerRuntimeData:    toMessagingRuntimeData(checkerRd),
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_FinishTestWithRuntimeError{
+			FinishTestWithRuntimeError: &msg.FinishTestWithRuntimeError{
+				TestId: testId,
+			},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) FinishTestWithVerdictAccepted(testId int64) {
-	// submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
-	// checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.TestFinished,
-	// 	Data: messaging2.TestFinishedData{
-	// 		TestId:                testId,
-	// 		Verdict:               statuses.Accepted,
-	// 		SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
-	// 		CheckerRuntimeData:    toMessagingRuntimeData(checkerRd),
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_FinishTestWithVerdictAccepted{
+			FinishTestWithVerdictAccepted: &msg.FinishTestWithVerdictAccepted{
+				TestId: testId,
+			},
+		},
+	}
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) FinishTestWithVerdictWrongAnswer(testId int64) {
-	// submissionRd := &r.testRuntimeDataCache[testId].submissionRuntimeData
-	// checkerRd := &r.testRuntimeDataCache[testId].checkerRuntimeData
-	// msg := &messaging2.EvaluationResponse{
-	// 	FeedbackType: messaging2.TestFinished,
-	// 	Data: messaging2.TestFinishedData{
-	// 		TestId:                testId,
-	// 		Verdict:               statuses.WrongAnswer,
-	// 		SubmissionRuntimeData: toMessagingRuntimeData(submissionRd),
-	// 		CheckerRuntimeData:    toMessagingRuntimeData(checkerRd),
-	// 	},
-	// }
-	// r.sendEvalResponse(msg)
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_FinishTestWithVerdictWrongAnswer{
+			FinishTestWithVerdictWrongAnswer: &msg.FinishTestWithVerdictWrongAnswer{
+				TestId: testId,
+			},
+		},
+	}
+	r.sendEvalResponse(m)
 }

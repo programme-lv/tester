@@ -11,7 +11,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.17.7
 	github.com/lib/pq v1.10.9
-	github.com/programme-lv/director v0.1.2
+	github.com/programme-lv/director v0.1.4
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/wagslane/go-rabbitmq v0.13.0
 	go.uber.org/mock v0.4.0
