@@ -14,6 +14,12 @@ func (s *Storage) DownloadTextFile(url string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Ensure the directory exists
+	dirPath := s.textFileCachePath()
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %v", err)
+	}
+
 	// Create a temporary file
 	tempFile, err := os.CreateTemp(s.textFileCachePath(), "download-*.tmp")
 	if err != nil {
