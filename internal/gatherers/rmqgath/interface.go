@@ -75,8 +75,8 @@ func (r *Gatherer) FinishCompilation(data *models.RuntimeData) {
 		FeedbackTypes: &msg.EvaluationFeedback_FinishCompilation{
 			FinishCompilation: &msg.FinishCompilation{
 				CompilationRData: &msg.RuntimeData{
-					Stdout:         data.Output.Stdout,
-					Stderr:         data.Output.Stderr,
+					Stdout:         clampString(data.Output.Stdout, 1e4),
+					Stderr:         clampString(data.Output.Stderr, 1e4),
 					ExitCode:       data.Output.ExitCode,
 					CpuTimeMillis:  data.Metrics.CpuTimeMillis,
 					WallTimeMillis: data.Metrics.WallTimeMillis,
@@ -125,8 +125,8 @@ func (r *Gatherer) ReportTestSubmissionRuntimeData(testId int64, rd *models.Runt
 			ReportTestSubmissionRuntimeData: &msg.ReportTestSubmissionRuntimeData{
 				TestId: testId,
 				RData: &msg.RuntimeData{
-					Stdout:         rd.Output.Stdout,
-					Stderr:         rd.Output.Stderr,
+					Stdout:         clampString(rd.Output.Stdout, 1e4),
+					Stderr:         clampString(rd.Output.Stderr, 1e4),
 					ExitCode:       rd.Output.ExitCode,
 					CpuTimeMillis:  rd.Metrics.CpuTimeMillis,
 					WallTimeMillis: rd.Metrics.WallTimeMillis,
@@ -144,8 +144,8 @@ func (r *Gatherer) ReportTestCheckerRuntimeData(testId int64, rd *models.Runtime
 			ReportTestCheckerRuntimeData: &msg.ReportTestCheckerRuntimeData{
 				TestId: testId,
 				RData: &msg.RuntimeData{
-					Stdout:         rd.Output.Stdout,
-					Stderr:         rd.Output.Stderr,
+					Stdout:         clampString(rd.Output.Stdout, 1e4),
+					Stderr:         clampString(rd.Output.Stderr, 1e4),
 					ExitCode:       rd.Output.ExitCode,
 					CpuTimeMillis:  rd.Metrics.CpuTimeMillis,
 					WallTimeMillis: rd.Metrics.WallTimeMillis,

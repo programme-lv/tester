@@ -44,7 +44,7 @@ func main() {
 		reqModel := translateMsgRequestToTestingModel(&request)
 		log.Printf("Received request: %+v", reqModel)
 		err = testing.EvaluateSubmission(&reqModel, rmqGatherer)
-		log.Printf("Evaluation finished: %+v", err)
+		log.Printf("Evaluation finished! error: %+v", err)
 
 		return rabbitmq.Ack
 	})

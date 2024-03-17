@@ -1,8 +1,6 @@
 package rmqgath
 
 import (
-	"log"
-
 	"github.com/klauspost/compress/snappy"
 	"github.com/programme-lv/director/msg"
 	"github.com/programme-lv/tester/internal/testing"
@@ -28,13 +26,13 @@ func NewRabbitMQGatherer(conn *rabbitmq.Conn, replyTo string) *Gatherer {
 }
 
 func (r *Gatherer) sendEvalResponse(m *msg.EvaluationFeedback) {
-	log.Printf("m: %+v", m)
+	// log.Printf("m: %+v", m)
 	marshalled, err := proto.Marshal(m)
 	panicOnError(err)
-	log.Printf("marshalled: %+v", marshalled)
+	// log.Printf("marshalled: %+v", marshalled)
 
 	compressed := snappy.Encode(nil, marshalled)
-	log.Printf("compressed: %+v", compressed)
+	// log.Printf("compressed: %+v", compressed)
 
 	err = r.publisher.Publish(
 		compressed,
