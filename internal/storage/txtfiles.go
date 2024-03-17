@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,7 +36,7 @@ func (s *Storage) ensureTextFileExistsInCache(fname string) error {
 	return fmt.Errorf("text file %s does not exist in cache", fname)
 }
 
-func (s *Storage) SaveTextFileToCache(fname string, content []byte) error {
+func (s *Storage) SaveTextFileToCache(content []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -43,7 +45,9 @@ func (s *Storage) SaveTextFileToCache(fname string, content []byte) error {
 		return err
 	}
 
-	filePath := filepath.Join(s.textFileCachePath(), fname)
+	hash := sha256.Sum256(content)
+	hexString := hex.EncodeToString(hash[:])
+	filePath := filepath.Join(s.textFileCachePath(), hexString)
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err

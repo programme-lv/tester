@@ -125,13 +125,13 @@ func downloadTests(tests []models.TestRef) ([]models.Test, error) {
 				err = fmt.Errorf("input file is not in cache and no download url nor content provided")
 				return nil, err
 			} else if rTest.InDownlUrl != nil {
-				err := s.DownloadTextFile(rTest.InSHA256, *rTest.InDownlUrl)
+				err := s.DownloadTextFile(*rTest.InDownlUrl)
 				if err != nil {
 					err = fmt.Errorf("failed to download input file: %v", err)
 					return nil, err
 				}
 			} else if rTest.InContent != nil {
-				err := s.SaveTextFileToCache(rTest.InSHA256, []byte(*rTest.InContent))
+				err := s.SaveTextFileToCache([]byte(*rTest.InContent))
 				if err != nil {
 					err = fmt.Errorf("failed to write input file: %v", err)
 					return nil, err
@@ -156,13 +156,13 @@ func downloadTests(tests []models.TestRef) ([]models.Test, error) {
 				err = fmt.Errorf("answer file is not in cache and no download url nor content provided")
 				return nil, err
 			} else if rTest.AnsDownlUrl != nil {
-				err := s.DownloadTextFile(rTest.AnsSHA256, *rTest.AnsDownlUrl)
+				err := s.DownloadTextFile(*rTest.AnsDownlUrl)
 				if err != nil {
 					err = fmt.Errorf("failed to download answer file: %v", err)
 					return nil, err
 				}
 			} else if rTest.AnsContent != nil {
-				err := s.SaveTextFileToCache(rTest.AnsSHA256, []byte(*rTest.AnsContent))
+				err := s.SaveTextFileToCache([]byte(*rTest.AnsContent))
 				if err != nil {
 					err = fmt.Errorf("failed to write answer file: %v", err)
 					return nil, err
