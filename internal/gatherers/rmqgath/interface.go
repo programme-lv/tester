@@ -1,12 +1,9 @@
 package rmqgath
 
 import (
-	"log"
-
 	"github.com/programme-lv/director/msg"
 	"github.com/programme-lv/tester/internal/testing/models"
 	messaging2 "github.com/programme-lv/tester/pkg/messaging"
-	"google.golang.org/protobuf/proto"
 )
 
 func (r *Gatherer) StartEvaluation() {
@@ -16,10 +13,6 @@ func (r *Gatherer) StartEvaluation() {
 		},
 	}
 
-	marshalled, err := proto.Marshal(m)
-	panicOnError(err)
-
-	log.Println("marshalled: ", marshalled)
 	r.sendEvalResponse(m)
 }
 

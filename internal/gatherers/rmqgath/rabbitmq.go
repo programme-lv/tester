@@ -39,8 +39,10 @@ func (r *Gatherer) sendEvalResponse(m *msg.EvaluationFeedback) {
 	log.Printf("m: %+v", m)
 	marshalled, err := proto.Marshal(m)
 	panicOnError(err)
+	log.Printf("marshalled: %+v", marshalled)
 
 	compressed := snappy.Encode(nil, marshalled)
+	log.Printf("compressed: %+v", compressed)
 
 	err = r.publisher.Publish(
 		compressed,
