@@ -1,21 +1,26 @@
 package rmqgath
 
 import (
+	"log"
+
 	"github.com/programme-lv/director/msg"
 	"github.com/programme-lv/tester/internal/testing/models"
 	messaging2 "github.com/programme-lv/tester/pkg/messaging"
+	"google.golang.org/protobuf/proto"
 )
 
 func (r *Gatherer) StartEvaluation() {
-	m := msg.EvaluationFeedback_Start{
-		Start: &msg.StartEvaluation{},
+	m := &msg.EvaluationFeedback{
+		FeedbackTypes: &msg.EvaluationFeedback_Start{
+			Start: &msg.StartEvaluation{},
+		},
 	}
 
-	x := &msg.EvaluationFeedback{
-		FeedbackTypes: &m,
-	}
+	marshalled, err := proto.Marshal(m)
+	panicOnError(err)
 
-	r.sendEvalResponse(x)
+	log.Println("marshalled: ", marshalled)
+	r.sendEvalResponse(m)
 }
 
 func (r *Gatherer) StartTesting(maxScore int64) {

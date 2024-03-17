@@ -1,12 +1,14 @@
 package rmqgath
 
 import (
-	"github.com/gogo/protobuf/proto"
+	"log"
+
 	"github.com/klauspost/compress/snappy"
 	"github.com/programme-lv/director/msg"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testing/models"
 	"github.com/wagslane/go-rabbitmq"
+	"google.golang.org/protobuf/proto"
 )
 
 type testRuntimeData struct {
@@ -34,6 +36,7 @@ func NewRabbitMQGatherer(conn *rabbitmq.Conn, replyTo string) *Gatherer {
 }
 
 func (r *Gatherer) sendEvalResponse(m *msg.EvaluationFeedback) {
+	log.Printf("m: %+v", m)
 	marshalled, err := proto.Marshal(m)
 	panicOnError(err)
 
