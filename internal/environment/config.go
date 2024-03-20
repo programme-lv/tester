@@ -36,9 +36,16 @@ func ReadEnvConfig() *EnvConfig {
 	rmqPort := os.Getenv("RMQ_PORT")
 	rmqUser := os.Getenv("RMQ_USER")
 	rmqPass := os.Getenv("RMQ_PASS")
+	rmqTls := os.Getenv("RMQ_TLS")
+
+	if rmqTls == "true" || rmqTls == "1" || rmqTls == "True" {
+		rmqTls = "amqps"
+	} else {
+		rmqTls = "amqp"
+	}
 
 	result.AMQPConnString = fmt.Sprintf(
-		`amqp://%s:%s@%s:%s/`,
+		`%s://%s:%s@%s:%s/`, rmqTls,
 		rmqUser, rmqPass, rmqHost, rmqPort)
 
 	return result
