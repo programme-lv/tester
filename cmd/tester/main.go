@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/golang/snappy"
@@ -35,15 +36,21 @@ func main() {
 	err = consumer.Run(func(d rabbitmq.Delivery) rabbitmq.Action {
 		decompressed, err := snappy.Decode(nil, d.Body)
 		panicOnError(err)
+
 		request := msg.EvaluationRequest{}
 		err = proto.Unmarshal(decompressed, &request)
 		panicOnError(err)
 
 		rmqGatherer := rmqgath.NewRabbitMQGatherer(conn, d.ReplyTo)
 
-		reqModel := translateMsgRequestToTestingModel(&request)
+		reqModel, err := translateMsgRequestToTestingModel(&request)
+		if err != nil {
+			rmqGatherer.FinishWithInternalServerError(fmt.Errorf("failed to translate request: %w", err))
+			return rabbitmq.Ack
+		}
+
 		log.Printf("Received request: %+v", reqModel)
-		err = testing.EvaluateSubmission(&reqModel, rmqGatherer)
+		err = testing.EvaluateSubmission(reqModel, rmqGatherer)
 		log.Printf("Evaluation finished! error: %+v", err)
 
 		return rabbitmq.Ack
@@ -51,7 +58,20 @@ func main() {
 	panicOnError(err)
 }
 
-func translateMsgRequestToTestingModel(request *msg.EvaluationRequest) models.EvaluationRequest {
+func translateMsgRequestToTestingModel(request *msg.EvaluationRequest) (*models.EvaluationRequest, error) {
+	if request == nil {
+		return nil, fmt.Errorf("nil request")
+	}
+	if request.Language == nil {
+		return nil, fmt.Errorf("nil language")
+	}
+	if request.Limits == nil {
+		return nil, fmt.Errorf("nil limits")
+	}
+	if request.Tests == nil {
+		return nil, fmt.Errorf("nil tests")
+	}
+
 	result := models.EvaluationRequest{
 		Submission: request.Submission,
 		PLanguage: models.PLanguage{
@@ -97,7 +117,7 @@ func translateMsgRequestToTestingModel(request *msg.EvaluationRequest) models.Ev
 	// }
 	// result.Subtasks = subtasks
 
-	return result
+	return &result, nil
 }
 
 // func openChannel(rabbit *amqp.Connection) (*amqp.Channel, error) {
