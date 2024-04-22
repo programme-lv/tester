@@ -4,7 +4,6 @@ go 1.22.1
 
 require (
 	github.com/go-jet/jet/v2 v2.11.0
-	github.com/gogo/protobuf v1.3.2
 	github.com/golang/snappy v0.0.4
 	github.com/jedib0t/go-pretty/v6 v6.5.5
 	github.com/jmoiron/sqlx v1.3.5
