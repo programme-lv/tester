@@ -47,6 +47,16 @@ func PrepareEvalRequest(req *models.EvaluationRequest, gath EvalResGatherer) (
 	})
 
 	errs.Go(func() error {
+		if req.PLanguage.CompileCmd == nil {
+			resMu.Lock()
+			res.Submission = models.ExecutableFile{
+				Content:  []byte(req.Submission),
+				Filename: req.PLanguage.CodeFilename,
+				ExecCmd:  req.PLanguage.ExecCmd,
+			}
+			resMu.Unlock()
+			return nil
+		}
 		gath.StartCompilation()
 		cRes, runData, err := compileSubmission(req)
 
