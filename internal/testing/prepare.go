@@ -26,7 +26,7 @@ func PrepareEvalRequest(req *models.EvaluationRequest, gath EvalResGatherer) (
 	resMu := sync.Mutex{}
 
 	res.SubmConstrs = models.Constraints{
-		CpuTimeLimInSec: float64(req.Limits.CPUTimeMillis * 1000),
+		CpuTimeLimInSec: float64(req.Limits.CPUTimeMillis / 1000.0),
 		MemoryLimitInKB: int64(req.Limits.MemKibibytes),
 	}
 
