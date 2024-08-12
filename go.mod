@@ -11,7 +11,6 @@ require (
 	github.com/klauspost/compress v1.17.7
 	github.com/lib/pq v1.10.9
 	github.com/programme-lv/director v0.1.6
-	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/wagslane/go-rabbitmq v0.13.0
 	go.uber.org/mock v0.4.0
 	golang.org/x/sync v0.6.0
@@ -24,6 +23,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rabbitmq/amqp091-go v1.9.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
