@@ -56,8 +56,8 @@ func (t *Tester) EvaluateSubmission(
 
 	gath.StartTesting()
 	// TODO: testing
-	fmt.Printf("Compiled: %v\n", compiled)
-	fmt.Printf("Testlib checker: %v\n", tlibChecker)
+	fmt.Printf("Compiled: %v\n", len(compiled))
+	fmt.Printf("Testlib checker: %v\n", len(tlibChecker))
 	gath.FinishTesting()
 
 	gath.FinishEvaluation(nil)

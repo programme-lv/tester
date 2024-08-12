@@ -16,8 +16,8 @@ type FileStore struct {
 	fileKeyToS3Uri   sync.Map
 }
 
-// New creates a new FileStore instance. It takes a function that downloads files from S3.
-func New(downloadFunc func(s3Uri string) (string, error)) *FileStore {
+// NewFileStore creates a new FileStore instance. It takes a function that downloads files from S3.
+func NewFileStore(downloadFunc func(s3Uri string) (string, error)) *FileStore {
 	fs := &FileStore{
 		fileDirectory:    filepath.Join("var", "tester", "files"),
 		s3DownloadFunc:   downloadFunc,
@@ -25,6 +25,11 @@ func New(downloadFunc func(s3Uri string) (string, error)) *FileStore {
 		awaitedKeyQueue:  make(chan string, 10000),
 		scheduledS3Files: make(chan string, 10000),
 		fileKeyToS3Uri:   sync.Map{},
+	}
+
+	err := os.MkdirAll(fs.fileDirectory, 0777)
+	if err != nil {
+		panic(fmt.Errorf("failed to create file store directory: %w", err))
 	}
 
 	return fs

@@ -20,9 +20,16 @@ type TestlibCompiler struct {
 }
 
 func NewTestlibCheckerCompiler() *TestlibCompiler {
-	return &TestlibCompiler{
+	tc := &TestlibCompiler{
 		tlibCheckerDir: filepath.Join("var", "tester", "checkers", "testlib"),
 	}
+
+	err := os.MkdirAll(tc.tlibCheckerDir, 0777)
+	if err != nil {
+		log.Fatalf("failed to create testlib checker directory: %v", err)
+	}
+
+	return tc
 }
 
 func (cs *TestlibCompiler) GetExecutable(sourceCode string) ([]byte, error) {
@@ -33,6 +40,15 @@ func (cs *TestlibCompiler) GetExecutable(sourceCode string) ([]byte, error) {
 		<-c
 		return os.ReadFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256))
 	} else {
+		if _, err := os.Stat(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256)); err == nil {
+			c <- struct{}{}
+			close(c)
+			fmt.Printf("Checker %s already exists\n", sourceCodeSha256)
+			return os.ReadFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256))
+		} else {
+			fmt.Printf("Checker %s does not exist\n", sourceCodeSha256)
+		}
+
 		compiled, runData, err := compileTestlibChecker(sourceCode)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compile checker: %w", err)
