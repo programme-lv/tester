@@ -14,18 +14,18 @@ import (
 	"github.com/programme-lv/tester/internal/utils"
 )
 
-type TestlibCheckerCompiler struct {
+type TestlibCompiler struct {
 	tlibCheckerDir string
 	checkerSyncMap sync.Map
 }
 
-func NewTestlibCheckerCompiler() *TestlibCheckerCompiler {
-	return &TestlibCheckerCompiler{
+func NewTestlibCheckerCompiler() *TestlibCompiler {
+	return &TestlibCompiler{
 		tlibCheckerDir: filepath.Join("var", "tester", "checkers", "testlib"),
 	}
 }
 
-func (cs *TestlibCheckerCompiler) GetExecutable(sourceCode string) ([]byte, error) {
+func (cs *TestlibCompiler) GetExecutable(sourceCode string) ([]byte, error) {
 	sourceCodeSha256 := getStringSha256(sourceCode)
 	c := make(chan struct{}, 1)
 	_, exists := cs.checkerSyncMap.LoadOrStore(sourceCode, c)

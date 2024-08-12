@@ -1,21 +1,24 @@
-package testing
+package tester
 
 import (
 	"fmt"
 	"os/exec"
 
+	"github.com/programme-lv/tester/internal/checkers"
 	"github.com/programme-lv/tester/internal/filestore"
 )
 
 type Tester struct {
-	filestore  *filestore.FileStore
-	systemInfo string
+	filestore    *filestore.FileStore
+	systemInfo   string
+	tlibCheckers *checkers.TestlibCompiler
 }
 
-func NewTester(filestore *filestore.FileStore) *Tester {
+func NewTester(filestore *filestore.FileStore, tlibCheckers *checkers.TestlibCompiler) *Tester {
 	return &Tester{
-		filestore:  filestore,
-		systemInfo: getSystemInfo(),
+		filestore:    filestore,
+		systemInfo:   getSystemInfo(),
+		tlibCheckers: tlibCheckers,
 	}
 }
 
