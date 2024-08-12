@@ -1,4 +1,4 @@
-package testing
+package internal
 
 type RuntimeData struct {
 	Stdout   *string `json:"stdout"`
@@ -11,10 +11,11 @@ type RuntimeData struct {
 }
 
 type EvaluationRequest struct {
-	Submission string              `json:"submission"`
-	Language   ProgrammingLanguage `json:"language"`
-	Limits     ExecutionLimits     `json:"limits"`
-	Tests      []RequestTest       `json:"tests"`
+	Submission     string              `json:"submission"`
+	Language       ProgrammingLanguage `json:"language"`
+	Limits         ExecutionLimits     `json:"limits"`
+	Tests          []RequestTest       `json:"tests"`
+	TestlibChecker string              `json:"testlib_checker"`
 }
 
 type RequestTest struct {

@@ -19,11 +19,11 @@ type FileStore struct {
 // New creates a new FileStore instance. It takes a function that downloads files from S3.
 func New(downloadFunc func(s3Uri string) (string, error)) *FileStore {
 	fs := &FileStore{
-		fileDirectory:    filepath.Join("var", "tester"),
+		fileDirectory:    filepath.Join("var", "tester", "files"),
 		s3DownloadFunc:   downloadFunc,
 		downloadChannels: sync.Map{},
-		awaitedKeyQueue:  make(chan string),
-		scheduledS3Files: make(chan string),
+		awaitedKeyQueue:  make(chan string, 10000),
+		scheduledS3Files: make(chan string, 10000),
 		fileKeyToS3Uri:   sync.Map{},
 	}
 
@@ -55,7 +55,7 @@ func (fs *FileStore) ScheduleDownloadFromS3(key string, s3Uri string) error {
 		return nil // already scheduled
 	}
 
-	c := make(chan struct{})
+	c := make(chan struct{}, 1)
 	_, loaded = fs.downloadChannels.LoadOrStore(key, c)
 	if loaded {
 		return nil // already scheduled
@@ -87,6 +87,11 @@ func (fs *FileStore) StartDownloadingInBg() {
 }
 
 func (fs *FileStore) download(key string) error {
+	_, err := os.Stat(filepath.Join(fs.fileDirectory, key))
+	if err == nil {
+		return nil
+	}
+
 	s3Uri, exists := fs.fileKeyToS3Uri.Load(key)
 	if !exists {
 		return fmt.Errorf("file %s has not been scheduled for download", key)

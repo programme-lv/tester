@@ -1,11 +1,13 @@
 package testing
 
+import "github.com/programme-lv/tester/internal"
+
 type EvalResGatherer interface {
 	StartEvaluation(systemInfo string)
 	FinishEvaluation(errIfAny error)
 
 	StartCompilation()
-	FinishCompilation(data *RuntimeData)
+	FinishCompilation(data *internal.RuntimeData)
 
 	StartTesting()
 	FinishTesting()
@@ -14,6 +16,6 @@ type EvalResGatherer interface {
 
 	StartTest(testId int64)
 	FinishTest(testId int64,
-		submission *RuntimeData,
-		checker *RuntimeData)
+		submission *internal.RuntimeData,
+		checker *internal.RuntimeData)
 }

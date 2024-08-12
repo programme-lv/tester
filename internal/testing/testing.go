@@ -1,10 +1,14 @@
 package testing
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/programme-lv/tester/internal"
+)
 
 func (t *Tester) EvaluateSubmission(
 	gath EvalResGatherer,
-	req EvaluationRequest,
+	req internal.EvaluationRequest,
 ) error {
 	gath.StartEvaluation(t.systemInfo)
 	for _, test := range req.Tests {
@@ -19,7 +23,45 @@ func (t *Tester) EvaluateSubmission(
 		}
 	}
 
-	gath.StartCompilation()
+	// compile testlib checker
+	// req.TestlibChecker
+
+	if req.Language.CompileCommand != nil {
+		gath.StartCompilation()
+
+	}
 
 	return nil
 }
+
+// func compileSubmission(req *internal.EvaluationRequest) (
+// 	*models.ExecutableFile, *models.RuntimeData, error) {
+
+// 	code := req.Submission
+// 	pLang := req.PLanguage
+
+// 	if pLang.CompileCmd == nil {
+// 		return &models.ExecutableFile{
+// 			Content:  []byte(code),
+// 			Filename: pLang.CodeFilename,
+// 			ExecCmd:  pLang.ExecCmd,
+// 		}, nil, nil
+// 	}
+
+// 	fname := pLang.CodeFilename
+// 	cCmd := *pLang.CompileCmd
+// 	cFname := *pLang.CompiledFilename
+
+// 	compiled, runData, err := compilation.CompileSourceCode(
+// 		code, fname, cCmd, cFname)
+
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+
+// 	return &models.ExecutableFile{
+// 		Content:  compiled,
+// 		Filename: *pLang.CompiledFilename,
+// 		ExecCmd:  pLang.ExecCmd,
+// 	}, runData, nil
+// }
