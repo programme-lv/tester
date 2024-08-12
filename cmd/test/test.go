@@ -15,6 +15,7 @@ import (
 
 func main() {
 	filestore := filestore.NewFileStore(s3DownloadFunc)
+	filestore.StartDownloadingInBg()
 	tlibCheckers := checkers.NewTestlibCheckerCompiler()
 	tester := tester.NewTester(filestore, tlibCheckers)
 	jsonReq, err := os.ReadFile(filepath.Join("data", "req.json"))
@@ -28,8 +29,14 @@ func main() {
 
 }
 
-func s3DownloadFunc(s3Uri string) (string, error) {
-	return "", nil
+func s3DownloadFunc(s3Uri string, path string) error {
+	// write hello world to path
+	err := os.WriteFile(path, []byte("hello world"), 0777)
+	if err != nil {
+		return fmt.Errorf("failed to write to file %s: %w", path, err)
+	}
+
+	return nil
 }
 
 type stdoutGathererMock struct {

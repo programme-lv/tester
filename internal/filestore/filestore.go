@@ -9,7 +9,8 @@ import (
 
 type FileStore struct {
 	fileDirectory    string
-	s3DownloadFunc   func(s3Uri string) (string, error)
+	tmpDirectory     string
+	s3DownloadFunc   func(s3Uri string, path string) error
 	downloadChannels sync.Map
 	awaitedKeyQueue  chan string
 	scheduledS3Files chan string
@@ -17,9 +18,10 @@ type FileStore struct {
 }
 
 // NewFileStore creates a new FileStore instance. It takes a function that downloads files from S3.
-func NewFileStore(downloadFunc func(s3Uri string) (string, error)) *FileStore {
+func NewFileStore(downloadFunc func(s3Uri string, path string) error) *FileStore {
 	fs := &FileStore{
 		fileDirectory:    filepath.Join("var", "tester", "files"),
+		tmpDirectory:     filepath.Join("var", "tester", "tmp"),
 		s3DownloadFunc:   downloadFunc,
 		downloadChannels: sync.Map{},
 		awaitedKeyQueue:  make(chan string, 10000),
@@ -30,6 +32,11 @@ func NewFileStore(downloadFunc func(s3Uri string) (string, error)) *FileStore {
 	err := os.MkdirAll(fs.fileDirectory, 0777)
 	if err != nil {
 		panic(fmt.Errorf("failed to create file store directory: %w", err))
+	}
+
+	err = os.MkdirAll(fs.tmpDirectory, 0777)
+	if err != nil {
+		panic(fmt.Errorf("failed to create tmp directory: %w", err))
 	}
 
 	return fs
@@ -101,7 +108,8 @@ func (fs *FileStore) download(key string) error {
 	if !exists {
 		return fmt.Errorf("file %s has not been scheduled for download", key)
 	}
-	tmpPath, err := fs.s3DownloadFunc(s3Uri.(string))
+	tmpPath := filepath.Join(fs.tmpDirectory, key)
+	err = fs.s3DownloadFunc(s3Uri.(string), tmpPath)
 	if err != nil {
 		return fmt.Errorf("failed to download file %s from S3: %w", key, err)
 	}
