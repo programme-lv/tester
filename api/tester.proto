@@ -15,13 +15,15 @@ message EvaluationRequest {
 message TestAccess {
   int64 id = 1;
 
-  string inSha256 = 2;
-  optional string inDownloadUrl = 3;
-  optional string inContent = 4;
+  string inputSha256 = 2;
+  optional string inputDownloadUrl = 3;
+  optional string inputS3Uri = 4;
+  optional string inputContent = 5;
 
-  string ansSha256 = 5;
-  optional string ansDownloadUrl = 6;
-  optional string ansContent = 7;
+  string answerSha256 = 6;
+  optional string answerDownloadUrl = 7;
+  optional string answerS3Uri = 8;
+  optional string answerContent = 9;
 }
 
 message ProgramLang {
