@@ -81,7 +81,7 @@ func main() {
 				continue
 			}
 
-			err = tester.EvaluateSubmission(stdoutGathererMock{}, qMsg.Request)
+			err = tester.EvaluateSubmission(NewSqsResponseQueueGatherer(), qMsg.Request)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				continue
@@ -98,7 +98,151 @@ func main() {
 	}
 }
 
-type stdoutGathererMock struct {
+type sqsResponseQueueGatherer struct {
+	sqsClient *sqs.Client
+	queueUrl  string
+}
+
+// FinishCompilation implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
+	msg := struct {
+		MsgType     string                `json:"msg_type"`
+		RuntimeData *internal.RuntimeData `json:"runtime_data"`
+	}{
+		MsgType:     "finished_compilation",
+		RuntimeData: data,
+	}
+	s.send(msg)
+}
+
+// FinishEvaluation implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) FinishEvaluation(errIfAny error) {
+	msg := struct {
+		MsgType string `json:"msg_type"`
+		Error   string `json:"error"`
+	}{
+		MsgType: "finished_evaluation",
+		Error:   "",
+	}
+	if errIfAny != nil {
+		msg.Error = errIfAny.Error()
+	}
+	s.send(msg)
+}
+
+// FinishTest implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
+	msg := struct {
+		MsgType    string                `json:"msg_type"`
+		TestId     int64                 `json:"test_id"`
+		Submission *internal.RuntimeData `json:"submission"`
+		Checker    *internal.RuntimeData `json:"checker"`
+	}{
+		MsgType:    "finished_test",
+		TestId:     testId,
+		Submission: submission,
+		Checker:    checker,
+	}
+	s.send(msg)
+}
+
+// FinishTesting implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) FinishTesting() {
+	msg := struct {
+		MsgType string `json:"msg_type"`
+	}{
+		MsgType: "finished_testing",
+	}
+	s.send(msg)
+}
+
+// IgnoreTest implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) IgnoreTest(testId int64) {
+	msg := struct {
+		MsgType string `json:"msg_type"`
+		TestId  int64  `json:"test_id"`
+	}{
+		MsgType: "ignored_test",
+		TestId:  testId,
+	}
+	s.send(msg)
+}
+
+// StartCompilation implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) StartCompilation() {
+	msg := struct {
+		MsgType string `json:"msg_type"`
+	}{
+		MsgType: "started_compilation",
+	}
+	s.send(msg)
+}
+
+// StartEvaluation implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) StartEvaluation(systemInfo string) {
+	msg := struct {
+		MsgType     string `json:"msg_type"`
+		SystemInfo  string `json:"system_info"`
+		StartedTime string `json:"started_time"`
+	}{
+		MsgType:     "started_evaluation",
+		SystemInfo:  systemInfo,
+		StartedTime: time.Now().Format(time.RFC3339),
+	}
+	s.send(msg)
+}
+
+// StartTest implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) StartTest(testId int64) {
+	msg := struct {
+		MsgType string `json:"msg_type"`
+		TestId  int64  `json:"test_id"`
+	}{
+		MsgType: "started_test",
+		TestId:  testId,
+	}
+	s.send(msg)
+}
+
+// StartTesting implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) StartTesting() {
+	msg := struct {
+		MsgType string `json:"msg_type"`
+	}{
+		MsgType: "started_testing",
+	}
+	s.send(msg)
+}
+
+func NewSqsResponseQueueGatherer() *sqsResponseQueueGatherer {
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-central-1"), config.WithSharedConfigProfile("kp"))
+	if err != nil {
+		panic(fmt.Sprintf("unable to load SDK config, %v", err))
+	}
+
+	return &sqsResponseQueueGatherer{
+		sqsClient: sqs.NewFromConfig(cfg),
+		queueUrl:  "https://sqs.eu-central-1.amazonaws.com/975049886115/standard_subm_eval_results",
+	}
+}
+
+func (s *sqsResponseQueueGatherer) send(msg interface{}) {
+	b, err := json.Marshal(msg)
+	if err != nil {
+		panic(fmt.Errorf("failed to marshal message: %w", err))
+	}
+
+	_, err = s.sqsClient.SendMessage(context.TODO(), &sqs.SendMessageInput{
+		QueueUrl:    aws.String(s.queueUrl),
+		MessageBody: ptr.String(string(b)),
+	})
+
+	if err != nil {
+		panic(fmt.Errorf("failed to send message: %w", err))
+	}
+}
+
+type StdoutGathererMock struct {
 }
 
 func mustMarshal(v interface{}) string {
@@ -110,46 +254,46 @@ func mustMarshal(v interface{}) string {
 }
 
 // FinishCompilation implements tester.EvalResGatherer.
-func (s stdoutGathererMock) FinishCompilation(data *internal.RuntimeData) {
+func (s StdoutGathererMock) FinishCompilation(data *internal.RuntimeData) {
 	log.Printf("Compilation finished: %s", mustMarshal(data))
 }
 
 // FinishEvaluation implements tester.EvalResGatherer.
-func (s stdoutGathererMock) FinishEvaluation(errIfAny error) {
+func (s StdoutGathererMock) FinishEvaluation(errIfAny error) {
 	log.Printf("Evaluation finished with error: %v", errIfAny)
 }
 
 // FinishTest implements tester.EvalResGatherer.
-func (s stdoutGathererMock) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
+func (s StdoutGathererMock) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
 	log.Printf("Test %d finished: %s, %s", testId, mustMarshal(submission), mustMarshal(checker))
 }
 
 // FinishTesting implements tester.EvalResGatherer.
-func (s stdoutGathererMock) FinishTesting() {
+func (s StdoutGathererMock) FinishTesting() {
 	log.Printf("Testing finished")
 }
 
 // IgnoreTest implements tester.EvalResGatherer.
-func (s stdoutGathererMock) IgnoreTest(testId int64) {
+func (s StdoutGathererMock) IgnoreTest(testId int64) {
 	log.Printf("Test %d ignored", testId)
 }
 
 // StartCompilation implements tester.EvalResGatherer.
-func (s stdoutGathererMock) StartCompilation() {
+func (s StdoutGathererMock) StartCompilation() {
 	log.Println("Compilation started")
 }
 
 // StartEvaluation implements tester.EvalResGatherer.
-func (s stdoutGathererMock) StartEvaluation(systemInfo string) {
+func (s StdoutGathererMock) StartEvaluation(systemInfo string) {
 	log.Printf("Evaluation started: %s", systemInfo)
 }
 
 // StartTest implements tester.EvalResGatherer.
-func (s stdoutGathererMock) StartTest(testId int64) {
+func (s StdoutGathererMock) StartTest(testId int64) {
 	log.Printf("Test %d started", testId)
 }
 
 // StartTesting implements tester.EvalResGatherer.
-func (s stdoutGathererMock) StartTesting() {
+func (s StdoutGathererMock) StartTesting() {
 	log.Printf("Testing started")
 }
