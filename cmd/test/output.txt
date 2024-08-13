@@ -1,4 +1,950 @@
+received message: Message 5a659267-be4d-4430-8b49-20a9cc4bcd1f
+failed to unmarshal message, invalid character 'M' looking for beginning of value
 sent message 1
+received message: Message fdfca582-71e8-4044-a196-68965a3b92fe
+failed to unmarshal message, invalid character 'M' looking for beginning of value
+received message: {
+  "evaluation_uuid": "1c9f5b69-a295-475f-acaf-8a1e00cb0747",
+  "request": {
+    "submission": "#include <bits/stdc++.h>\n\nusing namespace std;\nusing ll = long long;\nusing ii = pair<ll,ll>;\n\nbool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {\n    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;\n    ll count=0;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            if(matrix[y+i][x+j]=='X') count++;\n        }\n    }\n    return count<=((k*k)/2);\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n\n    ll n, m, k;\n    cin>>n>>m>>k;\n\n    vector<string> matrix;\n    matrix.resize(n);\n\n    for(ll i=0;i<n;i++) {\n        cin>>matrix[i];\n    }\n\n    ii A = {-1,-1}, B = {-1,-1};\n    for(ll i=0;i<n;i++){\n        for(ll j=0;j<m;j++){\n            if(matrix[i][j] == 'A') {\n                A = {i,j};\n            }\n            if(matrix[i][j] == 'B') {\n                B = {i,j};\n            }\n        }\n    }\n    assert(A.first != -1 && B.first != -1);\n\n    assert(ok(A.first, A.second, n, m, k, matrix));\n\n    vector<vector<ll>> dist(n, vector<ll>(m, -1));\n    queue<ii> q;\n    q.push(A);\n    dist[A.first][A.second] = 0;\n\n    const ll dx[] = {1,0,-1,0};\n    const ll dy[] = {0,1,0,-1};\n    while(!q.empty()){\n        ii v = q.front();\n        q.pop();\n        for(ll i=0;i<4;i++){\n            ll x = v.second + dx[i];\n            ll y = v.first + dy[i];\n            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){\n                dist[y][x] = dist[v.first][v.second] + 1;\n                q.push({y,x});\n            }\n        }\n    }\n\n    const ll INF = 1e18;\n    ll res = INF;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            ll y=B.first-i;\n            ll x=B.second-j;\n            if(y<0||x<0) continue;\n            if(dist[y][x] != -1) {\n                res = min(res, dist[y][x]);\n            }\n        }\n    }\n    if(res == INF) {\n        cout<<\"-1\\n\";\n    } else {\n        cout<<res<<\"\\n\";\n    }\n}\n",
+    "language": {
+      "id": "cpp17",
+      "name": "C++17 (GCC)",
+      "code_filename": "main.cpp",
+      "compile_cmd": "g++ -std=c++17 -o main main.cpp",
+      "compiled_filename": "main",
+      "exec_cmd": "./main"
+    },
+    "limits": {
+      "cpu_time_millis": 500,
+      "memory_kibibytes": 262144
+    },
+    "tests": [
+      {
+        "id": 1,
+        "input_sha256": "358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2",
+        "input_s3_uri": "s3://proglv-tests/358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "answer_s3_uri": "s3://proglv-tests/9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      },
+      {
+        "id": 2,
+        "input_sha256": "ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b",
+        "input_s3_uri": "s3://proglv-tests/ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7",
+        "answer_s3_uri": "s3://proglv-tests/06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      },
+      {
+        "id": 3,
+        "input_sha256": "45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00",
+        "input_s3_uri": "s3://proglv-tests/45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28",
+        "answer_s3_uri": "s3://proglv-tests/ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      }
+    ],
+    "testlib_checker": "#include \"testlib.h\"\n\nusing namespace std;\n\nint main(int argc, char *argv[]) {\n    setName(\"compare sequences of tokens\");\n    registerTestlibCmd(argc, argv);\n\n    int n = 0;\n    string j, p;\n\n    while (!ans.seekEof() && !ouf.seekEof()) {\n        n++;\n\n        ans.readWordTo(j);\n        ouf.readWordTo(p);\n\n        if (j != p)\n            quitf(_wa, \"%d%s words differ - expected: '%s', found: '%s'\", n, englishEnding(n).c_str(),\n                  compress(j).c_str(), compress(p).c_str());\n    }\n\n    if (ans.seekEof() && ouf.seekEof()) {\n        if (n == 1)\n            quitf(_ok, \"\\\"%s\\\"\", compress(j).c_str());\n        else\n            quitf(_ok, \"%d tokens\", n);\n    } else {\n        if (ans.seekEof())\n            quitf(_wa, \"Participant output contains extra tokens\");\n        else\n            quitf(_wa, \"Unexpected EOF in the participants output\");\n    }\n}\n"
+  }
+}
+Tester: 2024/08/13 13:29:51 testing.go:17: Starting evaluation for submission: #include <bits/stdc++.h>
+
+using namespace std;
+using ll = long long;
+using ii = pair<ll,ll>;
+
+bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
+    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
+    ll count=0;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            if(matrix[y+i][x+j]=='X') count++;
+        }
+    }
+    return count<=((k*k)/2);
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    ll n, m, k;
+    cin>>n>>m>>k;
+
+    vector<string> matrix;
+    matrix.resize(n);
+
+    for(ll i=0;i<n;i++) {
+        cin>>matrix[i];
+    }
+
+    ii A = {-1,-1}, B = {-1,-1};
+    for(ll i=0;i<n;i++){
+        for(ll j=0;j<m;j++){
+            if(matrix[i][j] == 'A') {
+                A = {i,j};
+            }
+            if(matrix[i][j] == 'B') {
+                B = {i,j};
+            }
+        }
+    }
+    assert(A.first != -1 && B.first != -1);
+
+    assert(ok(A.first, A.second, n, m, k, matrix));
+
+    vector<vector<ll>> dist(n, vector<ll>(m, -1));
+    queue<ii> q;
+    q.push(A);
+    dist[A.first][A.second] = 0;
+
+    const ll dx[] = {1,0,-1,0};
+    const ll dy[] = {0,1,0,-1};
+    while(!q.empty()){
+        ii v = q.front();
+        q.pop();
+        for(ll i=0;i<4;i++){
+            ll x = v.second + dx[i];
+            ll y = v.first + dy[i];
+            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
+                dist[y][x] = dist[v.first][v.second] + 1;
+                q.push({y,x});
+            }
+        }
+    }
+
+    const ll INF = 1e18;
+    ll res = INF;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            ll y=B.first-i;
+            ll x=B.second-j;
+            if(y<0||x<0) continue;
+            if(dist[y][x] != -1) {
+                res = min(res, dist[y][x]);
+            }
+        }
+    }
+    if(res == INF) {
+        cout<<"-1\n";
+    } else {
+        cout<<res<<"\n";
+    }
+}
+Tester: 2024/08/13 13:29:51 testing.go:21: Scheduling download for input file: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
+Tester: 2024/08/13 13:29:51 testing.go:30: Scheduling download for answer file: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
+Tester: 2024/08/13 13:29:51 testing.go:21: Scheduling download for input file: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
+Tester: 2024/08/13 13:29:51 testing.go:30: Scheduling download for answer file: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
+Tester: 2024/08/13 13:29:51 testing.go:21: Scheduling download for input file: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
+Tester: 2024/08/13 13:29:51 testing.go:30: Scheduling download for answer file: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
+Tester: 2024/08/13 13:29:51 testing.go:40: Retrieving testlib checker: #include "testlib.h"
+
+using namespace std;
+
+int main(int argc, char *argv[]) {
+    setName("compare sequences of tokens");
+    registerTestlibCmd(argc, argv);
+
+    int n = 0;
+    string j, p;
+
+    while (!ans.seekEof() && !ouf.seekEof()) {
+        n++;
+
+        ans.readWordTo(j);
+        ouf.readWordTo(p);
+
+        if (j != p)
+            quitf(_wa, "%d%s words differ - expected: '%s', found: '%s'", n, englishEnding(n).c_str(),
+                  compress(j).c_str(), compress(p).c_str());
+    }
+
+    if (ans.seekEof() && ouf.seekEof()) {
+        if (n == 1)
+            quitf(_ok, "\"%s\"", compress(j).c_str());
+        else
+            quitf(_ok, "%d tokens", n);
+    } else {
+        if (ans.seekEof())
+            quitf(_wa, "Participant output contains extra tokens");
+        else
+            quitf(_wa, "Unexpected EOF in the participants output");
+    }
+}
+Checker d2382830d258a4aaf2743e5d048e1839746aff458cbde14d23c0b38c1f190f22 already exists
+Tester: 2024/08/13 13:29:51 testing.go:53: Starting compilation for language: C++17 (GCC)
+2024/08/13 13:29:51 Running command: isolate -s --cg --box-id=0 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2919778934.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "g++ -std=c++17 -o main main.cpp"
+sent message 2
+Tester: 2024/08/13 13:29:52 testing.go:124: Starting testing for submission: #include <bits/stdc++.h>
+
+using namespace std;
+using ll = long long;
+using ii = pair<ll,ll>;
+
+bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
+    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
+    ll count=0;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            if(matrix[y+i][x+j]=='X') count++;
+        }
+    }
+    return count<=((k*k)/2);
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    ll n, m, k;
+    cin>>n>>m>>k;
+
+    vector<string> matrix;
+    matrix.resize(n);
+
+    for(ll i=0;i<n;i++) {
+        cin>>matrix[i];
+    }
+
+    ii A = {-1,-1}, B = {-1,-1};
+    for(ll i=0;i<n;i++){
+        for(ll j=0;j<m;j++){
+            if(matrix[i][j] == 'A') {
+                A = {i,j};
+            }
+            if(matrix[i][j] == 'B') {
+                B = {i,j};
+            }
+        }
+    }
+    assert(A.first != -1 && B.first != -1);
+
+    assert(ok(A.first, A.second, n, m, k, matrix));
+
+    vector<vector<ll>> dist(n, vector<ll>(m, -1));
+    queue<ii> q;
+    q.push(A);
+    dist[A.first][A.second] = 0;
+
+    const ll dx[] = {1,0,-1,0};
+    const ll dy[] = {0,1,0,-1};
+    while(!q.empty()){
+        ii v = q.front();
+        q.pop();
+        for(ll i=0;i<4;i++){
+            ll x = v.second + dx[i];
+            ll y = v.first + dy[i];
+            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
+                dist[y][x] = dist[v.first][v.second] + 1;
+                q.push({y,x});
+            }
+        }
+    }
+
+    const ll INF = 1e18;
+    ll res = INF;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            ll y=B.first-i;
+            ll x=B.second-j;
+            if(y<0||x<0) continue;
+            if(dist[y][x] != -1) {
+                res = min(res, dist[y][x]);
+            }
+        }
+    }
+    if(res == INF) {
+        cout<<"-1\n";
+    } else {
+        cout<<res<<"\n";
+    }
+}
+Tester: 2024/08/13 13:29:53 testing.go:127: Starting test: 1
+Tester: 2024/08/13 13:29:53 testing.go:150: Awaiting test input: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
+2024/08/13 13:29:53 Running command: isolate -s --cg --box-id=1 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3751157091.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
+Tester: 2024/08/13 13:29:53 testing.go:200: Setting up checker for test: 1
+Tester: 2024/08/13 13:29:53 testing.go:234: Awaiting test answer: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
+Tester: 2024/08/13 13:29:53 testing.go:251: Running checker for test: 1
+2024/08/13 13:29:53 Running command: isolate -s --cg --box-id=2 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.572401682.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
+Tester: 2024/08/13 13:29:53 testing.go:268: Test 1 finished successfully
+Tester: 2024/08/13 13:29:53 testing.go:127: Starting test: 2
+Tester: 2024/08/13 13:29:53 testing.go:150: Awaiting test input: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
+2024/08/13 13:29:53 Running command: isolate -s --cg --box-id=3 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3671219980.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
+Tester: 2024/08/13 13:29:53 testing.go:200: Setting up checker for test: 2
+Tester: 2024/08/13 13:29:53 testing.go:234: Awaiting test answer: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
+Tester: 2024/08/13 13:29:53 testing.go:251: Running checker for test: 2
+2024/08/13 13:29:53 Running command: isolate -s --cg --box-id=4 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.5067861.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
+Tester: 2024/08/13 13:29:53 testing.go:268: Test 2 finished successfully
+Tester: 2024/08/13 13:29:53 testing.go:127: Starting test: 3
+Tester: 2024/08/13 13:29:53 testing.go:150: Awaiting test input: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
+2024/08/13 13:29:53 Running command: isolate -s --cg --box-id=5 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3625817975.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
+Tester: 2024/08/13 13:29:53 testing.go:200: Setting up checker for test: 3
+Tester: 2024/08/13 13:29:53 testing.go:234: Awaiting test answer: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
+Tester: 2024/08/13 13:29:53 testing.go:251: Running checker for test: 3
+2024/08/13 13:29:53 Running command: isolate -s --cg --box-id=6 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3027378316.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
+Tester: 2024/08/13 13:29:53 testing.go:268: Test 3 finished successfully
+Tester: 2024/08/13 13:29:53 testing.go:272: Finished testing for submission
+sent message 3
+Tester: 2024/08/13 13:29:53 testing.go:275: Evaluation completed for submission
+received message: {
+  "evaluation_uuid": "1c9f5b69-a295-475f-acaf-8a1e00cb0747",
+  "request": {
+    "submission": "#include <bits/stdc++.h>\n\nusing namespace std;\nusing ll = long long;\nusing ii = pair<ll,ll>;\n\nbool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {\n    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;\n    ll count=0;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            if(matrix[y+i][x+j]=='X') count++;\n        }\n    }\n    return count<=((k*k)/2);\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n\n    ll n, m, k;\n    cin>>n>>m>>k;\n\n    vector<string> matrix;\n    matrix.resize(n);\n\n    for(ll i=0;i<n;i++) {\n        cin>>matrix[i];\n    }\n\n    ii A = {-1,-1}, B = {-1,-1};\n    for(ll i=0;i<n;i++){\n        for(ll j=0;j<m;j++){\n            if(matrix[i][j] == 'A') {\n                A = {i,j};\n            }\n            if(matrix[i][j] == 'B') {\n                B = {i,j};\n            }\n        }\n    }\n    assert(A.first != -1 && B.first != -1);\n\n    assert(ok(A.first, A.second, n, m, k, matrix));\n\n    vector<vector<ll>> dist(n, vector<ll>(m, -1));\n    queue<ii> q;\n    q.push(A);\n    dist[A.first][A.second] = 0;\n\n    const ll dx[] = {1,0,-1,0};\n    const ll dy[] = {0,1,0,-1};\n    while(!q.empty()){\n        ii v = q.front();\n        q.pop();\n        for(ll i=0;i<4;i++){\n            ll x = v.second + dx[i];\n            ll y = v.first + dy[i];\n            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){\n                dist[y][x] = dist[v.first][v.second] + 1;\n                q.push({y,x});\n            }\n        }\n    }\n\n    const ll INF = 1e18;\n    ll res = INF;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            ll y=B.first-i;\n            ll x=B.second-j;\n            if(y<0||x<0) continue;\n            if(dist[y][x] != -1) {\n                res = min(res, dist[y][x]);\n            }\n        }\n    }\n    if(res == INF) {\n        cout<<\"-1\\n\";\n    } else {\n        cout<<res<<\"\\n\";\n    }\n}\n",
+    "language": {
+      "id": "cpp17",
+      "name": "C++17 (GCC)",
+      "code_filename": "main.cpp",
+      "compile_cmd": "g++ -std=c++17 -o main main.cpp",
+      "compiled_filename": "main",
+      "exec_cmd": "./main"
+    },
+    "limits": {
+      "cpu_time_millis": 500,
+      "memory_kibibytes": 262144
+    },
+    "tests": [
+      {
+        "id": 1,
+        "input_sha256": "358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2",
+        "input_s3_uri": "s3://proglv-tests/358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "answer_s3_uri": "s3://proglv-tests/9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      },
+      {
+        "id": 2,
+        "input_sha256": "ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b",
+        "input_s3_uri": "s3://proglv-tests/ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7",
+        "answer_s3_uri": "s3://proglv-tests/06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      },
+      {
+        "id": 3,
+        "input_sha256": "45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00",
+        "input_s3_uri": "s3://proglv-tests/45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28",
+        "answer_s3_uri": "s3://proglv-tests/ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      }
+    ],
+    "testlib_checker": "#include \"testlib.h\"\n\nusing namespace std;\n\nint main(int argc, char *argv[]) {\n    setName(\"compare sequences of tokens\");\n    registerTestlibCmd(argc, argv);\n\n    int n = 0;\n    string j, p;\n\n    while (!ans.seekEof() && !ouf.seekEof()) {\n        n++;\n\n        ans.readWordTo(j);\n        ouf.readWordTo(p);\n\n        if (j != p)\n            quitf(_wa, \"%d%s words differ - expected: '%s', found: '%s'\", n, englishEnding(n).c_str(),\n                  compress(j).c_str(), compress(p).c_str());\n    }\n\n    if (ans.seekEof() && ouf.seekEof()) {\n        if (n == 1)\n            quitf(_ok, \"\\\"%s\\\"\", compress(j).c_str());\n        else\n            quitf(_ok, \"%d tokens\", n);\n    } else {\n        if (ans.seekEof())\n            quitf(_wa, \"Participant output contains extra tokens\");\n        else\n            quitf(_wa, \"Unexpected EOF in the participants output\");\n    }\n}\n"
+  }
+}
+Tester: 2024/08/13 13:29:53 testing.go:17: Starting evaluation for submission: #include <bits/stdc++.h>
+
+using namespace std;
+using ll = long long;
+using ii = pair<ll,ll>;
+
+bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
+    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
+    ll count=0;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            if(matrix[y+i][x+j]=='X') count++;
+        }
+    }
+    return count<=((k*k)/2);
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    ll n, m, k;
+    cin>>n>>m>>k;
+
+    vector<string> matrix;
+    matrix.resize(n);
+
+    for(ll i=0;i<n;i++) {
+        cin>>matrix[i];
+    }
+
+    ii A = {-1,-1}, B = {-1,-1};
+    for(ll i=0;i<n;i++){
+        for(ll j=0;j<m;j++){
+            if(matrix[i][j] == 'A') {
+                A = {i,j};
+            }
+            if(matrix[i][j] == 'B') {
+                B = {i,j};
+            }
+        }
+    }
+    assert(A.first != -1 && B.first != -1);
+
+    assert(ok(A.first, A.second, n, m, k, matrix));
+
+    vector<vector<ll>> dist(n, vector<ll>(m, -1));
+    queue<ii> q;
+    q.push(A);
+    dist[A.first][A.second] = 0;
+
+    const ll dx[] = {1,0,-1,0};
+    const ll dy[] = {0,1,0,-1};
+    while(!q.empty()){
+        ii v = q.front();
+        q.pop();
+        for(ll i=0;i<4;i++){
+            ll x = v.second + dx[i];
+            ll y = v.first + dy[i];
+            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
+                dist[y][x] = dist[v.first][v.second] + 1;
+                q.push({y,x});
+            }
+        }
+    }
+
+    const ll INF = 1e18;
+    ll res = INF;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            ll y=B.first-i;
+            ll x=B.second-j;
+            if(y<0||x<0) continue;
+            if(dist[y][x] != -1) {
+                res = min(res, dist[y][x]);
+            }
+        }
+    }
+    if(res == INF) {
+        cout<<"-1\n";
+    } else {
+        cout<<res<<"\n";
+    }
+}
+Tester: 2024/08/13 13:29:53 testing.go:21: Scheduling download for input file: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
+Tester: 2024/08/13 13:29:53 testing.go:30: Scheduling download for answer file: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
+Tester: 2024/08/13 13:29:53 testing.go:21: Scheduling download for input file: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
+Tester: 2024/08/13 13:29:53 testing.go:30: Scheduling download for answer file: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
+Tester: 2024/08/13 13:29:53 testing.go:21: Scheduling download for input file: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
+Tester: 2024/08/13 13:29:53 testing.go:30: Scheduling download for answer file: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
+Tester: 2024/08/13 13:29:53 testing.go:40: Retrieving testlib checker: #include "testlib.h"
+
+using namespace std;
+
+int main(int argc, char *argv[]) {
+    setName("compare sequences of tokens");
+    registerTestlibCmd(argc, argv);
+
+    int n = 0;
+    string j, p;
+
+    while (!ans.seekEof() && !ouf.seekEof()) {
+        n++;
+
+        ans.readWordTo(j);
+        ouf.readWordTo(p);
+
+        if (j != p)
+            quitf(_wa, "%d%s words differ - expected: '%s', found: '%s'", n, englishEnding(n).c_str(),
+                  compress(j).c_str(), compress(p).c_str());
+    }
+
+    if (ans.seekEof() && ouf.seekEof()) {
+        if (n == 1)
+            quitf(_ok, "\"%s\"", compress(j).c_str());
+        else
+            quitf(_ok, "%d tokens", n);
+    } else {
+        if (ans.seekEof())
+            quitf(_wa, "Participant output contains extra tokens");
+        else
+            quitf(_wa, "Unexpected EOF in the participants output");
+    }
+}
+Tester: 2024/08/13 13:29:53 testing.go:53: Starting compilation for language: C++17 (GCC)
+2024/08/13 13:29:53 Running command: isolate -s --cg --box-id=0 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3641034837.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "g++ -std=c++17 -o main main.cpp"
+Tester: 2024/08/13 13:29:54 testing.go:124: Starting testing for submission: #include <bits/stdc++.h>
+
+using namespace std;
+using ll = long long;
+using ii = pair<ll,ll>;
+
+bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
+    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
+    ll count=0;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            if(matrix[y+i][x+j]=='X') count++;
+        }
+    }
+    return count<=((k*k)/2);
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    ll n, m, k;
+    cin>>n>>m>>k;
+
+    vector<string> matrix;
+    matrix.resize(n);
+
+    for(ll i=0;i<n;i++) {
+        cin>>matrix[i];
+    }
+
+    ii A = {-1,-1}, B = {-1,-1};
+    for(ll i=0;i<n;i++){
+        for(ll j=0;j<m;j++){
+            if(matrix[i][j] == 'A') {
+                A = {i,j};
+            }
+            if(matrix[i][j] == 'B') {
+                B = {i,j};
+            }
+        }
+    }
+    assert(A.first != -1 && B.first != -1);
+
+    assert(ok(A.first, A.second, n, m, k, matrix));
+
+    vector<vector<ll>> dist(n, vector<ll>(m, -1));
+    queue<ii> q;
+    q.push(A);
+    dist[A.first][A.second] = 0;
+
+    const ll dx[] = {1,0,-1,0};
+    const ll dy[] = {0,1,0,-1};
+    while(!q.empty()){
+        ii v = q.front();
+        q.pop();
+        for(ll i=0;i<4;i++){
+            ll x = v.second + dx[i];
+            ll y = v.first + dy[i];
+            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
+                dist[y][x] = dist[v.first][v.second] + 1;
+                q.push({y,x});
+            }
+        }
+    }
+
+    const ll INF = 1e18;
+    ll res = INF;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            ll y=B.first-i;
+            ll x=B.second-j;
+            if(y<0||x<0) continue;
+            if(dist[y][x] != -1) {
+                res = min(res, dist[y][x]);
+            }
+        }
+    }
+    if(res == INF) {
+        cout<<"-1\n";
+    } else {
+        cout<<res<<"\n";
+    }
+}
+Tester: 2024/08/13 13:29:55 testing.go:127: Starting test: 1
+Tester: 2024/08/13 13:29:55 testing.go:150: Awaiting test input: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
+2024/08/13 13:29:55 Running command: isolate -s --cg --box-id=1 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3759494623.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
+Tester: 2024/08/13 13:29:55 testing.go:200: Setting up checker for test: 1
+Tester: 2024/08/13 13:29:55 testing.go:234: Awaiting test answer: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
+Tester: 2024/08/13 13:29:55 testing.go:251: Running checker for test: 1
+2024/08/13 13:29:55 Running command: isolate -s --cg --box-id=2 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3036553129.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
+Tester: 2024/08/13 13:29:55 testing.go:268: Test 1 finished successfully
+Tester: 2024/08/13 13:29:55 testing.go:127: Starting test: 2
+Tester: 2024/08/13 13:29:55 testing.go:150: Awaiting test input: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
+2024/08/13 13:29:55 Running command: isolate -s --cg --box-id=3 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2081471691.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
+Tester: 2024/08/13 13:29:55 testing.go:200: Setting up checker for test: 2
+Tester: 2024/08/13 13:29:55 testing.go:234: Awaiting test answer: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
+Tester: 2024/08/13 13:29:55 testing.go:251: Running checker for test: 2
+2024/08/13 13:29:55 Running command: isolate -s --cg --box-id=4 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.1080530292.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
+Tester: 2024/08/13 13:29:55 testing.go:268: Test 2 finished successfully
+Tester: 2024/08/13 13:29:55 testing.go:127: Starting test: 3
+Tester: 2024/08/13 13:29:55 testing.go:150: Awaiting test input: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
+2024/08/13 13:29:55 Running command: isolate -s --cg --box-id=5 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2397473977.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
+Tester: 2024/08/13 13:29:55 testing.go:200: Setting up checker for test: 3
+Tester: 2024/08/13 13:29:55 testing.go:234: Awaiting test answer: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
+Tester: 2024/08/13 13:29:55 testing.go:251: Running checker for test: 3
+2024/08/13 13:29:55 Running command: isolate -s --cg --box-id=6 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.753692442.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
+Tester: 2024/08/13 13:29:55 testing.go:268: Test 3 finished successfully
+Tester: 2024/08/13 13:29:55 testing.go:272: Finished testing for submission
+Tester: 2024/08/13 13:29:55 testing.go:275: Evaluation completed for submission
+received message: Message 25612621-ea62-49b1-a1fd-3e7c4109f3d8
+failed to unmarshal message, invalid character 'M' looking for beginning of value
+received message: {
+  "evaluation_uuid": "1c9f5b69-a295-475f-acaf-8a1e00cb0747",
+  "request": {
+    "submission": "#include <bits/stdc++.h>\n\nusing namespace std;\nusing ll = long long;\nusing ii = pair<ll,ll>;\n\nbool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {\n    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;\n    ll count=0;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            if(matrix[y+i][x+j]=='X') count++;\n        }\n    }\n    return count<=((k*k)/2);\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n\n    ll n, m, k;\n    cin>>n>>m>>k;\n\n    vector<string> matrix;\n    matrix.resize(n);\n\n    for(ll i=0;i<n;i++) {\n        cin>>matrix[i];\n    }\n\n    ii A = {-1,-1}, B = {-1,-1};\n    for(ll i=0;i<n;i++){\n        for(ll j=0;j<m;j++){\n            if(matrix[i][j] == 'A') {\n                A = {i,j};\n            }\n            if(matrix[i][j] == 'B') {\n                B = {i,j};\n            }\n        }\n    }\n    assert(A.first != -1 && B.first != -1);\n\n    assert(ok(A.first, A.second, n, m, k, matrix));\n\n    vector<vector<ll>> dist(n, vector<ll>(m, -1));\n    queue<ii> q;\n    q.push(A);\n    dist[A.first][A.second] = 0;\n\n    const ll dx[] = {1,0,-1,0};\n    const ll dy[] = {0,1,0,-1};\n    while(!q.empty()){\n        ii v = q.front();\n        q.pop();\n        for(ll i=0;i<4;i++){\n            ll x = v.second + dx[i];\n            ll y = v.first + dy[i];\n            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){\n                dist[y][x] = dist[v.first][v.second] + 1;\n                q.push({y,x});\n            }\n        }\n    }\n\n    const ll INF = 1e18;\n    ll res = INF;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            ll y=B.first-i;\n            ll x=B.second-j;\n            if(y<0||x<0) continue;\n            if(dist[y][x] != -1) {\n                res = min(res, dist[y][x]);\n            }\n        }\n    }\n    if(res == INF) {\n        cout<<\"-1\\n\";\n    } else {\n        cout<<res<<\"\\n\";\n    }\n}\n",
+    "language": {
+      "id": "cpp17",
+      "name": "C++17 (GCC)",
+      "code_filename": "main.cpp",
+      "compile_cmd": "g++ -std=c++17 -o main main.cpp",
+      "compiled_filename": "main",
+      "exec_cmd": "./main"
+    },
+    "limits": {
+      "cpu_time_millis": 500,
+      "memory_kibibytes": 262144
+    },
+    "tests": [
+      {
+        "id": 1,
+        "input_sha256": "358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2",
+        "input_s3_uri": "s3://proglv-tests/358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "answer_s3_uri": "s3://proglv-tests/9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      },
+      {
+        "id": 2,
+        "input_sha256": "ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b",
+        "input_s3_uri": "s3://proglv-tests/ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7",
+        "answer_s3_uri": "s3://proglv-tests/06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      },
+      {
+        "id": 3,
+        "input_sha256": "45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00",
+        "input_s3_uri": "s3://proglv-tests/45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28",
+        "answer_s3_uri": "s3://proglv-tests/ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      }
+    ],
+    "testlib_checker": "#include \"testlib.h\"\n\nusing namespace std;\n\nint main(int argc, char *argv[]) {\n    setName(\"compare sequences of tokens\");\n    registerTestlibCmd(argc, argv);\n\n    int n = 0;\n    string j, p;\n\n    while (!ans.seekEof() && !ouf.seekEof()) {\n        n++;\n\n        ans.readWordTo(j);\n        ouf.readWordTo(p);\n\n        if (j != p)\n            quitf(_wa, \"%d%s words differ - expected: '%s', found: '%s'\", n, englishEnding(n).c_str(),\n                  compress(j).c_str(), compress(p).c_str());\n    }\n\n    if (ans.seekEof() && ouf.seekEof()) {\n        if (n == 1)\n            quitf(_ok, \"\\\"%s\\\"\", compress(j).c_str());\n        else\n            quitf(_ok, \"%d tokens\", n);\n    } else {\n        if (ans.seekEof())\n            quitf(_wa, \"Participant output contains extra tokens\");\n        else\n            quitf(_wa, \"Unexpected EOF in the participants output\");\n    }\n}\n"
+  }
+}
+Tester: 2024/08/13 13:29:55 testing.go:17: Starting evaluation for submission: #include <bits/stdc++.h>
+
+using namespace std;
+using ll = long long;
+using ii = pair<ll,ll>;
+
+bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
+    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
+    ll count=0;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            if(matrix[y+i][x+j]=='X') count++;
+        }
+    }
+    return count<=((k*k)/2);
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    ll n, m, k;
+    cin>>n>>m>>k;
+
+    vector<string> matrix;
+    matrix.resize(n);
+
+    for(ll i=0;i<n;i++) {
+        cin>>matrix[i];
+    }
+
+    ii A = {-1,-1}, B = {-1,-1};
+    for(ll i=0;i<n;i++){
+        for(ll j=0;j<m;j++){
+            if(matrix[i][j] == 'A') {
+                A = {i,j};
+            }
+            if(matrix[i][j] == 'B') {
+                B = {i,j};
+            }
+        }
+    }
+    assert(A.first != -1 && B.first != -1);
+
+    assert(ok(A.first, A.second, n, m, k, matrix));
+
+    vector<vector<ll>> dist(n, vector<ll>(m, -1));
+    queue<ii> q;
+    q.push(A);
+    dist[A.first][A.second] = 0;
+
+    const ll dx[] = {1,0,-1,0};
+    const ll dy[] = {0,1,0,-1};
+    while(!q.empty()){
+        ii v = q.front();
+        q.pop();
+        for(ll i=0;i<4;i++){
+            ll x = v.second + dx[i];
+            ll y = v.first + dy[i];
+            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
+                dist[y][x] = dist[v.first][v.second] + 1;
+                q.push({y,x});
+            }
+        }
+    }
+
+    const ll INF = 1e18;
+    ll res = INF;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            ll y=B.first-i;
+            ll x=B.second-j;
+            if(y<0||x<0) continue;
+            if(dist[y][x] != -1) {
+                res = min(res, dist[y][x]);
+            }
+        }
+    }
+    if(res == INF) {
+        cout<<"-1\n";
+    } else {
+        cout<<res<<"\n";
+    }
+}
+Tester: 2024/08/13 13:29:56 testing.go:21: Scheduling download for input file: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
+Tester: 2024/08/13 13:29:56 testing.go:30: Scheduling download for answer file: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
+Tester: 2024/08/13 13:29:56 testing.go:21: Scheduling download for input file: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
+Tester: 2024/08/13 13:29:56 testing.go:30: Scheduling download for answer file: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
+Tester: 2024/08/13 13:29:56 testing.go:21: Scheduling download for input file: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
+Tester: 2024/08/13 13:29:56 testing.go:30: Scheduling download for answer file: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
+Tester: 2024/08/13 13:29:56 testing.go:40: Retrieving testlib checker: #include "testlib.h"
+
+using namespace std;
+
+int main(int argc, char *argv[]) {
+    setName("compare sequences of tokens");
+    registerTestlibCmd(argc, argv);
+
+    int n = 0;
+    string j, p;
+
+    while (!ans.seekEof() && !ouf.seekEof()) {
+        n++;
+
+        ans.readWordTo(j);
+        ouf.readWordTo(p);
+
+        if (j != p)
+            quitf(_wa, "%d%s words differ - expected: '%s', found: '%s'", n, englishEnding(n).c_str(),
+                  compress(j).c_str(), compress(p).c_str());
+    }
+
+    if (ans.seekEof() && ouf.seekEof()) {
+        if (n == 1)
+            quitf(_ok, "\"%s\"", compress(j).c_str());
+        else
+            quitf(_ok, "%d tokens", n);
+    } else {
+        if (ans.seekEof())
+            quitf(_wa, "Participant output contains extra tokens");
+        else
+            quitf(_wa, "Unexpected EOF in the participants output");
+    }
+}
+Tester: 2024/08/13 13:29:56 testing.go:53: Starting compilation for language: C++17 (GCC)
+2024/08/13 13:29:56 Running command: isolate -s --cg --box-id=0 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.1326423646.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "g++ -std=c++17 -o main main.cpp"
+Tester: 2024/08/13 13:29:57 testing.go:124: Starting testing for submission: #include <bits/stdc++.h>
+
+using namespace std;
+using ll = long long;
+using ii = pair<ll,ll>;
+
+bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
+    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
+    ll count=0;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            if(matrix[y+i][x+j]=='X') count++;
+        }
+    }
+    return count<=((k*k)/2);
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    ll n, m, k;
+    cin>>n>>m>>k;
+
+    vector<string> matrix;
+    matrix.resize(n);
+
+    for(ll i=0;i<n;i++) {
+        cin>>matrix[i];
+    }
+
+    ii A = {-1,-1}, B = {-1,-1};
+    for(ll i=0;i<n;i++){
+        for(ll j=0;j<m;j++){
+            if(matrix[i][j] == 'A') {
+                A = {i,j};
+            }
+            if(matrix[i][j] == 'B') {
+                B = {i,j};
+            }
+        }
+    }
+    assert(A.first != -1 && B.first != -1);
+
+    assert(ok(A.first, A.second, n, m, k, matrix));
+
+    vector<vector<ll>> dist(n, vector<ll>(m, -1));
+    queue<ii> q;
+    q.push(A);
+    dist[A.first][A.second] = 0;
+
+    const ll dx[] = {1,0,-1,0};
+    const ll dy[] = {0,1,0,-1};
+    while(!q.empty()){
+        ii v = q.front();
+        q.pop();
+        for(ll i=0;i<4;i++){
+            ll x = v.second + dx[i];
+            ll y = v.first + dy[i];
+            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
+                dist[y][x] = dist[v.first][v.second] + 1;
+                q.push({y,x});
+            }
+        }
+    }
+
+    const ll INF = 1e18;
+    ll res = INF;
+    for(ll i=0;i<k;i++){
+        for(ll j=0;j<k;j++){
+            ll y=B.first-i;
+            ll x=B.second-j;
+            if(y<0||x<0) continue;
+            if(dist[y][x] != -1) {
+                res = min(res, dist[y][x]);
+            }
+        }
+    }
+    if(res == INF) {
+        cout<<"-1\n";
+    } else {
+        cout<<res<<"\n";
+    }
+}
+Tester: 2024/08/13 13:29:57 testing.go:127: Starting test: 1
+Tester: 2024/08/13 13:29:57 testing.go:150: Awaiting test input: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
+2024/08/13 13:29:57 Running command: isolate -s --cg --box-id=1 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.101361992.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
+Tester: 2024/08/13 13:29:57 testing.go:200: Setting up checker for test: 1
+Tester: 2024/08/13 13:29:57 testing.go:234: Awaiting test answer: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
+Tester: 2024/08/13 13:29:57 testing.go:251: Running checker for test: 1
+2024/08/13 13:29:57 Running command: isolate -s --cg --box-id=2 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.1408771372.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
+Tester: 2024/08/13 13:29:57 testing.go:268: Test 1 finished successfully
+Tester: 2024/08/13 13:29:57 testing.go:127: Starting test: 2
+Tester: 2024/08/13 13:29:57 testing.go:150: Awaiting test input: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
+2024/08/13 13:29:57 Running command: isolate -s --cg --box-id=3 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2165665777.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
+Tester: 2024/08/13 13:29:57 testing.go:200: Setting up checker for test: 2
+Tester: 2024/08/13 13:29:57 testing.go:234: Awaiting test answer: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
+Tester: 2024/08/13 13:29:57 testing.go:251: Running checker for test: 2
+2024/08/13 13:29:57 Running command: isolate -s --cg --box-id=4 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.1185917153.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
+Tester: 2024/08/13 13:29:57 testing.go:268: Test 2 finished successfully
+Tester: 2024/08/13 13:29:57 testing.go:127: Starting test: 3
+Tester: 2024/08/13 13:29:57 testing.go:150: Awaiting test input: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
+2024/08/13 13:29:57 Running command: isolate -s --cg --box-id=5 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.340899843.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
+Tester: 2024/08/13 13:29:57 testing.go:200: Setting up checker for test: 3
+Tester: 2024/08/13 13:29:57 testing.go:234: Awaiting test answer: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
+Tester: 2024/08/13 13:29:57 testing.go:251: Running checker for test: 3
+2024/08/13 13:29:57 Running command: isolate -s --cg --box-id=6 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.911510780.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
+Tester: 2024/08/13 13:29:57 testing.go:268: Test 3 finished successfully
+Tester: 2024/08/13 13:29:57 testing.go:272: Finished testing for submission
+Tester: 2024/08/13 13:29:57 testing.go:275: Evaluation completed for submission
+received message: {
+    "submission": "#include <bits/stdc++.h>\n\nusing namespace std;\nusing ll = long long;\nusing ii = pair<ll,ll>;\n\nbool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {\n    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;\n    ll count=0;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            if(matrix[y+i][x+j]=='X') count++;\n        }\n    }\n    return count<=((k*k)/2);\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n\n    ll n, m, k;\n    cin>>n>>m>>k;\n\n    vector<string> matrix;\n    matrix.resize(n);\n\n    for(ll i=0;i<n;i++) {\n        cin>>matrix[i];\n    }\n\n    ii A = {-1,-1}, B = {-1,-1};\n    for(ll i=0;i<n;i++){\n        for(ll j=0;j<m;j++){\n            if(matrix[i][j] == 'A') {\n                A = {i,j};\n            }\n            if(matrix[i][j] == 'B') {\n                B = {i,j};\n            }\n        }\n    }\n    assert(A.first != -1 && B.first != -1);\n\n    assert(ok(A.first, A.second, n, m, k, matrix));\n\n    vector<vector<ll>> dist(n, vector<ll>(m, -1));\n    queue<ii> q;\n    q.push(A);\n    dist[A.first][A.second] = 0;\n\n    const ll dx[] = {1,0,-1,0};\n    const ll dy[] = {0,1,0,-1};\n    while(!q.empty()){\n        ii v = q.front();\n        q.pop();\n        for(ll i=0;i<4;i++){\n            ll x = v.second + dx[i];\n            ll y = v.first + dy[i];\n            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){\n                dist[y][x] = dist[v.first][v.second] + 1;\n                q.push({y,x});\n            }\n        }\n    }\n\n    const ll INF = 1e18;\n    ll res = INF;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            ll y=B.first-i;\n            ll x=B.second-j;\n            if(y<0||x<0) continue;\n            if(dist[y][x] != -1) {\n                res = min(res, dist[y][x]);\n            }\n        }\n    }\n    if(res == INF) {\n        cout<<\"-1\\n\";\n    } else {\n        cout<<res<<\"\\n\";\n    }\n}\n",
+    "language": {
+      "id": "cpp17",
+      "name": "C++17 (GCC)",
+      "code_filename": "main.cpp",
+      "compile_cmd": "g++ -std=c++17 -o main main.cpp",
+      "compiled_filename": "main",
+      "exec_cmd": "./main"
+    },
+    "limits": {
+      "cpu_time_millis": 500,
+      "memory_kibibytes": 262144
+    },
+    "tests": [
+      {
+        "id": 1,
+        "input_sha256": "358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2",
+        "input_s3_uri": "s3://proglv-tests/358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "answer_s3_uri": "s3://proglv-tests/9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      },
+      {
+        "id": 2,
+        "input_sha256": "ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b",
+        "input_s3_uri": "s3://proglv-tests/ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7",
+        "answer_s3_uri": "s3://proglv-tests/06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      },
+      {
+        "id": 3,
+        "input_sha256": "45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00",
+        "input_s3_uri": "s3://proglv-tests/45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00.zst",
+        "input_content": null,
+        "input_http_url": null,
+        "answer_sha256": "ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28",
+        "answer_s3_uri": "s3://proglv-tests/ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28.zst",
+        "answer_content": null,
+        "answer_http_url": null
+      }
+    ],
+    "testlib_checker": "#include \"testlib.h\"\n\nusing namespace std;\n\nint main(int argc, char *argv[]) {\n    setName(\"compare sequences of tokens\");\n    registerTestlibCmd(argc, argv);\n\n    int n = 0;\n    string j, p;\n\n    while (!ans.seekEof() && !ouf.seekEof()) {\n        n++;\n\n        ans.readWordTo(j);\n        ouf.readWordTo(p);\n\n        if (j != p)\n            quitf(_wa, \"%d%s words differ - expected: '%s', found: '%s'\", n, englishEnding(n).c_str(),\n                  compress(j).c_str(), compress(p).c_str());\n    }\n\n    if (ans.seekEof() && ouf.seekEof()) {\n        if (n == 1)\n            quitf(_ok, \"\\\"%s\\\"\", compress(j).c_str());\n        else\n            quitf(_ok, \"%d tokens\", n);\n    } else {\n        if (ans.seekEof())\n            quitf(_wa, \"Participant output contains extra tokens\");\n        else\n            quitf(_wa, \"Unexpected EOF in the participants output\");\n    }\n}\n"
+  }
+  
+Tester: 2024/08/13 13:29:57 testing.go:17: Starting evaluation for submission: 
+Tester: 2024/08/13 13:29:58 testing.go:40: Retrieving testlib checker: 
+Checker e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 does not exist
+2024/08/13 13:29:58 Creating isolate box...
+2024/08/13 13:29:58 Created isolate box: /var/local/lib/isolate/0
+2024/08/13 13:29:58 Adding checker code to isolate box...
+2024/08/13 13:29:58 Adding testlib.h to isolate box...
+2024/08/13 13:29:58 Running checker compilation...
+2024/08/13 13:29:58 Running command: isolate -s --cg --box-id=0 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.107830336.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "g++ -std=c++17 -o checker checker.cpp -I . -I /usr/include"
+2024/08/13 13:29:58 Collecting compilation runtime data...
+2024/08/13 13:29:58 Checker compilation finished!
+Tester: 2024/08/13 13:29:58 testing.go:44: Error: failed to get testlib checker: checker compilation failed with exit code 1
+Error: failed to get testlib checker: checker compilation failed with exit code 1
+received message: Message 5a659267-be4d-4430-8b49-20a9cc4bcd1f
+failed to unmarshal message, invalid character 'M' looking for beginning of value
 received message: Message fdfca582-71e8-4044-a196-68965a3b92fe
 failed to unmarshal message, invalid character 'M' looking for beginning of value
 received message: Message 25612621-ea62-49b1-a1fd-3e7c4109f3d8
@@ -55,24 +1001,17 @@ received message: {
     "testlib_checker": "#include \"testlib.h\"\n\nusing namespace std;\n\nint main(int argc, char *argv[]) {\n    setName(\"compare sequences of tokens\");\n    registerTestlibCmd(argc, argv);\n\n    int n = 0;\n    string j, p;\n\n    while (!ans.seekEof() && !ouf.seekEof()) {\n        n++;\n\n        ans.readWordTo(j);\n        ouf.readWordTo(p);\n\n        if (j != p)\n            quitf(_wa, \"%d%s words differ - expected: '%s', found: '%s'\", n, englishEnding(n).c_str(),\n                  compress(j).c_str(), compress(p).c_str());\n    }\n\n    if (ans.seekEof() && ouf.seekEof()) {\n        if (n == 1)\n            quitf(_ok, \"\\\"%s\\\"\", compress(j).c_str());\n        else\n            quitf(_ok, \"%d tokens\", n);\n    } else {\n        if (ans.seekEof())\n            quitf(_wa, \"Participant output contains extra tokens\");\n        else\n            quitf(_wa, \"Unexpected EOF in the participants output\");\n    }\n}\n"
   }
   
-Tester: 2024/08/13 12:54:52 testing.go:17: Starting evaluation for submission: 
-Tester: 2024/08/13 12:54:53 testing.go:40: Retrieving testlib checker: 
-Checker e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 does not exist
-2024/08/13 12:54:53 Creating isolate box...
-2024/08/13 12:54:53 Created isolate box: /var/local/lib/isolate/0
-2024/08/13 12:54:53 Adding checker code to isolate box...
-2024/08/13 12:54:53 Adding testlib.h to isolate box...
-2024/08/13 12:54:53 Running checker compilation...
-2024/08/13 12:54:53 Running command: isolate -s --cg --box-id=0 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.1786773115.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "g++ -std=c++17 -o checker checker.cpp -I . -I /usr/include"
-2024/08/13 12:54:53 Collecting compilation runtime data...
-2024/08/13 12:54:53 Checker compilation finished!
-Tester: 2024/08/13 12:54:53 testing.go:44: Error: failed to get testlib checker: checker compilation failed with exit code 1
-Error: failed to get testlib checker: checker compilation failed with exit code 1
+Tester: 2024/08/13 13:34:57 testing.go:17: Starting evaluation for submission: 
+Tester: 2024/08/13 13:34:58 testing.go:40: Retrieving testlib checker: 
+Tester: 2024/08/13 13:34:58 testing.go:44: Error: failed to get testlib checker: open var/tester/checkers/testlib/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855: no such file or directory
+Error: failed to get testlib checker: open var/tester/checkers/testlib/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855: no such file or directory
 received message: Message 5a659267-be4d-4430-8b49-20a9cc4bcd1f
 failed to unmarshal message, invalid character 'M' looking for beginning of value
+received message: Message fdfca582-71e8-4044-a196-68965a3b92fe
+failed to unmarshal message, invalid character 'M' looking for beginning of value
+received message: Message 25612621-ea62-49b1-a1fd-3e7c4109f3d8
+failed to unmarshal message, invalid character 'M' looking for beginning of value
 received message: {
-  "evaluation_uuid": "1c9f5b69-a295-475f-acaf-8a1e00cb0747",
-  "request": {
     "submission": "#include <bits/stdc++.h>\n\nusing namespace std;\nusing ll = long long;\nusing ii = pair<ll,ll>;\n\nbool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {\n    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;\n    ll count=0;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            if(matrix[y+i][x+j]=='X') count++;\n        }\n    }\n    return count<=((k*k)/2);\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n\n    ll n, m, k;\n    cin>>n>>m>>k;\n\n    vector<string> matrix;\n    matrix.resize(n);\n\n    for(ll i=0;i<n;i++) {\n        cin>>matrix[i];\n    }\n\n    ii A = {-1,-1}, B = {-1,-1};\n    for(ll i=0;i<n;i++){\n        for(ll j=0;j<m;j++){\n            if(matrix[i][j] == 'A') {\n                A = {i,j};\n            }\n            if(matrix[i][j] == 'B') {\n                B = {i,j};\n            }\n        }\n    }\n    assert(A.first != -1 && B.first != -1);\n\n    assert(ok(A.first, A.second, n, m, k, matrix));\n\n    vector<vector<ll>> dist(n, vector<ll>(m, -1));\n    queue<ii> q;\n    q.push(A);\n    dist[A.first][A.second] = 0;\n\n    const ll dx[] = {1,0,-1,0};\n    const ll dy[] = {0,1,0,-1};\n    while(!q.empty()){\n        ii v = q.front();\n        q.pop();\n        for(ll i=0;i<4;i++){\n            ll x = v.second + dx[i];\n            ll y = v.first + dy[i];\n            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){\n                dist[y][x] = dist[v.first][v.second] + 1;\n                q.push({y,x});\n            }\n        }\n    }\n\n    const ll INF = 1e18;\n    ll res = INF;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            ll y=B.first-i;\n            ll x=B.second-j;\n            if(y<0||x<0) continue;\n            if(dist[y][x] != -1) {\n                res = min(res, dist[y][x]);\n            }\n        }\n    }\n    if(res == INF) {\n        cout<<\"-1\\n\";\n    } else {\n        cout<<res<<\"\\n\";\n    }\n}\n",
     "language": {
       "id": "cpp17",
@@ -123,824 +1062,9 @@ received message: {
     ],
     "testlib_checker": "#include \"testlib.h\"\n\nusing namespace std;\n\nint main(int argc, char *argv[]) {\n    setName(\"compare sequences of tokens\");\n    registerTestlibCmd(argc, argv);\n\n    int n = 0;\n    string j, p;\n\n    while (!ans.seekEof() && !ouf.seekEof()) {\n        n++;\n\n        ans.readWordTo(j);\n        ouf.readWordTo(p);\n\n        if (j != p)\n            quitf(_wa, \"%d%s words differ - expected: '%s', found: '%s'\", n, englishEnding(n).c_str(),\n                  compress(j).c_str(), compress(p).c_str());\n    }\n\n    if (ans.seekEof() && ouf.seekEof()) {\n        if (n == 1)\n            quitf(_ok, \"\\\"%s\\\"\", compress(j).c_str());\n        else\n            quitf(_ok, \"%d tokens\", n);\n    } else {\n        if (ans.seekEof())\n            quitf(_wa, \"Participant output contains extra tokens\");\n        else\n            quitf(_wa, \"Unexpected EOF in the participants output\");\n    }\n}\n"
   }
-}
-Tester: 2024/08/13 12:54:53 testing.go:17: Starting evaluation for submission: #include <bits/stdc++.h>
-
-using namespace std;
-using ll = long long;
-using ii = pair<ll,ll>;
-
-bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
-    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
-    ll count=0;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            if(matrix[y+i][x+j]=='X') count++;
-        }
-    }
-    return count<=((k*k)/2);
-}
-
-int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-
-    ll n, m, k;
-    cin>>n>>m>>k;
-
-    vector<string> matrix;
-    matrix.resize(n);
-
-    for(ll i=0;i<n;i++) {
-        cin>>matrix[i];
-    }
-
-    ii A = {-1,-1}, B = {-1,-1};
-    for(ll i=0;i<n;i++){
-        for(ll j=0;j<m;j++){
-            if(matrix[i][j] == 'A') {
-                A = {i,j};
-            }
-            if(matrix[i][j] == 'B') {
-                B = {i,j};
-            }
-        }
-    }
-    assert(A.first != -1 && B.first != -1);
-
-    assert(ok(A.first, A.second, n, m, k, matrix));
-
-    vector<vector<ll>> dist(n, vector<ll>(m, -1));
-    queue<ii> q;
-    q.push(A);
-    dist[A.first][A.second] = 0;
-
-    const ll dx[] = {1,0,-1,0};
-    const ll dy[] = {0,1,0,-1};
-    while(!q.empty()){
-        ii v = q.front();
-        q.pop();
-        for(ll i=0;i<4;i++){
-            ll x = v.second + dx[i];
-            ll y = v.first + dy[i];
-            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
-                dist[y][x] = dist[v.first][v.second] + 1;
-                q.push({y,x});
-            }
-        }
-    }
-
-    const ll INF = 1e18;
-    ll res = INF;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            ll y=B.first-i;
-            ll x=B.second-j;
-            if(y<0||x<0) continue;
-            if(dist[y][x] != -1) {
-                res = min(res, dist[y][x]);
-            }
-        }
-    }
-    if(res == INF) {
-        cout<<"-1\n";
-    } else {
-        cout<<res<<"\n";
-    }
-}
-sent message 2
-Tester: 2024/08/13 12:54:54 testing.go:21: Scheduling download for input file: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
-Tester: 2024/08/13 12:54:54 testing.go:30: Scheduling download for answer file: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
-Tester: 2024/08/13 12:54:54 testing.go:21: Scheduling download for input file: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
-Tester: 2024/08/13 12:54:54 testing.go:30: Scheduling download for answer file: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
-Tester: 2024/08/13 12:54:54 testing.go:21: Scheduling download for input file: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
-Tester: 2024/08/13 12:54:54 testing.go:30: Scheduling download for answer file: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
-Tester: 2024/08/13 12:54:54 testing.go:40: Retrieving testlib checker: #include "testlib.h"
-
-using namespace std;
-
-int main(int argc, char *argv[]) {
-    setName("compare sequences of tokens");
-    registerTestlibCmd(argc, argv);
-
-    int n = 0;
-    string j, p;
-
-    while (!ans.seekEof() && !ouf.seekEof()) {
-        n++;
-
-        ans.readWordTo(j);
-        ouf.readWordTo(p);
-
-        if (j != p)
-            quitf(_wa, "%d%s words differ - expected: '%s', found: '%s'", n, englishEnding(n).c_str(),
-                  compress(j).c_str(), compress(p).c_str());
-    }
-
-    if (ans.seekEof() && ouf.seekEof()) {
-        if (n == 1)
-            quitf(_ok, "\"%s\"", compress(j).c_str());
-        else
-            quitf(_ok, "%d tokens", n);
-    } else {
-        if (ans.seekEof())
-            quitf(_wa, "Participant output contains extra tokens");
-        else
-            quitf(_wa, "Unexpected EOF in the participants output");
-    }
-}
-Checker d2382830d258a4aaf2743e5d048e1839746aff458cbde14d23c0b38c1f190f22 already exists
-Tester: 2024/08/13 12:54:54 testing.go:53: Starting compilation for language: C++17 (GCC)
-2024/08/13 12:54:54 Running command: isolate -s --cg --box-id=0 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.4175085673.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "g++ -std=c++17 -o main main.cpp"
-sent message 3
-Tester: 2024/08/13 12:54:55 testing.go:124: Starting testing for submission: #include <bits/stdc++.h>
-
-using namespace std;
-using ll = long long;
-using ii = pair<ll,ll>;
-
-bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
-    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
-    ll count=0;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            if(matrix[y+i][x+j]=='X') count++;
-        }
-    }
-    return count<=((k*k)/2);
-}
-
-int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-
-    ll n, m, k;
-    cin>>n>>m>>k;
-
-    vector<string> matrix;
-    matrix.resize(n);
-
-    for(ll i=0;i<n;i++) {
-        cin>>matrix[i];
-    }
-
-    ii A = {-1,-1}, B = {-1,-1};
-    for(ll i=0;i<n;i++){
-        for(ll j=0;j<m;j++){
-            if(matrix[i][j] == 'A') {
-                A = {i,j};
-            }
-            if(matrix[i][j] == 'B') {
-                B = {i,j};
-            }
-        }
-    }
-    assert(A.first != -1 && B.first != -1);
-
-    assert(ok(A.first, A.second, n, m, k, matrix));
-
-    vector<vector<ll>> dist(n, vector<ll>(m, -1));
-    queue<ii> q;
-    q.push(A);
-    dist[A.first][A.second] = 0;
-
-    const ll dx[] = {1,0,-1,0};
-    const ll dy[] = {0,1,0,-1};
-    while(!q.empty()){
-        ii v = q.front();
-        q.pop();
-        for(ll i=0;i<4;i++){
-            ll x = v.second + dx[i];
-            ll y = v.first + dy[i];
-            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
-                dist[y][x] = dist[v.first][v.second] + 1;
-                q.push({y,x});
-            }
-        }
-    }
-
-    const ll INF = 1e18;
-    ll res = INF;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            ll y=B.first-i;
-            ll x=B.second-j;
-            if(y<0||x<0) continue;
-            if(dist[y][x] != -1) {
-                res = min(res, dist[y][x]);
-            }
-        }
-    }
-    if(res == INF) {
-        cout<<"-1\n";
-    } else {
-        cout<<res<<"\n";
-    }
-}
-Tester: 2024/08/13 12:54:55 testing.go:127: Starting test: 1
-Tester: 2024/08/13 12:54:55 testing.go:150: Awaiting test input: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
-2024/08/13 12:54:55 Running command: isolate -s --cg --box-id=1 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3019014301.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
-Tester: 2024/08/13 12:54:55 testing.go:200: Setting up checker for test: 1
-Tester: 2024/08/13 12:54:55 testing.go:234: Awaiting test answer: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
-Tester: 2024/08/13 12:54:55 testing.go:251: Running checker for test: 1
-2024/08/13 12:54:55 Running command: isolate -s --cg --box-id=2 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.1735627497.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
-Tester: 2024/08/13 12:54:55 testing.go:268: Test 1 finished successfully
-Tester: 2024/08/13 12:54:55 testing.go:127: Starting test: 2
-Tester: 2024/08/13 12:54:55 testing.go:150: Awaiting test input: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
-2024/08/13 12:54:55 Running command: isolate -s --cg --box-id=3 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2861839362.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
-Tester: 2024/08/13 12:54:55 testing.go:200: Setting up checker for test: 2
-Tester: 2024/08/13 12:54:55 testing.go:234: Awaiting test answer: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
-Tester: 2024/08/13 12:54:55 testing.go:251: Running checker for test: 2
-2024/08/13 12:54:55 Running command: isolate -s --cg --box-id=4 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.4131715362.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
-Tester: 2024/08/13 12:54:55 testing.go:268: Test 2 finished successfully
-Tester: 2024/08/13 12:54:55 testing.go:127: Starting test: 3
-Tester: 2024/08/13 12:54:55 testing.go:150: Awaiting test input: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
-2024/08/13 12:54:55 Running command: isolate -s --cg --box-id=5 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.392086717.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
-Tester: 2024/08/13 12:54:55 testing.go:200: Setting up checker for test: 3
-Tester: 2024/08/13 12:54:55 testing.go:234: Awaiting test answer: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
-Tester: 2024/08/13 12:54:55 testing.go:251: Running checker for test: 3
-2024/08/13 12:54:55 Running command: isolate -s --cg --box-id=6 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.4202151275.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
-Tester: 2024/08/13 12:54:55 testing.go:268: Test 3 finished successfully
-Tester: 2024/08/13 12:54:55 testing.go:272: Finished testing for submission
-Tester: 2024/08/13 12:54:55 testing.go:275: Evaluation completed for submission
-received message: {
-  "evaluation_uuid": "1c9f5b69-a295-475f-acaf-8a1e00cb0747",
-  "request": {
-    "submission": "#include <bits/stdc++.h>\n\nusing namespace std;\nusing ll = long long;\nusing ii = pair<ll,ll>;\n\nbool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {\n    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;\n    ll count=0;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            if(matrix[y+i][x+j]=='X') count++;\n        }\n    }\n    return count<=((k*k)/2);\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n\n    ll n, m, k;\n    cin>>n>>m>>k;\n\n    vector<string> matrix;\n    matrix.resize(n);\n\n    for(ll i=0;i<n;i++) {\n        cin>>matrix[i];\n    }\n\n    ii A = {-1,-1}, B = {-1,-1};\n    for(ll i=0;i<n;i++){\n        for(ll j=0;j<m;j++){\n            if(matrix[i][j] == 'A') {\n                A = {i,j};\n            }\n            if(matrix[i][j] == 'B') {\n                B = {i,j};\n            }\n        }\n    }\n    assert(A.first != -1 && B.first != -1);\n\n    assert(ok(A.first, A.second, n, m, k, matrix));\n\n    vector<vector<ll>> dist(n, vector<ll>(m, -1));\n    queue<ii> q;\n    q.push(A);\n    dist[A.first][A.second] = 0;\n\n    const ll dx[] = {1,0,-1,0};\n    const ll dy[] = {0,1,0,-1};\n    while(!q.empty()){\n        ii v = q.front();\n        q.pop();\n        for(ll i=0;i<4;i++){\n            ll x = v.second + dx[i];\n            ll y = v.first + dy[i];\n            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){\n                dist[y][x] = dist[v.first][v.second] + 1;\n                q.push({y,x});\n            }\n        }\n    }\n\n    const ll INF = 1e18;\n    ll res = INF;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            ll y=B.first-i;\n            ll x=B.second-j;\n            if(y<0||x<0) continue;\n            if(dist[y][x] != -1) {\n                res = min(res, dist[y][x]);\n            }\n        }\n    }\n    if(res == INF) {\n        cout<<\"-1\\n\";\n    } else {\n        cout<<res<<\"\\n\";\n    }\n}\n",
-    "language": {
-      "id": "cpp17",
-      "name": "C++17 (GCC)",
-      "code_filename": "main.cpp",
-      "compile_cmd": "g++ -std=c++17 -o main main.cpp",
-      "compiled_filename": "main",
-      "exec_cmd": "./main"
-    },
-    "limits": {
-      "cpu_time_millis": 500,
-      "memory_kibibytes": 262144
-    },
-    "tests": [
-      {
-        "id": 1,
-        "input_sha256": "358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2",
-        "input_s3_uri": "s3://proglv-tests/358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2.zst",
-        "input_content": null,
-        "input_http_url": null,
-        "answer_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
-        "answer_s3_uri": "s3://proglv-tests/9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa.zst",
-        "answer_content": null,
-        "answer_http_url": null
-      },
-      {
-        "id": 2,
-        "input_sha256": "ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b",
-        "input_s3_uri": "s3://proglv-tests/ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b.zst",
-        "input_content": null,
-        "input_http_url": null,
-        "answer_sha256": "06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7",
-        "answer_s3_uri": "s3://proglv-tests/06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7.zst",
-        "answer_content": null,
-        "answer_http_url": null
-      },
-      {
-        "id": 3,
-        "input_sha256": "45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00",
-        "input_s3_uri": "s3://proglv-tests/45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00.zst",
-        "input_content": null,
-        "input_http_url": null,
-        "answer_sha256": "ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28",
-        "answer_s3_uri": "s3://proglv-tests/ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28.zst",
-        "answer_content": null,
-        "answer_http_url": null
-      }
-    ],
-    "testlib_checker": "#include \"testlib.h\"\n\nusing namespace std;\n\nint main(int argc, char *argv[]) {\n    setName(\"compare sequences of tokens\");\n    registerTestlibCmd(argc, argv);\n\n    int n = 0;\n    string j, p;\n\n    while (!ans.seekEof() && !ouf.seekEof()) {\n        n++;\n\n        ans.readWordTo(j);\n        ouf.readWordTo(p);\n\n        if (j != p)\n            quitf(_wa, \"%d%s words differ - expected: '%s', found: '%s'\", n, englishEnding(n).c_str(),\n                  compress(j).c_str(), compress(p).c_str());\n    }\n\n    if (ans.seekEof() && ouf.seekEof()) {\n        if (n == 1)\n            quitf(_ok, \"\\\"%s\\\"\", compress(j).c_str());\n        else\n            quitf(_ok, \"%d tokens\", n);\n    } else {\n        if (ans.seekEof())\n            quitf(_wa, \"Participant output contains extra tokens\");\n        else\n            quitf(_wa, \"Unexpected EOF in the participants output\");\n    }\n}\n"
-  }
-}
-Tester: 2024/08/13 12:54:55 testing.go:17: Starting evaluation for submission: #include <bits/stdc++.h>
-
-using namespace std;
-using ll = long long;
-using ii = pair<ll,ll>;
-
-bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
-    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
-    ll count=0;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            if(matrix[y+i][x+j]=='X') count++;
-        }
-    }
-    return count<=((k*k)/2);
-}
-
-int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-
-    ll n, m, k;
-    cin>>n>>m>>k;
-
-    vector<string> matrix;
-    matrix.resize(n);
-
-    for(ll i=0;i<n;i++) {
-        cin>>matrix[i];
-    }
-
-    ii A = {-1,-1}, B = {-1,-1};
-    for(ll i=0;i<n;i++){
-        for(ll j=0;j<m;j++){
-            if(matrix[i][j] == 'A') {
-                A = {i,j};
-            }
-            if(matrix[i][j] == 'B') {
-                B = {i,j};
-            }
-        }
-    }
-    assert(A.first != -1 && B.first != -1);
-
-    assert(ok(A.first, A.second, n, m, k, matrix));
-
-    vector<vector<ll>> dist(n, vector<ll>(m, -1));
-    queue<ii> q;
-    q.push(A);
-    dist[A.first][A.second] = 0;
-
-    const ll dx[] = {1,0,-1,0};
-    const ll dy[] = {0,1,0,-1};
-    while(!q.empty()){
-        ii v = q.front();
-        q.pop();
-        for(ll i=0;i<4;i++){
-            ll x = v.second + dx[i];
-            ll y = v.first + dy[i];
-            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
-                dist[y][x] = dist[v.first][v.second] + 1;
-                q.push({y,x});
-            }
-        }
-    }
-
-    const ll INF = 1e18;
-    ll res = INF;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            ll y=B.first-i;
-            ll x=B.second-j;
-            if(y<0||x<0) continue;
-            if(dist[y][x] != -1) {
-                res = min(res, dist[y][x]);
-            }
-        }
-    }
-    if(res == INF) {
-        cout<<"-1\n";
-    } else {
-        cout<<res<<"\n";
-    }
-}
-Tester: 2024/08/13 12:54:56 testing.go:21: Scheduling download for input file: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
-Tester: 2024/08/13 12:54:56 testing.go:30: Scheduling download for answer file: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
-Tester: 2024/08/13 12:54:56 testing.go:21: Scheduling download for input file: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
-Tester: 2024/08/13 12:54:56 testing.go:30: Scheduling download for answer file: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
-Tester: 2024/08/13 12:54:56 testing.go:21: Scheduling download for input file: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
-Tester: 2024/08/13 12:54:56 testing.go:30: Scheduling download for answer file: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
-Tester: 2024/08/13 12:54:56 testing.go:40: Retrieving testlib checker: #include "testlib.h"
-
-using namespace std;
-
-int main(int argc, char *argv[]) {
-    setName("compare sequences of tokens");
-    registerTestlibCmd(argc, argv);
-
-    int n = 0;
-    string j, p;
-
-    while (!ans.seekEof() && !ouf.seekEof()) {
-        n++;
-
-        ans.readWordTo(j);
-        ouf.readWordTo(p);
-
-        if (j != p)
-            quitf(_wa, "%d%s words differ - expected: '%s', found: '%s'", n, englishEnding(n).c_str(),
-                  compress(j).c_str(), compress(p).c_str());
-    }
-
-    if (ans.seekEof() && ouf.seekEof()) {
-        if (n == 1)
-            quitf(_ok, "\"%s\"", compress(j).c_str());
-        else
-            quitf(_ok, "%d tokens", n);
-    } else {
-        if (ans.seekEof())
-            quitf(_wa, "Participant output contains extra tokens");
-        else
-            quitf(_wa, "Unexpected EOF in the participants output");
-    }
-}
-Tester: 2024/08/13 12:54:56 testing.go:53: Starting compilation for language: C++17 (GCC)
-2024/08/13 12:54:56 Running command: isolate -s --cg --box-id=0 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.4054885990.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "g++ -std=c++17 -o main main.cpp"
-Tester: 2024/08/13 12:54:57 testing.go:124: Starting testing for submission: #include <bits/stdc++.h>
-
-using namespace std;
-using ll = long long;
-using ii = pair<ll,ll>;
-
-bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
-    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
-    ll count=0;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            if(matrix[y+i][x+j]=='X') count++;
-        }
-    }
-    return count<=((k*k)/2);
-}
-
-int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-
-    ll n, m, k;
-    cin>>n>>m>>k;
-
-    vector<string> matrix;
-    matrix.resize(n);
-
-    for(ll i=0;i<n;i++) {
-        cin>>matrix[i];
-    }
-
-    ii A = {-1,-1}, B = {-1,-1};
-    for(ll i=0;i<n;i++){
-        for(ll j=0;j<m;j++){
-            if(matrix[i][j] == 'A') {
-                A = {i,j};
-            }
-            if(matrix[i][j] == 'B') {
-                B = {i,j};
-            }
-        }
-    }
-    assert(A.first != -1 && B.first != -1);
-
-    assert(ok(A.first, A.second, n, m, k, matrix));
-
-    vector<vector<ll>> dist(n, vector<ll>(m, -1));
-    queue<ii> q;
-    q.push(A);
-    dist[A.first][A.second] = 0;
-
-    const ll dx[] = {1,0,-1,0};
-    const ll dy[] = {0,1,0,-1};
-    while(!q.empty()){
-        ii v = q.front();
-        q.pop();
-        for(ll i=0;i<4;i++){
-            ll x = v.second + dx[i];
-            ll y = v.first + dy[i];
-            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
-                dist[y][x] = dist[v.first][v.second] + 1;
-                q.push({y,x});
-            }
-        }
-    }
-
-    const ll INF = 1e18;
-    ll res = INF;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            ll y=B.first-i;
-            ll x=B.second-j;
-            if(y<0||x<0) continue;
-            if(dist[y][x] != -1) {
-                res = min(res, dist[y][x]);
-            }
-        }
-    }
-    if(res == INF) {
-        cout<<"-1\n";
-    } else {
-        cout<<res<<"\n";
-    }
-}
-Tester: 2024/08/13 12:54:57 testing.go:127: Starting test: 1
-Tester: 2024/08/13 12:54:57 testing.go:150: Awaiting test input: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
-2024/08/13 12:54:57 Running command: isolate -s --cg --box-id=1 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2772802215.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
-Tester: 2024/08/13 12:54:57 testing.go:200: Setting up checker for test: 1
-Tester: 2024/08/13 12:54:57 testing.go:234: Awaiting test answer: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
-Tester: 2024/08/13 12:54:57 testing.go:251: Running checker for test: 1
-2024/08/13 12:54:57 Running command: isolate -s --cg --box-id=2 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3364580524.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
-Tester: 2024/08/13 12:54:57 testing.go:268: Test 1 finished successfully
-Tester: 2024/08/13 12:54:57 testing.go:127: Starting test: 2
-Tester: 2024/08/13 12:54:57 testing.go:150: Awaiting test input: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
-2024/08/13 12:54:57 Running command: isolate -s --cg --box-id=3 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3233210454.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
-Tester: 2024/08/13 12:54:57 testing.go:200: Setting up checker for test: 2
-Tester: 2024/08/13 12:54:57 testing.go:234: Awaiting test answer: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
-Tester: 2024/08/13 12:54:57 testing.go:251: Running checker for test: 2
-2024/08/13 12:54:57 Running command: isolate -s --cg --box-id=4 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2123350366.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
-Tester: 2024/08/13 12:54:57 testing.go:268: Test 2 finished successfully
-Tester: 2024/08/13 12:54:57 testing.go:127: Starting test: 3
-Tester: 2024/08/13 12:54:57 testing.go:150: Awaiting test input: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
-2024/08/13 12:54:57 Running command: isolate -s --cg --box-id=5 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2457978141.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
-Tester: 2024/08/13 12:54:57 testing.go:200: Setting up checker for test: 3
-Tester: 2024/08/13 12:54:57 testing.go:234: Awaiting test answer: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
-Tester: 2024/08/13 12:54:57 testing.go:251: Running checker for test: 3
-2024/08/13 12:54:57 Running command: isolate -s --cg --box-id=6 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.1358222569.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
-Tester: 2024/08/13 12:54:57 testing.go:268: Test 3 finished successfully
-Tester: 2024/08/13 12:54:57 testing.go:272: Finished testing for submission
-Tester: 2024/08/13 12:54:57 testing.go:275: Evaluation completed for submission
-received message: {
-  "evaluation_uuid": "1c9f5b69-a295-475f-acaf-8a1e00cb0747",
-  "request": {
-    "submission": "#include <bits/stdc++.h>\n\nusing namespace std;\nusing ll = long long;\nusing ii = pair<ll,ll>;\n\nbool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {\n    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;\n    ll count=0;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            if(matrix[y+i][x+j]=='X') count++;\n        }\n    }\n    return count<=((k*k)/2);\n}\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n\n    ll n, m, k;\n    cin>>n>>m>>k;\n\n    vector<string> matrix;\n    matrix.resize(n);\n\n    for(ll i=0;i<n;i++) {\n        cin>>matrix[i];\n    }\n\n    ii A = {-1,-1}, B = {-1,-1};\n    for(ll i=0;i<n;i++){\n        for(ll j=0;j<m;j++){\n            if(matrix[i][j] == 'A') {\n                A = {i,j};\n            }\n            if(matrix[i][j] == 'B') {\n                B = {i,j};\n            }\n        }\n    }\n    assert(A.first != -1 && B.first != -1);\n\n    assert(ok(A.first, A.second, n, m, k, matrix));\n\n    vector<vector<ll>> dist(n, vector<ll>(m, -1));\n    queue<ii> q;\n    q.push(A);\n    dist[A.first][A.second] = 0;\n\n    const ll dx[] = {1,0,-1,0};\n    const ll dy[] = {0,1,0,-1};\n    while(!q.empty()){\n        ii v = q.front();\n        q.pop();\n        for(ll i=0;i<4;i++){\n            ll x = v.second + dx[i];\n            ll y = v.first + dy[i];\n            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){\n                dist[y][x] = dist[v.first][v.second] + 1;\n                q.push({y,x});\n            }\n        }\n    }\n\n    const ll INF = 1e18;\n    ll res = INF;\n    for(ll i=0;i<k;i++){\n        for(ll j=0;j<k;j++){\n            ll y=B.first-i;\n            ll x=B.second-j;\n            if(y<0||x<0) continue;\n            if(dist[y][x] != -1) {\n                res = min(res, dist[y][x]);\n            }\n        }\n    }\n    if(res == INF) {\n        cout<<\"-1\\n\";\n    } else {\n        cout<<res<<\"\\n\";\n    }\n}\n",
-    "language": {
-      "id": "cpp17",
-      "name": "C++17 (GCC)",
-      "code_filename": "main.cpp",
-      "compile_cmd": "g++ -std=c++17 -o main main.cpp",
-      "compiled_filename": "main",
-      "exec_cmd": "./main"
-    },
-    "limits": {
-      "cpu_time_millis": 500,
-      "memory_kibibytes": 262144
-    },
-    "tests": [
-      {
-        "id": 1,
-        "input_sha256": "358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2",
-        "input_s3_uri": "s3://proglv-tests/358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2.zst",
-        "input_content": null,
-        "input_http_url": null,
-        "answer_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
-        "answer_s3_uri": "s3://proglv-tests/9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa.zst",
-        "answer_content": null,
-        "answer_http_url": null
-      },
-      {
-        "id": 2,
-        "input_sha256": "ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b",
-        "input_s3_uri": "s3://proglv-tests/ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b.zst",
-        "input_content": null,
-        "input_http_url": null,
-        "answer_sha256": "06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7",
-        "answer_s3_uri": "s3://proglv-tests/06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7.zst",
-        "answer_content": null,
-        "answer_http_url": null
-      },
-      {
-        "id": 3,
-        "input_sha256": "45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00",
-        "input_s3_uri": "s3://proglv-tests/45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00.zst",
-        "input_content": null,
-        "input_http_url": null,
-        "answer_sha256": "ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28",
-        "answer_s3_uri": "s3://proglv-tests/ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28.zst",
-        "answer_content": null,
-        "answer_http_url": null
-      }
-    ],
-    "testlib_checker": "#include \"testlib.h\"\n\nusing namespace std;\n\nint main(int argc, char *argv[]) {\n    setName(\"compare sequences of tokens\");\n    registerTestlibCmd(argc, argv);\n\n    int n = 0;\n    string j, p;\n\n    while (!ans.seekEof() && !ouf.seekEof()) {\n        n++;\n\n        ans.readWordTo(j);\n        ouf.readWordTo(p);\n\n        if (j != p)\n            quitf(_wa, \"%d%s words differ - expected: '%s', found: '%s'\", n, englishEnding(n).c_str(),\n                  compress(j).c_str(), compress(p).c_str());\n    }\n\n    if (ans.seekEof() && ouf.seekEof()) {\n        if (n == 1)\n            quitf(_ok, \"\\\"%s\\\"\", compress(j).c_str());\n        else\n            quitf(_ok, \"%d tokens\", n);\n    } else {\n        if (ans.seekEof())\n            quitf(_wa, \"Participant output contains extra tokens\");\n        else\n            quitf(_wa, \"Unexpected EOF in the participants output\");\n    }\n}\n"
-  }
-}
-Tester: 2024/08/13 12:54:58 testing.go:17: Starting evaluation for submission: #include <bits/stdc++.h>
-
-using namespace std;
-using ll = long long;
-using ii = pair<ll,ll>;
-
-bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
-    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
-    ll count=0;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            if(matrix[y+i][x+j]=='X') count++;
-        }
-    }
-    return count<=((k*k)/2);
-}
-
-int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-
-    ll n, m, k;
-    cin>>n>>m>>k;
-
-    vector<string> matrix;
-    matrix.resize(n);
-
-    for(ll i=0;i<n;i++) {
-        cin>>matrix[i];
-    }
-
-    ii A = {-1,-1}, B = {-1,-1};
-    for(ll i=0;i<n;i++){
-        for(ll j=0;j<m;j++){
-            if(matrix[i][j] == 'A') {
-                A = {i,j};
-            }
-            if(matrix[i][j] == 'B') {
-                B = {i,j};
-            }
-        }
-    }
-    assert(A.first != -1 && B.first != -1);
-
-    assert(ok(A.first, A.second, n, m, k, matrix));
-
-    vector<vector<ll>> dist(n, vector<ll>(m, -1));
-    queue<ii> q;
-    q.push(A);
-    dist[A.first][A.second] = 0;
-
-    const ll dx[] = {1,0,-1,0};
-    const ll dy[] = {0,1,0,-1};
-    while(!q.empty()){
-        ii v = q.front();
-        q.pop();
-        for(ll i=0;i<4;i++){
-            ll x = v.second + dx[i];
-            ll y = v.first + dy[i];
-            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
-                dist[y][x] = dist[v.first][v.second] + 1;
-                q.push({y,x});
-            }
-        }
-    }
-
-    const ll INF = 1e18;
-    ll res = INF;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            ll y=B.first-i;
-            ll x=B.second-j;
-            if(y<0||x<0) continue;
-            if(dist[y][x] != -1) {
-                res = min(res, dist[y][x]);
-            }
-        }
-    }
-    if(res == INF) {
-        cout<<"-1\n";
-    } else {
-        cout<<res<<"\n";
-    }
-}
-Tester: 2024/08/13 12:54:58 testing.go:21: Scheduling download for input file: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
-Tester: 2024/08/13 12:54:58 testing.go:30: Scheduling download for answer file: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
-Tester: 2024/08/13 12:54:58 testing.go:21: Scheduling download for input file: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
-Tester: 2024/08/13 12:54:58 testing.go:30: Scheduling download for answer file: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
-Tester: 2024/08/13 12:54:58 testing.go:21: Scheduling download for input file: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
-Tester: 2024/08/13 12:54:58 testing.go:30: Scheduling download for answer file: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
-Tester: 2024/08/13 12:54:58 testing.go:40: Retrieving testlib checker: #include "testlib.h"
-
-using namespace std;
-
-int main(int argc, char *argv[]) {
-    setName("compare sequences of tokens");
-    registerTestlibCmd(argc, argv);
-
-    int n = 0;
-    string j, p;
-
-    while (!ans.seekEof() && !ouf.seekEof()) {
-        n++;
-
-        ans.readWordTo(j);
-        ouf.readWordTo(p);
-
-        if (j != p)
-            quitf(_wa, "%d%s words differ - expected: '%s', found: '%s'", n, englishEnding(n).c_str(),
-                  compress(j).c_str(), compress(p).c_str());
-    }
-
-    if (ans.seekEof() && ouf.seekEof()) {
-        if (n == 1)
-            quitf(_ok, "\"%s\"", compress(j).c_str());
-        else
-            quitf(_ok, "%d tokens", n);
-    } else {
-        if (ans.seekEof())
-            quitf(_wa, "Participant output contains extra tokens");
-        else
-            quitf(_wa, "Unexpected EOF in the participants output");
-    }
-}
-Tester: 2024/08/13 12:54:58 testing.go:53: Starting compilation for language: C++17 (GCC)
-2024/08/13 12:54:58 Running command: isolate -s --cg --box-id=0 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2124830525.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "g++ -std=c++17 -o main main.cpp"
-Tester: 2024/08/13 12:54:59 testing.go:124: Starting testing for submission: #include <bits/stdc++.h>
-
-using namespace std;
-using ll = long long;
-using ii = pair<ll,ll>;
-
-bool ok(ll y, ll x, ll n, ll m, ll k, vector<string>& matrix) {
-    if(y < 0 || y+k > n || x < 0 || x+k > m) return false;
-    ll count=0;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            if(matrix[y+i][x+j]=='X') count++;
-        }
-    }
-    return count<=((k*k)/2);
-}
-
-int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-
-    ll n, m, k;
-    cin>>n>>m>>k;
-
-    vector<string> matrix;
-    matrix.resize(n);
-
-    for(ll i=0;i<n;i++) {
-        cin>>matrix[i];
-    }
-
-    ii A = {-1,-1}, B = {-1,-1};
-    for(ll i=0;i<n;i++){
-        for(ll j=0;j<m;j++){
-            if(matrix[i][j] == 'A') {
-                A = {i,j};
-            }
-            if(matrix[i][j] == 'B') {
-                B = {i,j};
-            }
-        }
-    }
-    assert(A.first != -1 && B.first != -1);
-
-    assert(ok(A.first, A.second, n, m, k, matrix));
-
-    vector<vector<ll>> dist(n, vector<ll>(m, -1));
-    queue<ii> q;
-    q.push(A);
-    dist[A.first][A.second] = 0;
-
-    const ll dx[] = {1,0,-1,0};
-    const ll dy[] = {0,1,0,-1};
-    while(!q.empty()){
-        ii v = q.front();
-        q.pop();
-        for(ll i=0;i<4;i++){
-            ll x = v.second + dx[i];
-            ll y = v.first + dy[i];
-            if(ok(y,x,n,m,k,matrix) && dist[y][x] == -1){
-                dist[y][x] = dist[v.first][v.second] + 1;
-                q.push({y,x});
-            }
-        }
-    }
-
-    const ll INF = 1e18;
-    ll res = INF;
-    for(ll i=0;i<k;i++){
-        for(ll j=0;j<k;j++){
-            ll y=B.first-i;
-            ll x=B.second-j;
-            if(y<0||x<0) continue;
-            if(dist[y][x] != -1) {
-                res = min(res, dist[y][x]);
-            }
-        }
-    }
-    if(res == INF) {
-        cout<<"-1\n";
-    } else {
-        cout<<res<<"\n";
-    }
-}
-Tester: 2024/08/13 12:54:59 testing.go:127: Starting test: 1
-Tester: 2024/08/13 12:54:59 testing.go:150: Awaiting test input: 358b7c2d614aca4f5d5bb5430deb56a0eb1bfd990f9356a814fa463a188506f2
-2024/08/13 12:54:59 Running command: isolate -s --cg --box-id=1 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2000291912.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
-Tester: 2024/08/13 12:54:59 testing.go:200: Setting up checker for test: 1
-Tester: 2024/08/13 12:54:59 testing.go:234: Awaiting test answer: 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa
-Tester: 2024/08/13 12:54:59 testing.go:251: Running checker for test: 1
-2024/08/13 12:54:59 Running command: isolate -s --cg --box-id=2 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3935692689.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
-Tester: 2024/08/13 12:54:59 testing.go:268: Test 1 finished successfully
-Tester: 2024/08/13 12:54:59 testing.go:127: Starting test: 2
-Tester: 2024/08/13 12:54:59 testing.go:150: Awaiting test input: ae7b67ae38df1e06357def0b7e51fc63cb085bbfd9187b24649b8d43e7179c2b
-2024/08/13 12:54:59 Running command: isolate -s --cg --box-id=3 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.157095985.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
-Tester: 2024/08/13 12:54:59 testing.go:200: Setting up checker for test: 2
-Tester: 2024/08/13 12:54:59 testing.go:234: Awaiting test answer: 06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7
-Tester: 2024/08/13 12:54:59 testing.go:251: Running checker for test: 2
-2024/08/13 12:54:59 Running command: isolate -s --cg --box-id=4 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.2721032305.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
-Tester: 2024/08/13 12:54:59 testing.go:268: Test 2 finished successfully
-Tester: 2024/08/13 12:54:59 testing.go:127: Starting test: 3
-Tester: 2024/08/13 12:55:00 testing.go:150: Awaiting test input: 45a3c1c93c88441f824b47eb6ea79fb6487e69180f35ffb781c795529a551c00
-2024/08/13 12:55:00 Running command: isolate -s --cg --box-id=5 --mem=262144 --time=0.500000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.3613916952.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./main"
-Tester: 2024/08/13 12:55:00 testing.go:200: Setting up checker for test: 3
-Tester: 2024/08/13 12:55:00 testing.go:234: Awaiting test answer: ee3aa64bb94a50845d5024cd4bd20202a4567aed5cd5328c0d97e9920775fc28
-Tester: 2024/08/13 12:55:00 testing.go:251: Running checker for test: 3
-2024/08/13 12:55:00 Running command: isolate -s --cg --box-id=6 --mem=5242880 --time=15.000000 --extra-time=0.500000 --wall-time=20.000000 --processes=256 --open-files=256 --meta=/tmp/isolate.1871314851.txt --env=HOME=/box --env=PATH --run -- /usr/bin/bash -c "./checker input.txt output.txt answer.txt"
-Tester: 2024/08/13 12:55:00 testing.go:268: Test 3 finished successfully
-Tester: 2024/08/13 12:55:00 testing.go:272: Finished testing for submission
-Tester: 2024/08/13 12:55:00 testing.go:275: Evaluation completed for submission
+  
+Tester: 2024/08/13 13:39:57 testing.go:17: Starting evaluation for submission: 
+Tester: 2024/08/13 13:39:58 testing.go:40: Retrieving testlib checker: 
+Tester: 2024/08/13 13:39:58 testing.go:44: Error: failed to get testlib checker: open var/tester/checkers/testlib/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855: no such file or directory
+Error: failed to get testlib checker: open var/tester/checkers/testlib/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855: no such file or directory
 signal: interrupt

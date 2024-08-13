@@ -91,8 +91,8 @@ func (t *Tester) EvaluateSubmission(
 		if runData.ExitCode != 0 || runData.Stderr != nil && *runData.Stderr != "" {
 			errMsg := fmt.Errorf("compilation failed: %s", *runData.Stderr)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
-			return errMsg
+			gath.FinishEvaluation(nil)
+			return nil
 		}
 
 		if compileBox.HasFile(*req.Language.CompiledFilename) {
