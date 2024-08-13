@@ -37,11 +37,10 @@ func (cs *TestlibCompiler) GetExecutable(sourceCode string) ([]byte, error) {
 	c := make(chan struct{}, 1)
 	_, exists := cs.checkerSyncMap.LoadOrStore(sourceCode, c)
 	if exists {
-		<-c
+		close(c)
 		return os.ReadFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256))
 	} else {
 		if _, err := os.Stat(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256)); err == nil {
-			c <- struct{}{}
 			close(c)
 			fmt.Printf("Checker %s already exists\n", sourceCodeSha256)
 			return os.ReadFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256))
@@ -78,7 +77,6 @@ func (cs *TestlibCompiler) GetExecutable(sourceCode string) ([]byte, error) {
 			return nil, fmt.Errorf("failed to write source code: %w", err)
 		}
 
-		c <- struct{}{}
 		close(c)
 
 		return compiled, nil
