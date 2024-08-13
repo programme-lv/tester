@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -110,7 +111,7 @@ func (s *sqsResponseQueueGatherer) FinishCompilation(data *internal.RuntimeData)
 		RuntimeData *internal.RuntimeData `json:"runtime_data"`
 	}{
 		MsgType:     "finished_compilation",
-		RuntimeData: data,
+		RuntimeData: trimRuntimeData(data),
 	}
 	s.send(msg)
 }
@@ -118,14 +119,15 @@ func (s *sqsResponseQueueGatherer) FinishCompilation(data *internal.RuntimeData)
 // FinishEvaluation implements tester.EvalResGatherer.
 func (s *sqsResponseQueueGatherer) FinishEvaluation(errIfAny error) {
 	msg := struct {
-		MsgType string `json:"msg_type"`
-		Error   string `json:"error"`
+		MsgType string  `json:"msg_type"`
+		Error   *string `json:"error"`
 	}{
 		MsgType: "finished_evaluation",
-		Error:   "",
+		Error:   nil,
 	}
 	if errIfAny != nil {
-		msg.Error = errIfAny.Error()
+		errMsg := errIfAny.Error()
+		msg.Error = &errMsg
 	}
 	s.send(msg)
 }
@@ -140,10 +142,49 @@ func (s *sqsResponseQueueGatherer) FinishTest(testId int64, submission *internal
 	}{
 		MsgType:    "finished_test",
 		TestId:     testId,
-		Submission: submission,
-		Checker:    checker,
+		Submission: trimRuntimeData(submission),
+		Checker:    trimRuntimeData(checker),
 	}
 	s.send(msg)
+}
+
+func trimRuntimeData(data *internal.RuntimeData) *internal.RuntimeData {
+	if data == nil {
+		return nil
+	}
+
+	return &internal.RuntimeData{
+		Stdout:          trimStringToRectangle(data.Stdout, 10, 100),
+		Stderr:          trimStringToRectangle(data.Stderr, 10, 100),
+		ExitCode:        data.ExitCode,
+		CpuTimeMillis:   data.CpuTimeMillis,
+		WallTimeMillis:  data.WallTimeMillis,
+		MemoryKibiBytes: data.MemoryKibiBytes,
+	}
+}
+
+func trimStringToRectangle(s *string, maxHeight int, maxWidth int) *string {
+	if s == nil {
+		return nil
+	}
+	// split into lines
+	res := ""
+	lines := strings.Split(*s, "\n")
+	if len(lines) > maxHeight {
+		lines = lines[:maxHeight]
+		lines = append(lines, "...")
+	}
+	for i, line := range lines {
+		if i > 0 {
+			res += "\n"
+		}
+		if len(line) > maxWidth {
+			res += line[:maxWidth] + "..."
+		} else {
+			res += line
+		}
+	}
+	return &res
 }
 
 // FinishTesting implements tester.EvalResGatherer.
