@@ -49,6 +49,10 @@ func (i *Isolate) NewBox() (*Box, error) {
 	return newIsolateBox(i, id, path), nil
 }
 
+func NewBox() (*Box, error) {
+	return GetInstance().NewBox()
+}
+
 func (i *Isolate) isIdInUse(id int) bool {
 	for _, usedId := range i.idsInUse {
 		if usedId == id {
