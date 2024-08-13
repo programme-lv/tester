@@ -2,6 +2,7 @@ package tester
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,13 +15,16 @@ type Tester struct {
 	filestore    *filestore.FileStore
 	systemInfo   string
 	tlibCheckers *checkers.TestlibCompiler
+	logger       *log.Logger
 }
 
 func NewTester(filestore *filestore.FileStore, tlibCheckers *checkers.TestlibCompiler) *Tester {
+	logger := log.New(os.Stdout, "Tester: ", log.LstdFlags|log.Lshortfile)
 	return &Tester{
 		filestore:    filestore,
 		systemInfo:   getSystemInfo(),
 		tlibCheckers: tlibCheckers,
+		logger:       logger,
 	}
 }
 

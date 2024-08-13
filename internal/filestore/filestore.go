@@ -101,6 +101,8 @@ func (fs *FileStore) StartDownloadingInBg() {
 func (fs *FileStore) download(key string) error {
 	_, err := os.Stat(filepath.Join(fs.fileDirectory, key))
 	if err == nil {
+		downlChan, _ := fs.downloadChannels.Load(key)
+		close(downlChan.(chan struct{}))
 		return nil
 	}
 
@@ -118,5 +120,9 @@ func (fs *FileStore) download(key string) error {
 	if err != nil {
 		return fmt.Errorf("failed to move file %s to file store: %w", key, err)
 	}
+
+	downlChan, _ := fs.downloadChannels.Load(key)
+	close(downlChan.(chan struct{}))
+
 	return nil
 }
