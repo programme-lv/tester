@@ -33,9 +33,17 @@ func main() {
 type stdoutGathererMock struct {
 }
 
+func mustMarshal(v interface{}) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
 // FinishCompilation implements tester.EvalResGatherer.
 func (s stdoutGathererMock) FinishCompilation(data *internal.RuntimeData) {
-	log.Printf("Compilation finished: %+v", data)
+	log.Printf("Compilation finished: %s", mustMarshal(data))
 }
 
 // FinishEvaluation implements tester.EvalResGatherer.
@@ -45,7 +53,7 @@ func (s stdoutGathererMock) FinishEvaluation(errIfAny error) {
 
 // FinishTest implements tester.EvalResGatherer.
 func (s stdoutGathererMock) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
-	log.Printf("Test %d finished: %+v, %+v", testId, submission, checker)
+	log.Printf("Test %d finished: %s, %s", testId, mustMarshal(submission), mustMarshal(checker))
 }
 
 // FinishTesting implements tester.EvalResGatherer.
