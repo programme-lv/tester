@@ -11,7 +11,7 @@ type FileStore struct {
 	fileDirectory    string
 	tmpDirectory     string
 	s3DownloadFunc   func(s3Uri string, path string) error
-	downloadChannels sync.Map
+	downloadWait     sync.Map
 	awaitedKeyQueue  chan string
 	scheduledS3Files chan string
 	fileKeyToS3Uri   sync.Map
@@ -23,7 +23,7 @@ func NewFileStore(downloadFunc func(s3Uri string, path string) error) *FileStore
 		fileDirectory:    filepath.Join("var", "tester", "files"),
 		tmpDirectory:     filepath.Join("var", "tester", "tmp"),
 		s3DownloadFunc:   downloadFunc,
-		downloadChannels: sync.Map{},
+		downloadWait:     sync.Map{},
 		awaitedKeyQueue:  make(chan string, 10000),
 		scheduledS3Files: make(chan string, 10000),
 		fileKeyToS3Uri:   sync.Map{},
@@ -44,12 +44,13 @@ func NewFileStore(downloadFunc func(s3Uri string, path string) error) *FileStore
 
 // AwaitAndGetFile waits for the download to finish (if it hasn't already), and then returns the file's contents.
 func (fs *FileStore) AwaitAndGetFile(key string) ([]byte, error) {
-	downlChan, exists := fs.downloadChannels.Load(key)
+	lock, exists := fs.downloadWait.Load(key)
 	if !exists {
 		return nil, fmt.Errorf("file %s has not been added to file store", key)
 	}
+	// here we have to wait until it will be downloaded
 	fs.awaitedKeyQueue <- key
-	<-downlChan.(chan struct{})
+	lock.(*sync.Cond).Wait()
 
 	filePath := filepath.Join(fs.fileDirectory, key)
 
@@ -67,8 +68,11 @@ func (fs *FileStore) ScheduleDownloadFromS3(key string, s3Uri string) error {
 		return nil // already scheduled
 	}
 
-	c := make(chan struct{}, 1)
-	_, loaded = fs.downloadChannels.LoadOrStore(key, c)
+	lock := &sync.Cond{
+		L: &sync.Mutex{},
+	}
+	lock.L.Lock()
+	_, loaded = fs.downloadWait.LoadOrStore(key, lock)
 	if loaded {
 		return nil // already scheduled
 	}
@@ -89,7 +93,12 @@ func (fs *FileStore) StartDownloadingInBg() {
 					panic(err)
 				}
 			}
-			err := fs.download(<-fs.scheduledS3Files)
+			var key string
+			select {
+			case key = <-fs.awaitedKeyQueue:
+			case key = <-fs.scheduledS3Files:
+			}
+			err := fs.download(key)
 			if err != nil {
 				fmt.Printf("failed to download file: %v", err)
 				panic(err)
@@ -99,10 +108,16 @@ func (fs *FileStore) StartDownloadingInBg() {
 }
 
 func (fs *FileStore) download(key string) error {
+
 	_, err := os.Stat(filepath.Join(fs.fileDirectory, key))
 	if err == nil {
-		downlChan, _ := fs.downloadChannels.Load(key)
-		close(downlChan.(chan struct{}))
+		lock, exists := fs.downloadWait.Load(key)
+		if exists {
+			lock.(*sync.Cond).Broadcast()
+		} else {
+			// should not happen
+			panic(fmt.Errorf("download channel for file %s not found", key))
+		}
 		return nil
 	}
 
@@ -121,8 +136,13 @@ func (fs *FileStore) download(key string) error {
 		return fmt.Errorf("failed to move file %s to file store: %w", key, err)
 	}
 
-	downlChan, _ := fs.downloadChannels.Load(key)
-	close(downlChan.(chan struct{}))
+	lock, exists := fs.downloadWait.Load(key)
+	if exists {
+		lock.(*sync.Cond).Broadcast()
+	} else {
+		// should not happen
+		panic(fmt.Errorf("download channel for file %s not found", key))
+	}
 
 	return nil
 }

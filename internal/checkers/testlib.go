@@ -16,7 +16,7 @@ import (
 
 type TestlibCompiler struct {
 	tlibCheckerDir string
-	checkerSyncMap sync.Map
+	lock           sync.Mutex
 }
 
 func NewTestlibCheckerCompiler() *TestlibCompiler {
@@ -34,53 +34,42 @@ func NewTestlibCheckerCompiler() *TestlibCompiler {
 
 func (cs *TestlibCompiler) GetExecutable(sourceCode string) ([]byte, error) {
 	sourceCodeSha256 := getStringSha256(sourceCode)
-	c := make(chan struct{}, 1)
-	_, exists := cs.checkerSyncMap.LoadOrStore(sourceCode, c)
-	if exists {
-		close(c)
+	cs.lock.Lock()
+	defer cs.lock.Unlock()
+	if _, err := os.Stat(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256)); err == nil {
 		return os.ReadFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256))
-	} else {
-		if _, err := os.Stat(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256)); err == nil {
-			close(c)
-			fmt.Printf("Checker %s already exists\n", sourceCodeSha256)
-			return os.ReadFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256))
-		} else {
-			fmt.Printf("Checker %s does not exist\n", sourceCodeSha256)
-		}
-
-		compiled, runData, err := compileTestlibChecker(sourceCode)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compile checker: %w", err)
-		}
-
-		if runData.ExitCode != 0 {
-			return nil, fmt.Errorf("checker compilation failed with exit code %d", runData.ExitCode)
-		}
-
-		err = os.WriteFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256), compiled, 0777)
-		if err != nil {
-			return nil, fmt.Errorf("failed to write compiled checker: %w", err)
-		}
-
-		runDataJson, err := json.Marshal(runData)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal runtime data: %w", err)
-		}
-
-		err = os.WriteFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256+".log"), runDataJson, 0666)
-		if err != nil {
-			return nil, fmt.Errorf("failed to write runtime data: %w", err)
-		}
-
-		err = os.WriteFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256+".cpp"), []byte(sourceCode), 0666)
-		if err != nil {
-			return nil, fmt.Errorf("failed to write source code: %w", err)
-		}
-
-		close(c)
-
-		return compiled, nil
 	}
+
+	compiled, runData, err := compileTestlibChecker(sourceCode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile checker: %w", err)
+	}
+
+	if runData.ExitCode != 0 {
+		return nil, fmt.Errorf("checker compilation failed with exit code %d", runData.ExitCode)
+	}
+
+	err = os.WriteFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256), compiled, 0777)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write compiled checker: %w", err)
+	}
+
+	runDataJson, err := json.Marshal(runData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal runtime data: %w", err)
+	}
+
+	err = os.WriteFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256+".log"), runDataJson, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write runtime data: %w", err)
+	}
+
+	err = os.WriteFile(filepath.Join(cs.tlibCheckerDir, sourceCodeSha256+".cpp"), []byte(sourceCode), 0666)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write source code: %w", err)
+	}
+
+	return compiled, nil
 }
 
 func getStringSha256(input string) string {

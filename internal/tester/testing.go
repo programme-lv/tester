@@ -18,7 +18,7 @@ func (t *Tester) EvaluateSubmission(
 	gath.StartEvaluation(t.systemInfo)
 
 	for _, test := range req.Tests {
-		t.logger.Printf("Scheduling download for input file: %s", test.InputSha256)
+		// t.logger.Printf("Scheduling download for input file: %s", test.InputSha256)
 		err := t.filestore.ScheduleDownloadFromS3(test.InputSha256, *test.InputS3Uri)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
@@ -27,7 +27,7 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 
-		t.logger.Printf("Scheduling download for answer file: %s", test.AnswerSha256)
+		// t.logger.Printf("Scheduling download for answer file: %s", test.AnswerSha256)
 		err = t.filestore.ScheduleDownloadFromS3(test.AnswerSha256, *test.AnswerS3Uri)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
@@ -37,7 +37,7 @@ func (t *Tester) EvaluateSubmission(
 		}
 	}
 
-	t.logger.Printf("Retrieving testlib checker: %s", req.TestlibChecker)
+	// t.logger.Printf("Retrieving testlib checker: %s", req.TestlibChecker)
 	tlibChecker, err := t.tlibCheckers.GetExecutable(req.TestlibChecker)
 	if err != nil {
 		errMsg := fmt.Errorf("failed to get testlib checker: %w", err)
