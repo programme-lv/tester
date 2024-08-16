@@ -9,7 +9,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.34.3
 	github.com/aws/smithy-go v1.20.3
 	github.com/klauspost/compress v1.17.9
-	github.com/lib/pq v1.10.9
 )
 
 require (
