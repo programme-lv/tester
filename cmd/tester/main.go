@@ -49,6 +49,7 @@ func main() {
 			type queueMsg struct {
 				EvaluationUuid string                     `json:"evaluation_uuid"`
 				Request        internal.EvaluationRequest `json:"request"`
+				ResponseSqsUrl *string                    `json:"response_sqs_url"`
 			}
 			var qMsg queueMsg
 			err := json.Unmarshal([]byte(*message.Body), &qMsg)
@@ -64,7 +65,12 @@ func main() {
 				continue
 			}
 
-			err = tester.EvaluateSubmission(NewSqsResponseQueueGatherer(qMsg.EvaluationUuid), qMsg.Request)
+			responseSqsUrl := "https://sqs.eu-central-1.amazonaws.com/975049886115/standard_subm_eval_results"
+			if qMsg.ResponseSqsUrl != nil {
+				responseSqsUrl = *qMsg.ResponseSqsUrl
+			}
+			gatherer := NewSqsResponseQueueGatherer(qMsg.EvaluationUuid, responseSqsUrl)
+			err = tester.EvaluateSubmission(gatherer, qMsg.Request)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				continue
@@ -238,15 +244,16 @@ func (s *sqsResponseQueueGatherer) StartTesting() {
 	s.send(msg)
 }
 
-func NewSqsResponseQueueGatherer(evalUuid string) *sqsResponseQueueGatherer {
+func NewSqsResponseQueueGatherer(evalUuid string, responseSqsUrl string) *sqsResponseQueueGatherer {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-central-1"), config.WithSharedConfigProfile("kp"))
 	if err != nil {
 		panic(fmt.Sprintf("unable to load SDK config, %v", err))
 	}
 
+	// TODO: retrieve response url from request
 	return &sqsResponseQueueGatherer{
 		sqsClient: sqs.NewFromConfig(cfg),
-		queueUrl:  "https://sqs.eu-central-1.amazonaws.com/975049886115/standard_subm_eval_results",
+		queueUrl:  responseSqsUrl,
 		evalUuid:  evalUuid,
 	}
 }
