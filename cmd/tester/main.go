@@ -100,7 +100,7 @@ func (s *sqsResponseQueueGatherer) FinishCompilation(data *internal.RuntimeData)
 		RuntimeData *internal.RuntimeData `json:"runtime_data"`
 	}{
 		MsgType:     "finished_compilation",
-		RuntimeData: trimRuntimeData(data),
+		RuntimeData: trimRuntimeData(data, 40, 160),
 	}
 	s.send(msg)
 }
@@ -131,20 +131,20 @@ func (s *sqsResponseQueueGatherer) FinishTest(testId int64, submission *internal
 	}{
 		MsgType:    "finished_test",
 		TestId:     testId,
-		Submission: trimRuntimeData(submission),
-		Checker:    trimRuntimeData(checker),
+		Submission: trimRuntimeData(submission, 20, 80),
+		Checker:    trimRuntimeData(checker, 20, 80),
 	}
 	s.send(msg)
 }
 
-func trimRuntimeData(data *internal.RuntimeData) *internal.RuntimeData {
+func trimRuntimeData(data *internal.RuntimeData, maxHeight int, maxWidth int) *internal.RuntimeData {
 	if data == nil {
 		return nil
 	}
 
 	return &internal.RuntimeData{
-		Stdout:          trimStringToRectangle(data.Stdout, 10, 100),
-		Stderr:          trimStringToRectangle(data.Stderr, 10, 100),
+		Stdout:          trimStringToRectangle(data.Stdout, maxHeight, maxWidth),
+		Stderr:          trimStringToRectangle(data.Stderr, maxHeight, maxWidth),
 		ExitCode:        data.ExitCode,
 		CpuTimeMillis:   data.CpuTimeMillis,
 		WallTimeMillis:  data.WallTimeMillis,
