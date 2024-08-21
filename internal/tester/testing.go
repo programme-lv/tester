@@ -89,9 +89,11 @@ func (t *Tester) EvaluateSubmission(
 		gath.FinishCompilation(runData)
 
 		if runData.ExitCode != 0 || runData.Stderr != nil && *runData.Stderr != "" {
-			errMsg := fmt.Errorf("compilation failed: %s", *runData.Stderr)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(nil)
+			if runData.Stderr != nil {
+				errMsg := fmt.Errorf("compilation failed: %s", (*runData.Stderr)[:min(len(*runData.Stderr), 100)])
+				t.logger.Printf("Error: %s", errMsg)
+			}
+			// gath.FinishEvaluation(nil)
 			return nil
 		}
 
