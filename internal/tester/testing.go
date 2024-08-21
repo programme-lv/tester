@@ -198,9 +198,9 @@ func (t *Tester) EvaluateSubmission(
 		if submissionRuntimeData.ExitCode != 0 ||
 			submissionRuntimeData.Stderr == nil ||
 			*submissionRuntimeData.Stderr != "" {
-			t.logger.Printf("Test %d failed with exit code: %d", test.Id, submissionRuntimeData.ExitCode)
+			errMsg := fmt.Errorf("test %d failed with exit code: %d", test.Id, submissionRuntimeData.ExitCode)
 			gath.FinishTest(test.Id, submissionRuntimeData, nil)
-			continue
+			return errMsg
 		}
 
 		output := submissionRuntimeData.Stdout
