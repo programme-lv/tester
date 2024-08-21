@@ -125,7 +125,28 @@ func (t *Tester) EvaluateSubmission(
 	gath.StartTesting()
 	for _, test := range req.Tests {
 		t.logger.Printf("Starting test: %d", test.Id)
-		gath.StartTest(test.Id)
+
+		t.logger.Printf("Awaiting test input: %s", test.InputSha256)
+		input, err := t.filestore.AwaitAndGetFile(test.InputSha256)
+		if err != nil {
+			errMsg := fmt.Errorf("failed to get test input: %w", err)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishEvaluation(errMsg)
+			return errMsg
+		}
+
+		t.logger.Printf("Awaiting test answer: %s", test.AnswerSha256)
+		answer, err := t.filestore.AwaitAndGetFile(test.AnswerSha256)
+		if err != nil {
+			errMsg := fmt.Errorf("failed to get test answer: %w", err)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishEvaluation(errMsg)
+			return errMsg
+		}
+
+		inputStr := string(input)
+		answerStr := string(answer)
+		gath.ReachTest(test.Id, &inputStr, &answerStr)
 
 		var submissionRuntimeData *internal.RuntimeData = nil
 		var checkerRuntimeData *internal.RuntimeData = nil
@@ -142,15 +163,6 @@ func (t *Tester) EvaluateSubmission(
 		err = submBox.AddFile(submFname, submContent)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
-			return errMsg
-		}
-
-		t.logger.Printf("Awaiting test input: %s", test.InputSha256)
-		input, err := t.filestore.AwaitAndGetFile(test.InputSha256)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to get test input: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
 			gath.FinishEvaluation(errMsg)
 			return errMsg
@@ -226,15 +238,6 @@ func (t *Tester) EvaluateSubmission(
 		err = checkerBox.AddFile("output.txt", []byte(*output))
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add output to isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
-			return errMsg
-		}
-
-		t.logger.Printf("Awaiting test answer: %s", test.AnswerSha256)
-		answer, err := t.filestore.AwaitAndGetFile(test.AnswerSha256)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to get test answer: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
 			gath.FinishEvaluation(errMsg)
 			return errMsg

@@ -222,14 +222,18 @@ func (s *sqsResponseQueueGatherer) StartEvaluation(systemInfo string) {
 	s.send(msg)
 }
 
-// StartTest implements tester.EvalResGatherer.
-func (s *sqsResponseQueueGatherer) StartTest(testId int64) {
+// ReachTest implements tester.EvalResGatherer.
+func (s *sqsResponseQueueGatherer) ReachTest(testId int64, input *string, answer *string) {
 	msg := struct {
-		MsgType string `json:"msg_type"`
-		TestId  int64  `json:"test_id"`
+		MsgType string  `json:"msg_type"`
+		TestId  int64   `json:"test_id"`
+		Input   *string `json:"input"`
+		Answer  *string `json:"answer"`
 	}{
-		MsgType: "started_test",
+		MsgType: "reached_test",
 		TestId:  testId,
+		Input:   trimStringToRectangle(input, 20, 80),
+		Answer:  trimStringToRectangle(answer, 20, 80),
 	}
 	s.send(msg)
 }
