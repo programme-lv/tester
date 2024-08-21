@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
@@ -199,8 +200,30 @@ func (t *Tester) EvaluateSubmission(
 			submissionRuntimeData.Stderr == nil ||
 			*submissionRuntimeData.Stderr != "" {
 			errMsg := fmt.Errorf("test %d failed with exit code: %d", test.Id, submissionRuntimeData.ExitCode)
+			log.Printf("Error: %v", errMsg)
 			gath.FinishTest(test.Id, submissionRuntimeData, nil)
-			return errMsg
+			return nil
+		}
+
+		if submissionRuntimeData.WallTimeMillis > 15 {
+			errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.Id, submissionRuntimeData.WallTimeMillis)
+			log.Printf("Error: %v", errMsg)
+			gath.FinishTest(test.Id, submissionRuntimeData, nil)
+			continue
+		}
+
+		if submissionRuntimeData.CpuTimeMillis > req.Limits.CpuTimeMillis {
+			errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.Id, submissionRuntimeData.CpuTimeMillis)
+			log.Printf("Error: %v", errMsg)
+			gath.FinishTest(test.Id, submissionRuntimeData, nil)
+			continue
+		}
+
+		if submissionRuntimeData.MemoryKibiBytes > req.Limits.MemoryKibiBytes {
+			errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.Id, submissionRuntimeData.MemoryKibiBytes)
+			log.Printf("Error: %v", errMsg)
+			gath.FinishTest(test.Id, submissionRuntimeData, nil)
+			continue
 		}
 
 		output := submissionRuntimeData.Stdout

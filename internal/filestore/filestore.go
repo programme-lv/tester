@@ -13,9 +13,9 @@ type FileStore struct {
 	s3DownloadFunc   func(s3Uri string, path string) error
 	awaitedKeyQueue  chan string
 	scheduledS3Files chan string
-	fileKeyToS3Uri   sync.Map
-	condLock         sync.Cond
-	downloadedMap    sync.Map
+	fileKeyToS3Uri   *sync.Map
+	downloadLocks    *sync.Map
+	downloadedSet    *sync.Map
 }
 
 // NewFileStore creates a new FileStore instance. It takes a function that downloads files from S3.
@@ -26,9 +26,9 @@ func NewFileStore(downloadFunc func(s3Uri string, path string) error) *FileStore
 		s3DownloadFunc:   downloadFunc,
 		awaitedKeyQueue:  make(chan string, 10000),
 		scheduledS3Files: make(chan string, 10000),
-		fileKeyToS3Uri:   sync.Map{},
-		condLock:         sync.Cond{},
-		downloadedMap:    sync.Map{},
+		fileKeyToS3Uri:   &sync.Map{},
+		downloadLocks:    &sync.Map{},
+		downloadedSet:    &sync.Map{},
 	}
 
 	err := os.MkdirAll(fs.fileDirectory, 0777)
@@ -48,10 +48,16 @@ func NewFileStore(downloadFunc func(s3Uri string, path string) error) *FileStore
 func (fs *FileStore) AwaitAndGetFile(key string) ([]byte, error) {
 	fs.awaitedKeyQueue <- key
 
-	_, exists := fs.downloadedMap.Load(key)
-	for !exists {
-		fs.condLock.Wait()
-		_, exists = fs.downloadedMap.Load(key)
+	lock, exists := fs.downloadLocks.Load(key)
+	if !exists {
+		return nil, fmt.Errorf("file %s has not been scheduled for download", key)
+	}
+
+	downloadExists := false
+	_, downloadExists = fs.downloadedSet.Load(key)
+	for !downloadExists {
+		lock.(*sync.Cond).Wait()
+		_, downloadExists = fs.downloadedSet.Load(key)
 	}
 
 	filePath := filepath.Join(fs.fileDirectory, key)
@@ -71,6 +77,11 @@ func (fs *FileStore) ScheduleDownloadFromS3(key string, s3Uri string) error {
 	}
 
 	fs.scheduledS3Files <- key
+
+	lock := sync.NewCond(&sync.Mutex{})
+	lock.L.Lock()
+	fs.downloadLocks.Store(key, lock)
+
 	return nil
 }
 
@@ -93,10 +104,15 @@ func (fs *FileStore) StartDownloadingInBg() {
 }
 
 func (fs *FileStore) downloadIfDoesNotExist(key string) error {
+	lock, lockExists := fs.downloadLocks.Load(key)
+	if !lockExists {
+		return fmt.Errorf("lock does not exist for file %s", key)
+	}
+
 	_, err := os.Stat(filepath.Join(fs.fileDirectory, key))
 	if err == nil {
-		fs.downloadedMap.Store(key, struct{}{})
-		fs.condLock.Broadcast()
+		fs.downloadedSet.Store(key, struct{}{})
+		lock.(*sync.Cond).Broadcast()
 		return nil
 	}
 
@@ -115,7 +131,7 @@ func (fs *FileStore) downloadIfDoesNotExist(key string) error {
 		return fmt.Errorf("failed to move file %s to file store: %w", key, err)
 	}
 
-	fs.downloadedMap.Store(key, struct{}{})
-	fs.condLock.Broadcast()
+	fs.downloadedSet.Store(key, struct{}{})
+	lock.(*sync.Cond).Broadcast()
 	return nil
 }
