@@ -205,7 +205,7 @@ func (t *Tester) EvaluateSubmission(
 			return nil
 		}
 
-		if submissionRuntimeData.WallTimeMillis > 15 {
+		if submissionRuntimeData.WallTimeMillis > 14000 { // more than 14 seconds
 			errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.Id, submissionRuntimeData.WallTimeMillis)
 			log.Printf("Error: %v", errMsg)
 			gath.FinishTest(test.Id, submissionRuntimeData, nil)
