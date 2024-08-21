@@ -161,14 +161,14 @@ func trimStringToRectangle(s *string, maxHeight int, maxWidth int) *string {
 	lines := strings.Split(*s, "\n")
 	if len(lines) > maxHeight {
 		lines = lines[:maxHeight]
-		lines = append(lines, "...")
+		lines = append(lines, "[...]")
 	}
 	for i, line := range lines {
 		if i > 0 {
 			res += "\n"
 		}
 		if len(line) > maxWidth {
-			res += line[:maxWidth] + "..."
+			res += line[:maxWidth] + "[...]"
 		} else {
 			res += line
 		}
