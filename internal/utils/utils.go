@@ -30,12 +30,16 @@ func CollectProcessRuntimeData(process *isolate.Process) (*internal.RuntimeData,
 	}
 
 	return &internal.RuntimeData{
-		Stdout:          stringPtr(string(stdout)),
-		Stderr:          stringPtr(string(stderr)),
-		ExitCode:        metrics.ExitCode,
-		CpuTimeMillis:   int64(metrics.TimeSec * 1000),
-		WallTimeMillis:  int64(metrics.TimeWallSec * 1000),
-		MemoryKibiBytes: metrics.CgMemKb,
+		Stdout:                   stringPtr(string(stdout)),
+		Stderr:                   stringPtr(string(stderr)),
+		ExitCode:                 metrics.ExitCode,
+		CpuTimeMillis:            int64(metrics.TimeSec * 1000),
+		WallTimeMillis:           int64(metrics.TimeWallSec * 1000),
+		MemoryKibiBytes:          metrics.CgMemKb,
+		ContextSwitchesVoluntary: metrics.CswVoluntary,
+		ContextSwitchesForced:    metrics.CswForced,
+		ExitSignal:               metrics.ExitSig,
+		IsolateStatus:            metrics.Status,
 	}, nil
 }
 

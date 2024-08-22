@@ -143,12 +143,16 @@ func trimRuntimeData(data *internal.RuntimeData, maxHeight int, maxWidth int) *i
 	}
 
 	return &internal.RuntimeData{
-		Stdout:          trimStringToRectangle(data.Stdout, maxHeight, maxWidth),
-		Stderr:          trimStringToRectangle(data.Stderr, maxHeight, maxWidth),
-		ExitCode:        data.ExitCode,
-		CpuTimeMillis:   data.CpuTimeMillis,
-		WallTimeMillis:  data.WallTimeMillis,
-		MemoryKibiBytes: data.MemoryKibiBytes,
+		Stdout:                   trimStringToRectangle(data.Stdout, maxHeight, maxWidth),
+		Stderr:                   trimStringToRectangle(data.Stderr, maxHeight, maxWidth),
+		ExitCode:                 data.ExitCode,
+		CpuTimeMillis:            data.CpuTimeMillis,
+		WallTimeMillis:           data.WallTimeMillis,
+		MemoryKibiBytes:          data.MemoryKibiBytes,
+		ContextSwitchesVoluntary: data.ContextSwitchesVoluntary,
+		ContextSwitchesForced:    data.ContextSwitchesForced,
+		ExitSignal:               data.ExitSignal,
+		IsolateStatus:            data.IsolateStatus,
 	}
 }
 
@@ -281,6 +285,8 @@ func (s *sqsResponseQueueGatherer) send(msg interface{}) {
 		QueueUrl:    aws.String(s.queueUrl),
 		MessageBody: ptr.String(string(b)),
 	})
+
+	// fmt.Printf("sent message: %s\n", string(b))
 
 	if err != nil {
 		panic(fmt.Errorf("failed to send message: %w", err))

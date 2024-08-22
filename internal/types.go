@@ -8,6 +8,12 @@ type RuntimeData struct {
 	CpuTimeMillis   int64 `json:"cpu_time_millis"`
 	WallTimeMillis  int64 `json:"wall_time_millis"`
 	MemoryKibiBytes int64 `json:"memory_kibibytes"`
+
+	ContextSwitchesVoluntary int64 `json:"context_switches_voluntary"`
+	ContextSwitchesForced    int64 `json:"context_switches_forced"`
+
+	ExitSignal    *int64 `json:"exit_signal"`
+	IsolateStatus string `json:"isolate_status"`
 }
 
 type EvaluationRequest struct {

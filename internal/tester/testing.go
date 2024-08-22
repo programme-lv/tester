@@ -196,6 +196,13 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 
+		if submissionRuntimeData.ExitSignal != nil {
+			errMsg := fmt.Errorf("test %d failed with signal: %d", test.Id, *submissionRuntimeData.ExitSignal)
+			log.Printf("Error: %v", errMsg)
+			gath.FinishTest(test.Id, submissionRuntimeData, nil)
+			return nil
+		}
+
 		if submissionRuntimeData.ExitCode != 0 ||
 			submissionRuntimeData.Stderr == nil ||
 			*submissionRuntimeData.Stderr != "" {

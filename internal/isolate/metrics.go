@@ -18,6 +18,7 @@ type Metrics struct {
 	Status       string
 	Message      string
 	Killed       int64
+	ExitSig      *int64
 }
 
 func parseMetaFile(metaFileBytes []byte) (*Metrics, error) {
@@ -63,6 +64,12 @@ func parseLine(key, value string, metrics *Metrics) error {
 		return sscanfErr(fmt.Sscanf(value, "%d", &metrics.Killed))
 	case "message":
 		metrics.Message = value
+	case "exitsig":
+		var exitsig int64
+		if err := sscanfErr(fmt.Sscanf(value, "%d", &exitsig)); err != nil {
+			return err
+		}
+		metrics.ExitSig = &exitsig
 	case "":
 		// ignore
 	default:
