@@ -76,11 +76,11 @@ func (fs *FileStore) ScheduleDownloadFromS3(key string, s3Uri string) error {
 		return nil // already scheduled
 	}
 
-	fs.scheduledS3Files <- key
-
 	lock := sync.NewCond(&sync.Mutex{})
 	lock.L.Lock()
 	fs.downloadLocks.Store(key, lock)
+
+	fs.scheduledS3Files <- key
 
 	return nil
 }
