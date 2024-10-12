@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
@@ -13,14 +12,20 @@ import (
 
 func (t *Tester) EvaluateSubmission(
 	gath EvalResGatherer,
-	req internal.EvaluationRequest,
+	req internal.EvalReq,
 ) error {
-	t.logger.Printf("Starting evaluation for submission: %s", req.Submission)
+	t.logger.Printf("Starting evaluation for submission: %s", req.Code)
 	gath.StartEvaluation(t.systemInfo)
 
 	for _, test := range req.Tests {
 		// t.logger.Printf("Scheduling download for input file: %s", test.InputSha256)
-		err := t.filestore.ScheduleDownloadFromS3(test.InputSha256, *test.InputS3Uri)
+		if test.InputS3Url == nil || test.AnswerS3Url == nil {
+			errMsg := fmt.Errorf("input or answer S3 url is nil")
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishEvaluation(errMsg)
+			return errMsg
+		}
+		err := t.filestore.ScheduleDownloadFromS3(test.InputSha256, *test.InputS3Url)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -29,7 +34,7 @@ func (t *Tester) EvaluateSubmission(
 		}
 
 		// t.logger.Printf("Scheduling download for answer file: %s", test.AnswerSha256)
-		err = t.filestore.ScheduleDownloadFromS3(test.AnswerSha256, *test.AnswerS3Uri)
+		err = t.filestore.ScheduleDownloadFromS3(test.AnswerSha256, *test.AnswerS3Url)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -39,7 +44,7 @@ func (t *Tester) EvaluateSubmission(
 	}
 
 	// t.logger.Printf("Retrieving testlib checker: %s", req.TestlibChecker)
-	tlibChecker, err := t.tlibCheckers.GetExecutable(req.TestlibChecker)
+	tlibChecker, err := t.tlibCheckers.GetExecutable(req.Checker)
 	if err != nil {
 		errMsg := fmt.Errorf("failed to get testlib checker: %w", err)
 		t.logger.Printf("Error: %s", errMsg)
@@ -50,8 +55,8 @@ func (t *Tester) EvaluateSubmission(
 	checkerExecCmd := "./checker input.txt output.txt answer.txt"
 
 	var compiled []byte
-	if req.Language.CompileCommand != nil {
-		t.logger.Printf("Starting compilation for language: %s", req.Language.LanguageName)
+	if req.Language.CompileCmd != nil {
+		t.logger.Printf("Starting compilation for language: %s", req.Language.LangName)
 		gath.StartCompilation()
 		var runData *internal.RuntimeData
 
@@ -64,7 +69,7 @@ func (t *Tester) EvaluateSubmission(
 		}
 		defer compileBox.Close()
 
-		err = compileBox.AddFile(req.Language.SourceCodeFname, []byte(req.Submission))
+		err = compileBox.AddFile(req.Language.CodeFname, []byte(req.Code))
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -72,7 +77,7 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 
-		compileProcess, err := compileBox.Run(*req.Language.CompileCommand, nil, nil)
+		compileProcess, err := compileBox.Run(*req.Language.CompileCmd, nil, nil)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to run compilation: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -98,8 +103,8 @@ func (t *Tester) EvaluateSubmission(
 			return nil
 		}
 
-		if compileBox.HasFile(*req.Language.CompiledFilename) {
-			compiled, err = compileBox.GetFile(*req.Language.CompiledFilename)
+		if compileBox.HasFile(*req.Language.CompiledFname) {
+			compiled, err = compileBox.GetFile(*req.Language.CompiledFname)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get compiled executable: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -114,20 +119,20 @@ func (t *Tester) EvaluateSubmission(
 		}
 	}
 
-	submFname := req.Language.SourceCodeFname
+	submFname := req.Language.CodeFname
 	if compiled != nil {
-		submFname = *req.Language.CompiledFilename
+		submFname = *req.Language.CompiledFname
 	}
 
 	submContent := compiled
 	if submContent == nil {
-		submContent = []byte(req.Submission)
+		submContent = []byte(req.Code)
 	}
 
-	t.logger.Printf("Starting testing for submission: %s", req.Submission)
+	t.logger.Printf("Starting testing for submission: %s", req.Code)
 	gath.StartTesting()
 	for _, test := range req.Tests {
-		t.logger.Printf("Starting test: %d", test.Id)
+		t.logger.Printf("Starting test: %d", test.ID)
 
 		t.logger.Printf("Awaiting test input: %s", test.InputSha256)
 		input, err := t.filestore.AwaitAndGetFile(test.InputSha256)
@@ -149,7 +154,7 @@ func (t *Tester) EvaluateSubmission(
 
 		inputStr := string(input)
 		answerStr := string(answer)
-		gath.ReachTest(test.Id, &inputStr, &answerStr)
+		gath.ReachTest(int64(test.ID), &inputStr, &answerStr)
 
 		var submissionRuntimeData *internal.RuntimeData = nil
 		var checkerRuntimeData *internal.RuntimeData = nil
@@ -172,12 +177,12 @@ func (t *Tester) EvaluateSubmission(
 		}
 
 		inputReadCloser := io.NopCloser(bytes.NewReader(input))
-		submProcess, err := submBox.Run(req.Language.ExecuteCommand,
+		submProcess, err := submBox.Run(req.Language.ExecCmd,
 			inputReadCloser, &isolate.Constraints{
-				CpuTimeLimInSec:      float64(req.Limits.CpuTimeMillis) / 1000,
+				CpuTimeLimInSec:      float64(req.CpuMillis) / 1000,
 				ExtraCpuTimeLimInSec: 0.5,
 				WallTimeLimInSec:     20.0,
-				MemoryLimitInKB:      req.Limits.MemoryKibiBytes,
+				MemoryLimitInKB:      int64(req.MemoryKiB),
 				MaxProcesses:         256,
 				MaxOpenFiles:         256,
 			})
@@ -197,39 +202,39 @@ func (t *Tester) EvaluateSubmission(
 		}
 
 		if submissionRuntimeData.ExitSignal != nil {
-			errMsg := fmt.Errorf("test %d failed with signal: %d", test.Id, *submissionRuntimeData.ExitSignal)
-			log.Printf("Error: %v", errMsg)
-			gath.FinishTest(test.Id, submissionRuntimeData, nil)
+			errMsg := fmt.Errorf("test %d failed with signal: %d", test.ID, *submissionRuntimeData.ExitSignal)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
 			return nil
 		}
 
 		if submissionRuntimeData.ExitCode != 0 ||
 			submissionRuntimeData.Stderr == nil ||
 			*submissionRuntimeData.Stderr != "" {
-			errMsg := fmt.Errorf("test %d failed with exit code: %d", test.Id, submissionRuntimeData.ExitCode)
-			log.Printf("Error: %v", errMsg)
-			gath.FinishTest(test.Id, submissionRuntimeData, nil)
+			errMsg := fmt.Errorf("test %d failed with exit code: %d", test.ID, submissionRuntimeData.ExitCode)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
 			return nil
 		}
 
 		if submissionRuntimeData.WallTimeMillis > 14000 { // more than 14 seconds
-			errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.Id, submissionRuntimeData.WallTimeMillis)
-			log.Printf("Error: %v", errMsg)
-			gath.FinishTest(test.Id, submissionRuntimeData, nil)
+			errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.ID, submissionRuntimeData.WallTimeMillis)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
 			continue
 		}
 
-		if submissionRuntimeData.CpuTimeMillis > req.Limits.CpuTimeMillis {
-			errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.Id, submissionRuntimeData.CpuTimeMillis)
-			log.Printf("Error: %v", errMsg)
-			gath.FinishTest(test.Id, submissionRuntimeData, nil)
+		if submissionRuntimeData.CpuTimeMillis > int64(req.CpuMillis) {
+			errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.ID, submissionRuntimeData.CpuTimeMillis)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
 			continue
 		}
 
-		if submissionRuntimeData.MemoryKibiBytes > req.Limits.MemoryKibiBytes {
-			errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.Id, submissionRuntimeData.MemoryKibiBytes)
-			log.Printf("Error: %v", errMsg)
-			gath.FinishTest(test.Id, submissionRuntimeData, nil)
+		if submissionRuntimeData.MemoryKibiBytes > int64(req.MemoryKiB) {
+			errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.ID, submissionRuntimeData.MemoryKibiBytes)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
 			continue
 		}
 
@@ -241,7 +246,7 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 
-		t.logger.Printf("Setting up checker for test: %d", test.Id)
+		t.logger.Printf("Setting up checker for test: %d", test.ID)
 		checkerBox, err := isolate.NewBox()
 		if err != nil {
 			errMsg := fmt.Errorf("failed to create isolate box: %w", err)
@@ -283,7 +288,7 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 
-		t.logger.Printf("Running checker for test: %d", test.Id)
+		t.logger.Printf("Running checker for test: %d", test.ID)
 		checkerProcess, err := checkerBox.Run(checkerExecCmd, nil, nil)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to run checker: %w", err)
@@ -300,8 +305,8 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 
-		t.logger.Printf("Test %d finished successfully", test.Id)
-		gath.FinishTest(test.Id, submissionRuntimeData, checkerRuntimeData)
+		t.logger.Printf("Test %d finished successfully", test.ID)
+		gath.FinishTest(int64(test.ID), submissionRuntimeData, checkerRuntimeData)
 	}
 
 	t.logger.Printf("Finished testing for submission")

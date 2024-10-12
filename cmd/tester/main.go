@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/ptr"
+	"github.com/joho/godotenv"
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/checkers"
 	"github.com/programme-lv/tester/internal/filestore"
@@ -19,9 +21,14 @@ import (
 )
 
 func main() {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-central-1"), config.WithSharedConfigProfile("kp"))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-central-1"))
 	if err != nil {
 		panic(fmt.Sprintf("unable to load SDK config, %v", err))
+	}
+
+	err = godotenv.Load()
+	if err != nil {
+		panic(fmt.Sprintf("Error loading .env file: %v", err))
 	}
 
 	filestore := filestore.NewFileStore(s3downl.GetS3DownloadFunc())
@@ -29,7 +36,11 @@ func main() {
 	tlibCheckers := checkers.NewTestlibCheckerCompiler()
 	tester := tester.NewTester(filestore, tlibCheckers)
 
-	submReqQueueUrl := "https://sqs.eu-central-1.amazonaws.com/975049886115/standard_submission_queue"
+	submReqQueueUrl := os.Getenv("SUBM_REQ_QUEUE_URL")
+	if submReqQueueUrl == "" {
+		panic("SUBM_REQ_QUEUE_URL environment variable is not set")
+	}
+
 	sqsClient := sqs.NewFromConfig(cfg)
 	for {
 		output, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
@@ -45,14 +56,8 @@ func main() {
 
 		for _, message := range output.Messages {
 			fmt.Printf("received message: %s\n", *message.Body)
-
-			type queueMsg struct {
-				EvaluationUuid string                     `json:"evaluation_uuid"`
-				Request        internal.EvaluationRequest `json:"request"`
-				ResponseSqsUrl *string                    `json:"response_sqs_url"`
-			}
-			var qMsg queueMsg
-			err := json.Unmarshal([]byte(*message.Body), &qMsg)
+			var request internal.EvalReq
+			err := json.Unmarshal([]byte(*message.Body), &request)
 			if err != nil {
 				fmt.Printf("failed to unmarshal message, %v\n", err)
 				_, err = sqsClient.DeleteMessage(context.TODO(), &sqs.DeleteMessageInput{
@@ -65,12 +70,9 @@ func main() {
 				continue
 			}
 
-			responseSqsUrl := "https://sqs.eu-central-1.amazonaws.com/975049886115/standard_subm_eval_results"
-			if qMsg.ResponseSqsUrl != nil {
-				responseSqsUrl = *qMsg.ResponseSqsUrl
-			}
-			gatherer := NewSqsResponseQueueGatherer(qMsg.EvaluationUuid, responseSqsUrl)
-			err = tester.EvaluateSubmission(gatherer, qMsg.Request)
+			responseSqsUrl := request.ResSqsUrl
+			gatherer := NewSqsResponseQueueGatherer(request.EvalUuid, responseSqsUrl)
+			err = tester.EvaluateSubmission(gatherer, request)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				continue
@@ -253,7 +255,7 @@ func (s *sqsResponseQueueGatherer) StartTesting() {
 }
 
 func NewSqsResponseQueueGatherer(evalUuid string, responseSqsUrl string) *sqsResponseQueueGatherer {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-central-1"), config.WithSharedConfigProfile("kp"))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-central-1"))
 	if err != nil {
 		panic(fmt.Sprintf("unable to load SDK config, %v", err))
 	}

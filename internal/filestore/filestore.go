@@ -10,23 +10,23 @@ import (
 type FileStore struct {
 	fileDirectory    string
 	tmpDirectory     string
-	s3DownloadFunc   func(s3Uri string, path string) error
+	downloadFromS3   func(s3Url string, path string) error
 	awaitedKeyQueue  chan string
 	scheduledS3Files chan string
-	fileKeyToS3Uri   *sync.Map
+	fileKeyToS3Url   *sync.Map
 	downloadLocks    *sync.Map
 	downloadedSet    *sync.Map
 }
 
 // NewFileStore creates a new FileStore instance. It takes a function that downloads files from S3.
-func NewFileStore(downloadFunc func(s3Uri string, path string) error) *FileStore {
+func NewFileStore(downloadFunc func(s3Url string, path string) error) *FileStore {
 	fs := &FileStore{
 		fileDirectory:    filepath.Join("var", "tester", "files"),
 		tmpDirectory:     filepath.Join("var", "tester", "tmp"),
-		s3DownloadFunc:   downloadFunc,
+		downloadFromS3:   downloadFunc,
 		awaitedKeyQueue:  make(chan string, 10000),
 		scheduledS3Files: make(chan string, 10000),
-		fileKeyToS3Uri:   &sync.Map{},
+		fileKeyToS3Url:   &sync.Map{},
 		downloadLocks:    &sync.Map{},
 		downloadedSet:    &sync.Map{},
 	}
@@ -70,8 +70,8 @@ func (fs *FileStore) AwaitAndGetFile(key string) ([]byte, error) {
 }
 
 // ScheduleDownloadFromS3 schedules a download from S3 if it's not already in progress or completed.
-func (fs *FileStore) ScheduleDownloadFromS3(key string, s3Uri string) error {
-	_, loaded := fs.fileKeyToS3Uri.LoadOrStore(key, s3Uri)
+func (fs *FileStore) ScheduleDownloadFromS3(key string, s3Url string) error {
+	_, loaded := fs.fileKeyToS3Url.LoadOrStore(key, s3Url)
 	if loaded {
 		return nil // already scheduled
 	}
@@ -116,12 +116,12 @@ func (fs *FileStore) downloadIfDoesNotExist(key string) error {
 		return nil
 	}
 
-	s3Uri, exists := fs.fileKeyToS3Uri.Load(key)
+	s3Uri, exists := fs.fileKeyToS3Url.Load(key)
 	if !exists {
 		return fmt.Errorf("file %s has not been scheduled for download", key)
 	}
 	tmpPath := filepath.Join(fs.tmpDirectory, key)
-	err = fs.s3DownloadFunc(s3Uri.(string), tmpPath)
+	err = fs.downloadFromS3(s3Uri.(string), tmpPath)
 	if err != nil {
 		return fmt.Errorf("failed to download file %s from S3: %w", key, err)
 	}

@@ -16,41 +16,38 @@ type RuntimeData struct {
 	IsolateStatus string `json:"isolate_status"`
 }
 
-type EvaluationRequest struct {
-	Submission     string              `json:"submission"`
-	Language       ProgrammingLanguage `json:"language"`
-	Limits         ExecutionLimits     `json:"limits"`
-	Tests          []RequestTest       `json:"tests"`
-	TestlibChecker string              `json:"testlib_checker"`
+type EvalReq struct {
+	EvalUuid  string `json:"eval_uuid"`
+	ResSqsUrl string `json:"res_sqs_url"`
+
+	Code     string    `json:"code"`
+	Language Language  `json:"language"`
+	Tests    []ReqTest `json:"tests"`
+	Checker  string    `json:"checker"`
+
+	CpuMillis int `json:"cpu_millis"`
+	MemoryKiB int `json:"memory_kib"`
 }
 
-type RequestTest struct {
-	Id int64 `json:"id"`
+type ReqTest struct {
+	ID int `json:"id"`
 
 	InputSha256  string  `json:"input_sha256"`
-	InputS3Uri   *string `json:"input_s3_uri"`
+	InputS3Url   *string `json:"input_s3_url"`
 	InputContent *string `json:"input_content"`
 	InputHttpUrl *string `json:"input_http_url"`
 
 	AnswerSha256  string  `json:"answer_sha256"`
-	AnswerS3Uri   *string `json:"answer_s3_uri"`
+	AnswerS3Url   *string `json:"answer_s3_url"`
 	AnswerContent *string `json:"answer_content"`
 	AnswerHttpUrl *string `json:"answer_http_url"`
 }
 
-type ProgrammingLanguage struct {
-	Id string `json:"id"`
-
-	LanguageName    string `json:"name"`
-	SourceCodeFname string `json:"code_filename"`
-
-	CompileCommand   *string `json:"compile_cmd"`
-	CompiledFilename *string `json:"compiled_filename"`
-
-	ExecuteCommand string `json:"exec_cmd"`
-}
-
-type ExecutionLimits struct {
-	CpuTimeMillis   int64 `json:"cpu_time_millis"`
-	MemoryKibiBytes int64 `json:"memory_kibibytes"`
+type Language struct {
+	LangID        string  `json:"lang_id"`
+	LangName      string  `json:"lang_name"`
+	CodeFname     string  `json:"code_fname"`
+	CompileCmd    *string `json:"compile_cmd"`
+	CompiledFname *string `json:"compiled_fname"`
+	ExecCmd       string  `json:"exec_cmd"`
 }
