@@ -54,22 +54,48 @@ func (s *sqsResQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
 
 type FinishedEvaluation struct {
 	Header
-	Error *string `json:"error"`
+	ErrorMessage  *string `json:"error_message"`
+	CompileError  bool    `json:"compile_error"`
+	InternalError bool    `json:"internal_error"`
 }
 
-func (s *sqsResQueueGatherer) FinishEvaluation(errIfAny error) {
+func (s *sqsResQueueGatherer) FinishEvalWithCompileError(msg string) {
 	header := Header{
 		EvalUuid: s.evalUuid,
 		MsgType:  MsgTypeFinishedEvaluation,
 	}
-	msg := FinishedEvaluation{
-		Header: header,
+	s.send(FinishedEvaluation{
+		Header:        header,
+		ErrorMessage:  &msg,
+		CompileError:  true,
+		InternalError: false,
+	})
+}
+
+func (s *sqsResQueueGatherer) FinishEvalWithInternalError(msg string) {
+	header := Header{
+		EvalUuid: s.evalUuid,
+		MsgType:  MsgTypeFinishedEvaluation,
 	}
-	if errIfAny != nil {
-		errMsg := errIfAny.Error()
-		msg.Error = &errMsg
+	s.send(FinishedEvaluation{
+		Header:        header,
+		ErrorMessage:  &msg,
+		CompileError:  false,
+		InternalError: true,
+	})
+}
+
+func (s *sqsResQueueGatherer) FinishEvalWithoutError() {
+	header := Header{
+		EvalUuid: s.evalUuid,
+		MsgType:  MsgTypeFinishedEvaluation,
 	}
-	s.send(msg)
+	s.send(FinishedEvaluation{
+		Header:        header,
+		ErrorMessage:  nil,
+		CompileError:  false,
+		InternalError: false,
+	})
 }
 
 type FinishedTest struct {

@@ -4,7 +4,9 @@ import "github.com/programme-lv/tester/internal"
 
 type EvalResGatherer interface {
 	StartEvaluation(systemInfo string)
-	FinishEvaluation(errIfAny error)
+	FinishEvalWithCompileError(msg string)
+	FinishEvalWithInternalError(msg string)
+	FinishEvalWithoutError()
 
 	StartCompilation()
 	FinishCompilation(data *internal.RuntimeData)

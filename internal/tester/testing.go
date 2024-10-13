@@ -22,14 +22,14 @@ func (t *Tester) EvaluateSubmission(
 		if test.InputS3Url == nil || test.AnswerS3Url == nil {
 			errMsg := fmt.Errorf("input or answer S3 url is nil")
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 		err := t.filestore.ScheduleDownloadFromS3(test.InputSha256, *test.InputS3Url)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -38,7 +38,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 	}
@@ -48,7 +48,7 @@ func (t *Tester) EvaluateSubmission(
 	if err != nil {
 		errMsg := fmt.Errorf("failed to get testlib checker: %w", err)
 		t.logger.Printf("Error: %s", errMsg)
-		gath.FinishEvaluation(errMsg)
+		gath.FinishEvalWithInternalError(errMsg.Error())
 		return errMsg
 	}
 	checkerFname := "checker"
@@ -64,7 +64,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to create isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 		defer compileBox.Close()
@@ -73,7 +73,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -81,7 +81,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to run compilation: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -89,17 +89,21 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to collect compilation runtime data: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 		gath.FinishCompilation(runData)
 
 		if runData.ExitCode != 0 || runData.Stderr != nil && *runData.Stderr != "" {
+			errMsg := ""
 			if runData.Stderr != nil {
-				errMsg := fmt.Errorf("compilation failed: %s", (*runData.Stderr)[:min(len(*runData.Stderr), 100)])
+				errMsg = fmt.Sprintf("compilation failed: %s", (*runData.Stderr)[:min(len(*runData.Stderr), 100)])
+				t.logger.Printf("Error: %s", errMsg)
+			} else {
+				errMsg = fmt.Sprintf("compilation failed with exit code: %d", runData.ExitCode)
 				t.logger.Printf("Error: %s", errMsg)
 			}
-			// gath.FinishEvaluation(nil)
+			gath.FinishEvalWithCompileError(errMsg)
 			return nil
 		}
 
@@ -108,13 +112,13 @@ func (t *Tester) EvaluateSubmission(
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get compiled executable: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvaluation(errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 		} else {
 			errMsg := fmt.Errorf("compiled executable not found")
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 	}
@@ -139,7 +143,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to get test input: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -148,7 +152,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to get test answer: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -163,7 +167,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to create isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 		defer submBox.Close()
@@ -172,7 +176,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -189,7 +193,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to run submission: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -197,7 +201,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to collect submission runtime data: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -242,7 +246,7 @@ func (t *Tester) EvaluateSubmission(
 		if output == nil {
 			errMsg := fmt.Errorf("submission stdout is nil")
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -251,7 +255,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to create isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 		defer checkerBox.Close()
@@ -260,7 +264,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add checker to isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -268,7 +272,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add input to isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -276,7 +280,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add output to isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -284,7 +288,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add answer to isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -293,7 +297,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to run checker: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -301,7 +305,7 @@ func (t *Tester) EvaluateSubmission(
 		if err != nil {
 			errMsg := fmt.Errorf("failed to collect checker runtime data: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvaluation(errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -313,7 +317,7 @@ func (t *Tester) EvaluateSubmission(
 	gath.FinishTesting()
 
 	t.logger.Printf("Evaluation completed for submission")
-	gath.FinishEvaluation(nil)
+	gath.FinishEvalWithoutError()
 
 	return nil
 }
