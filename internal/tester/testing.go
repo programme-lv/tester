@@ -209,7 +209,7 @@ func (t *Tester) EvaluateSubmission(
 			errMsg := fmt.Errorf("test %d failed with signal: %d", test.ID, *submissionRuntimeData.ExitSignal)
 			t.logger.Printf("Error: %s", errMsg)
 			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-			return nil
+			continue
 		}
 
 		if submissionRuntimeData.ExitCode != 0 ||
@@ -218,7 +218,7 @@ func (t *Tester) EvaluateSubmission(
 			errMsg := fmt.Errorf("test %d failed with exit code: %d", test.ID, submissionRuntimeData.ExitCode)
 			t.logger.Printf("Error: %s", errMsg)
 			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-			return nil
+			continue
 		}
 
 		if submissionRuntimeData.WallTimeMillis > 14000 { // more than 14 seconds
