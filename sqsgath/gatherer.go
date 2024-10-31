@@ -37,7 +37,7 @@ type FinishedCompilation struct {
 
 const (
 	MaxRuntimeDataHeight = 40
-	MaxRuntimeDataWidth  = 160
+	MaxRuntimeDataWidth  = 80
 )
 
 func (s *sqsResQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
