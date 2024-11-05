@@ -10,7 +10,7 @@ import (
 type FileStore struct {
 	fileDirectory    string
 	tmpDirectory     string
-	downloadFromS3   func(s3Url string, path string) error
+	downloadFunc     func(s3Url string, path string) error
 	awaitedKeyQueue  chan string
 	scheduledS3Files chan string
 	fileKeyToS3Url   *sync.Map
@@ -23,7 +23,7 @@ func NewFileStore(downloadFunc func(s3Url string, path string) error) *FileStore
 	fs := &FileStore{
 		fileDirectory:    filepath.Join("var", "tester", "files"),
 		tmpDirectory:     filepath.Join("var", "tester", "tmp"),
-		downloadFromS3:   downloadFunc,
+		downloadFunc:     downloadFunc,
 		awaitedKeyQueue:  make(chan string, 10000),
 		scheduledS3Files: make(chan string, 10000),
 		fileKeyToS3Url:   &sync.Map{},
@@ -116,12 +116,12 @@ func (fs *FileStore) downloadIfDoesNotExist(key string) error {
 		return nil
 	}
 
-	s3Uri, exists := fs.fileKeyToS3Url.Load(key)
+	s3Url, exists := fs.fileKeyToS3Url.Load(key)
 	if !exists {
 		return fmt.Errorf("file %s has not been scheduled for download", key)
 	}
 	tmpPath := filepath.Join(fs.tmpDirectory, key)
-	err = fs.downloadFromS3(s3Uri.(string), tmpPath)
+	err = fs.downloadFunc(s3Url.(string), tmpPath)
 	if err != nil {
 		return fmt.Errorf("failed to download file %s from S3: %w", key, err)
 	}

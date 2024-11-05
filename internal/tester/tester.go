@@ -7,18 +7,18 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/programme-lv/tester/internal/checkers"
 	"github.com/programme-lv/tester/internal/filestore"
+	"github.com/programme-lv/tester/internal/testlib"
 )
 
 type Tester struct {
 	filestore    *filestore.FileStore
 	systemInfo   string
-	tlibCheckers *checkers.TestlibCompiler
+	tlibCheckers *testlib.TestlibCompiler
 	logger       *log.Logger
 }
 
-func NewTester(filestore *filestore.FileStore, tlibCheckers *checkers.TestlibCompiler) *Tester {
+func NewTester(filestore *filestore.FileStore, tlibCheckers *testlib.TestlibCompiler) *Tester {
 	logger := log.New(os.Stdout, "Tester: ", log.LstdFlags|log.Lshortfile)
 	return &Tester{
 		filestore:    filestore,

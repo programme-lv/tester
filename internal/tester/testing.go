@@ -43,16 +43,32 @@ func (t *Tester) EvaluateSubmission(
 		}
 	}
 
-	// t.logger.Printf("Retrieving testlib checker: %s", req.TestlibChecker)
-	tlibChecker, err := t.tlibCheckers.GetExecutable(req.Checker)
-	if err != nil {
-		errMsg := fmt.Errorf("failed to get testlib checker: %w", err)
-		t.logger.Printf("Error: %s", errMsg)
-		gath.FinishEvalWithInternalError(errMsg.Error())
-		return errMsg
+	var tlibInteractor []byte
+	if req.Interactor != nil {
+		var err error
+		tlibInteractor, err = t.tlibCheckers.CompileInteractor(*req.Interactor)
+		if err != nil {
+			errMsg := fmt.Errorf("failed to get testlib interactor: %w", err)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
+			return errMsg
+		}
+	} else {
+		req.Checker = new(string)
+		*req.Checker = TestlibDefaultChecker
 	}
-	checkerFname := "checker"
-	checkerExecCmd := "./checker input.txt output.txt answer.txt"
+
+	var tlibChecker []byte
+	if req.Checker != nil {
+		var err error
+		tlibChecker, err = t.tlibCheckers.CompileChecker(*req.Checker)
+		if err != nil {
+			errMsg := fmt.Errorf("failed to get testlib checker: %w", err)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
+			return errMsg
+		}
+	}
 
 	var compiled []byte
 	if req.Language.CompileCmd != nil {
@@ -260,7 +276,7 @@ func (t *Tester) EvaluateSubmission(
 		}
 		defer checkerBox.Close()
 
-		err = checkerBox.AddFile(checkerFname, tlibChecker)
+		err = checkerBox.AddFile("checker", tlibChecker)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add checker to isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -293,7 +309,7 @@ func (t *Tester) EvaluateSubmission(
 		}
 
 		t.logger.Printf("Running checker for test: %d", test.ID)
-		checkerProcess, err := checkerBox.Run(checkerExecCmd, nil, nil)
+		checkerProcess, err := checkerBox.Run("./checker input.txt output.txt answer.txt", nil, nil)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to run checker: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
