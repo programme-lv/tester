@@ -2,10 +2,13 @@ package tester
 
 import (
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/internal/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 func (t *Tester) EvaluateSubmission(
@@ -354,7 +357,7 @@ func (t *Tester) EvaluateSubmission(
 			gath.ReachTest(int64(test.ID), input, answer)
 
 			var submissionRuntimeData *internal.RuntimeData = nil
-			var checkerRuntimeData *internal.RuntimeData = nil
+			var interactorRuntimeData *internal.RuntimeData = nil
 
 			t.logger.Printf("Setting up isolate box for submission")
 			submBox, err := isolate.NewBox()
@@ -408,16 +411,23 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			// inputReadCloser := io.NopCloser(bytes.NewReader(input))
-			submProcess, err := submBox.Command(req.Language.ExecCmd,
-				&isolate.Constraints{
-					CpuTimeLimInSec:      float64(req.CpuMillis) / 1000,
-					ExtraCpuTimeLimInSec: 0.5,
-					WallTimeLimInSec:     20.0,
-					MemoryLimitInKB:      int64(req.MemoryKiB),
-					MaxProcesses:         256,
-					MaxOpenFiles:         256,
-				})
+			interactorProcess, err := interactorBox.Command("./interactor input.txt output.txt answer.txt", nil)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to run interactor: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			submConstraints := &isolate.Constraints{
+				CpuTimeLimInSec:      float64(req.CpuMillis) / 1000,
+				ExtraCpuTimeLimInSec: 0.5,
+				WallTimeLimInSec:     20.0,
+				MemoryLimitInKB:      int64(req.MemoryKiB),
+				MaxProcesses:         256,
+				MaxOpenFiles:         256,
+			}
+			submProcess, err := submBox.Command(req.Language.ExecCmd, submConstraints)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to run submission: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -425,120 +435,116 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			submissionRuntimeData, err = utils.RunIsolateCmd(submProcess, nil)
+			err = interactorProcess.Start()
 			if err != nil {
-				errMsg := fmt.Errorf("failed to collect submission runtime data: %w", err)
+				errMsg := fmt.Errorf("failed to start interactor: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
-			if submissionRuntimeData.ExitSignal != nil {
-				errMsg := fmt.Errorf("test %d failed with signal: %d", test.ID, *submissionRuntimeData.ExitSignal)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-				continue
-			}
-
-			if submissionRuntimeData.ExitCode != 0 ||
-				submissionRuntimeData.Stderr == nil ||
-				len(submissionRuntimeData.Stderr) != 0 {
-				errMsg := fmt.Errorf("test %d failed with exit code: %d", test.ID, submissionRuntimeData.ExitCode)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-				continue
-			}
-
-			if submissionRuntimeData.WallMillis > 14000 { // more than 14 seconds
-				errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.ID, submissionRuntimeData.WallMillis)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-				continue
-			}
-
-			if submissionRuntimeData.CpuMillis > int64(req.CpuMillis) {
-				errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.ID, submissionRuntimeData.CpuMillis)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-				continue
-			}
-
-			if submissionRuntimeData.MemoryKiBytes > int64(req.MemoryKiB) {
-				errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.ID, submissionRuntimeData.MemoryKiBytes)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-				continue
-			}
-
-			output := submissionRuntimeData.Stdout
-			if output == nil {
-				errMsg := fmt.Errorf("submission stdout is nil")
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
-			}
-
-			t.logger.Printf("Setting up checker for test: %d", test.ID)
-			checkerBox, err := isolate.NewBox()
+			err = submProcess.Start()
 			if err != nil {
-				errMsg := fmt.Errorf("failed to create isolate box: %w", err)
+				errMsg := fmt.Errorf("failed to start submission: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
-			defer checkerBox.Close()
 
-			err = checkerBox.AddFile("checker", tlibChecker)
+			interactorStdin := interactorProcess.Stdin()
+			interactorStdout := interactorProcess.Stdout()
+			interactorStderr := interactorProcess.Stderr()
+
+			submStdin := submProcess.Stdin()
+			submStdout := submProcess.Stdout()
+			submStderr := submProcess.Stderr()
+
+			var submStdinStr, submStdoutStr strings.Builder
+			var submStderrStr, interactorStderrStr strings.Builder
+
+			var eg errgroup.Group
+			// move stdout from interactor to stdin of submission
+			eg.Go(func() error {
+				_, err := io.Copy(io.MultiWriter(submStdin, &submStdinStr), interactorStdout)
+				if err != nil {
+					t.logger.Printf("Error copying interactor stdout to submission stdin: %v", err)
+				}
+				submStdin.Close()
+				interactorStdout.Close()
+				return nil
+			})
+			// move stdout from submission to stdin of interactor
+			eg.Go(func() error {
+				_, err := io.Copy(io.MultiWriter(interactorStdin, &submStdoutStr), submStdout)
+				if err != nil {
+					t.logger.Printf("Error copying submission stdout to interactor stdin: %v", err)
+				}
+				submStdout.Close()
+				interactorStdin.Close()
+				return nil
+			})
+			// read stderr from interactor
+			eg.Go(func() error {
+				_, err := io.Copy(&interactorStderrStr, interactorStderr)
+				if err != nil {
+					t.logger.Printf("Error copying interactor stderr to string: %v", err)
+				}
+				interactorStderr.Close()
+				return nil
+			})
+			// read stderr from submission
+			eg.Go(func() error {
+				_, err := io.Copy(&submStderrStr, submStderr)
+				if err != nil {
+					t.logger.Printf("Error copying submission stderr to string: %v", err)
+				}
+				submStderr.Close()
+				return nil
+			})
+
+			err = eg.Wait()
 			if err != nil {
-				errMsg := fmt.Errorf("failed to add checker to isolate box: %w", err)
+				errMsg := fmt.Errorf("failed to wait for interactor and submission: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
-			err = checkerBox.AddFile("input.txt", input)
+			submMetrics, err := submProcess.Wait()
 			if err != nil {
-				errMsg := fmt.Errorf("failed to add input to isolate box: %w", err)
+				errMsg := fmt.Errorf("failed to wait for submission: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
+			submissionRuntimeData = &internal.RuntimeData{
+				Stdout:        []byte(submStdoutStr.String()),
+				Stderr:        []byte(submStderrStr.String()),
+				ExitCode:      submMetrics.ExitCode,
+				CpuMillis:     submMetrics.CpuMillis,
+				WallMillis:    submMetrics.WallMillis,
+				MemoryKiBytes: submMetrics.CgMemKb,
+			}
 
-			err = checkerBox.AddFile("output.txt", output)
+			interactorMetrics, err := interactorProcess.Wait()
 			if err != nil {
-				errMsg := fmt.Errorf("failed to add output to isolate box: %w", err)
+				errMsg := fmt.Errorf("failed to wait for interactor: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
-			err = checkerBox.AddFile("answer.txt", answer)
-			if err != nil {
-				errMsg := fmt.Errorf("failed to add answer to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
+			interactorRuntimeData = &internal.RuntimeData{
+				Stdout:        []byte(submStdinStr.String()),
+				Stderr:        []byte(interactorStderrStr.String()),
+				ExitCode:      interactorMetrics.ExitCode,
+				CpuMillis:     interactorMetrics.CpuMillis,
+				WallMillis:    interactorMetrics.WallMillis,
+				MemoryKiBytes: interactorMetrics.CgMemKb,
 			}
 
-			t.logger.Printf("Running checker for test: %d", test.ID)
-			checkerProcess, err := checkerBox.Command("./checker input.txt output.txt answer.txt", nil)
-			if err != nil {
-				errMsg := fmt.Errorf("failed to run checker: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
-			}
-
-			checkerRuntimeData, err = utils.RunIsolateCmd(checkerProcess, nil)
-			if err != nil {
-				errMsg := fmt.Errorf("failed to collect checker runtime data: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
-			}
-
-			t.logger.Printf("Test %d finished successfully", test.ID)
-			gath.FinishTest(int64(test.ID), submissionRuntimeData, checkerRuntimeData)
+			t.logger.Printf("Test %d finished", test.ID)
+			gath.FinishTest(int64(test.ID), submissionRuntimeData, interactorRuntimeData)
 		}
 	}
 

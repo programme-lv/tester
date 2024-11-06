@@ -35,26 +35,26 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 	// read everything from stdout
 	var stdout []byte
 	eg.Go(func() error {
-		var err error
-		stdout, err = io.ReadAll(p.Stdout())
-		if err != nil {
-			if err != io.ErrClosedPipe {
-				return fmt.Errorf("failed to read stdout: %w", err)
-			}
-		}
+		// var err error
+		stdout, _ = io.ReadAll(p.Stdout())
+		// if err != nil {
+		// 	if err != io.ErrClosedPipe {
+		// 		return fmt.Errorf("failed to read stdout: %w", err)
+		// 	}
+		// }
 		return nil
 	})
 
 	// read everything from stderr
 	var stderr []byte
 	eg.Go(func() error {
-		var err error
-		stderr, err = io.ReadAll(p.Stderr())
-		if err != nil {
-			if err != io.ErrClosedPipe {
-				return fmt.Errorf("failed to read stderr: %w", err)
-			}
-		}
+		// var err error
+		stderr, _ = io.ReadAll(p.Stderr())
+		// if err != nil {
+		// 	if err != io.ErrClosedPipe {
+		// 		return fmt.Errorf("failed to read stderr: %w", err)
+		// 	}
+		// }
 		return nil
 	})
 
