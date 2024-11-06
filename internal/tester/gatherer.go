@@ -14,7 +14,7 @@ type EvalResGatherer interface {
 	StartTesting()
 	FinishTesting()
 
-	ReachTest(testId int64, input *string, er *string)
+	ReachTest(testId int64, input []byte, answer []byte)
 	IgnoreTest(testId int64)
 	FinishTest(testId int64,
 		submission *internal.RuntimeData,

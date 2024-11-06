@@ -168,14 +168,14 @@ func compile(code string) (compiled []byte, runData *internal.RuntimeData, err e
 	}
 
 	log.Println("Running checker compilation...")
-	var process *isolate.Process
-	process, err = box.Run(compileCmd, nil, nil)
+	var iCmd *isolate.Cmd
+	iCmd, err = box.Command(compileCmd, nil)
 	if err != nil {
 		return
 	}
 
 	log.Println("Collecting compilation runtime data...")
-	runData, err = utils.CollectProcessRuntimeData(process)
+	runData, err = utils.RunIsolateCmd(iCmd, nil)
 	if err != nil {
 		return
 	}

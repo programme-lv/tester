@@ -7,37 +7,45 @@ import (
 	"os/exec"
 )
 
-type Process struct {
+type Cmd struct {
 	cmd          *exec.Cmd
+	stdin        io.WriteCloser
 	stdout       io.ReadCloser
 	stderr       io.ReadCloser
+	started      bool
 	metaFilePath string
+	Constraints  Constraints
 }
 
-func (process *Process) CombinedOutput() (*Metrics, []byte, error) {
-	combinedOut, err := process.cmd.CombinedOutput()
-	if err != nil {
-		var exitErr *exec.ExitError
-		if !errors.As(err, &exitErr) {
-			return nil, nil, err
-		}
-	}
+// func (process *Cmd) CombinedOutput() (*Metrics, []byte, error) {
+// 	combinedOut, err := process.cmd.CombinedOutput()
+// 	if err != nil {
+// 		var exitErr *exec.ExitError
+// 		if !errors.As(err, &exitErr) {
+// 			return nil, nil, err
+// 		}
+// 	}
 
-	metaFileBytes, err := os.ReadFile(process.metaFilePath)
-	if err != nil {
-		return nil, nil, err
-	}
+// 	metaFileBytes, err := os.ReadFile(process.metaFilePath)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
 
-	metrics, err := parseMetaFile(metaFileBytes)
-	if err != nil {
-		return nil, nil, err
-	}
+// 	metrics, err := parseMetaFile(metaFileBytes)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
 
-	return metrics, combinedOut, nil
-}
+// 	return metrics, combinedOut, nil
+// }
 
-func (process *Process) Start() error {
+func (process *Cmd) Start() error {
 	var err error
+	process.stdin, err = process.cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+
 	process.stdout, err = process.cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -51,7 +59,11 @@ func (process *Process) Start() error {
 	return process.cmd.Start()
 }
 
-func (process *Process) Wait() (*Metrics, error) {
+func (process *Cmd) Wait() (*Metrics, error) {
+	if !process.started {
+		panic("process should be started before waiting")
+	}
+
 	err := process.cmd.Wait()
 
 	if err != nil {
@@ -74,10 +86,23 @@ func (process *Process) Wait() (*Metrics, error) {
 	return metrics, nil
 }
 
-func (process *Process) Stdout() io.ReadCloser {
+func (process *Cmd) Stdin() io.WriteCloser {
+	if process.stdin == nil {
+		panic("process should be started before retrieving stdin")
+	}
+	return process.stdin
+}
+
+func (process *Cmd) Stdout() io.ReadCloser {
+	if process.stdout == nil {
+		panic("process should be started before retrieving stdout")
+	}
 	return process.stdout
 }
 
-func (process *Process) Stderr() io.ReadCloser {
+func (process *Cmd) Stderr() io.ReadCloser {
+	if process.stderr == nil {
+		panic("process should be started before retrieving stderr")
+	}
 	return process.stderr
 }

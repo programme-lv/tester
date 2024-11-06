@@ -47,7 +47,7 @@ func (s *sqsResQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
 	}
 	msg := FinishedCompilation{
 		Header:      header,
-		RuntimeData: trimRuntimeData(data, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		RuntimeData: trimRunDataOutput(data, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
 	}
 	s.send(msg)
 }
@@ -112,8 +112,8 @@ func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.Runt
 			MsgType:  MsgTypeFinishedTest,
 		},
 		TestId:     testId,
-		Submission: trimRuntimeData(submission, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
-		Checker:    trimRuntimeData(checker, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		Submission: trimRunDataOutput(submission, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		Checker:    trimRunDataOutput(checker, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
 	}
 	s.send(msg)
 }
@@ -193,16 +193,28 @@ type ReachedTest struct {
 }
 
 // ReachTest implements tester.EvalResGatherer.
-func (s *sqsResQueueGatherer) ReachTest(testId int64, input *string, answer *string) {
+func (s *sqsResQueueGatherer) ReachTest(testId int64, input []byte, answer []byte) {
 	header := Header{
 		EvalUuid: s.evalUuid,
 		MsgType:  MsgTypeReachedTest,
 	}
+	var inputStrPtr *string = nil
+	trimmedInput := trimStrToRect(input, MaxRuntimeDataHeight, MaxRuntimeDataWidth)
+	if trimmedInput != nil {
+		inputStr := string(trimmedInput)
+		inputStrPtr = &inputStr
+	}
+	var answerStrPtr *string = nil
+	trimmedAnswer := trimStrToRect(answer, MaxRuntimeDataHeight, MaxRuntimeDataWidth)
+	if trimmedAnswer != nil {
+		answerStr := string(trimmedAnswer)
+		answerStrPtr = &answerStr
+	}
 	msg := ReachedTest{
 		Header: header,
 		TestId: testId,
-		Input:  trimStringToRectangle(input, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
-		Answer: trimStringToRectangle(answer, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		Input:  inputStrPtr,
+		Answer: answerStrPtr,
 	}
 	s.send(msg)
 }

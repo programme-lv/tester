@@ -1,48 +1,67 @@
 package utils
 
 import (
-	"fmt"
+	"bytes"
 	"io"
 
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
+	"golang.org/x/sync/errgroup"
 )
 
-func CollectProcessRuntimeData(process *isolate.Process) (*internal.RuntimeData, error) {
-	err := process.Start()
-	if err != nil {
-		return nil, fmt.Errorf("failed to start process: %w", err)
+func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) {
+	var eg errgroup.Group
+
+	// write everything to stdin
+	if input != nil {
+		eg.Go(func() error {
+			_, err := io.Copy(p.Stdin(), bytes.NewReader(input))
+			if err != nil {
+				return err
+			}
+			p.Stdin().Close()
+			return nil
+		})
 	}
 
-	stdout, err := io.ReadAll(process.Stdout())
+	// read everything from stdout
+	var stdout []byte
+	eg.Go(func() error {
+		var err error
+		stdout, err = io.ReadAll(p.Stdout())
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	// read everything from stderr
+	var stderr []byte
+	eg.Go(func() error {
+		var err error
+		stderr, err = io.ReadAll(p.Stderr())
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	err := eg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read stdout: %w", err)
+		return nil, err
 	}
 
-	stderr, err := io.ReadAll(process.Stderr())
+	metrics, err := p.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read stderr: %w", err)
-	}
-
-	metrics, err := process.Wait()
-	if err != nil {
-		return nil, fmt.Errorf("failed to wait for process: %w", err)
+		return nil, err
 	}
 
 	return &internal.RuntimeData{
-		Stdout:                   stringPtr(string(stdout)),
-		Stderr:                   stringPtr(string(stderr)),
-		ExitCode:                 metrics.ExitCode,
-		CpuTimeMillis:            int64(metrics.TimeSec * 1000),
-		WallTimeMillis:           int64(metrics.TimeWallSec * 1000),
-		MemoryKibiBytes:          metrics.CgMemKb,
-		ContextSwitchesVoluntary: metrics.CswVoluntary,
-		ContextSwitchesForced:    metrics.CswForced,
-		ExitSignal:               metrics.ExitSig,
-		IsolateStatus:            metrics.Status,
+		Stdout:        stdout,
+		Stderr:        stderr,
+		ExitCode:      metrics.ExitCode,
+		CpuMillis:     metrics.CpuMillis,
+		WallMillis:    metrics.WallMillis,
+		MemoryKiBytes: metrics.CgMemKb,
 	}, nil
-}
-
-func stringPtr(s string) *string {
-	return &s
 }

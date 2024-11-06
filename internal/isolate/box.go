@@ -2,8 +2,6 @@ package isolate
 
 import (
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,31 +34,30 @@ func (box *Box) Close() error {
 	return box.isolate.eraseBox(box.id)
 }
 
-func (box *Box) Run(
-	command string,
-	stdin io.ReadCloser,
-	constraints *Constraints) (*Process, error) {
+func (box *Box) Command(
+	command string, constraints *Constraints) (*Cmd, error) {
 
-	if constraints == nil {
-		c := DefaultConstraints()
-		constraints = &c
+	var isolateCmd *Cmd = &Cmd{}
+	if constraints != nil {
+		isolateCmd.Constraints = *constraints
+	} else {
+		isolateCmd.Constraints = DefaultConstraints()
 	}
 
-	var process *Process = &Process{}
-
-	err := assignMetaFilePathToProcess(process)
+	tempFilePath, err := newTempIsolateFilePath()
 	if err != nil {
 		return nil, err
 	}
+	isolateCmd.metaFilePath = tempFilePath
 
 	var args []string
 	args = append(args, "-s")
 	args = append(args, "--cg")
 	args = append(args, fmt.Sprintf("--box-id=%d", box.id))
 
-	args = append(args, constraints.ToArgs()...)
+	args = append(args, isolateCmd.Constraints.ToArgs()...)
 
-	args = append(args, fmt.Sprintf("--meta=%s", process.metaFilePath))
+	args = append(args, fmt.Sprintf("--meta=%s", isolateCmd.metaFilePath))
 
 	args = append(args, "--env=HOME=/box")
 	args = append(args, "--env=PATH")
@@ -71,22 +68,10 @@ func (box *Box) Run(
 		command,
 	)
 
-	log.Println("Running command:", cmdStr)
-	cmd := exec.Command("/usr/bin/bash", "-c", cmdStr)
-	cmd.Stdin = stdin
+	goCmd := exec.Command("/usr/bin/bash", "-c", cmdStr)
 
-	process.cmd = cmd
-
-	return process, err
-}
-
-func assignMetaFilePathToProcess(process *Process) error {
-	tempFilePath, err := newTempIsolateFilePath()
-	if err != nil {
-		return err
-	}
-	process.metaFilePath = tempFilePath
-	return nil
+	isolateCmd.cmd = goCmd
+	return isolateCmd, err
 }
 
 func newTempIsolateFilePath() (string, error) {

@@ -1,9 +1,7 @@
 package tester
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
@@ -93,7 +91,7 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 
-		compileProcess, err := compileBox.Run(*req.Language.CompileCmd, nil, nil)
+		compileProcess, err := compileBox.Command(*req.Language.CompileCmd, nil)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to run compilation: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -101,7 +99,7 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 
-		runData, err = utils.CollectProcessRuntimeData(compileProcess)
+		runData, err = utils.RunIsolateCmd(compileProcess, nil)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to collect compilation runtime data: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -110,10 +108,11 @@ func (t *Tester) EvaluateSubmission(
 		}
 		gath.FinishCompilation(runData)
 
-		if runData.ExitCode != 0 || runData.Stderr != nil && *runData.Stderr != "" {
+		if runData.ExitCode != 0 || len(runData.Stderr) > 0 {
 			errMsg := ""
-			if runData.Stderr != nil {
-				errMsg = fmt.Sprintf("compilation failed: %s", (*runData.Stderr)[:min(len(*runData.Stderr), 100)])
+			if len(runData.Stderr) > 0 {
+				stderr := string(runData.Stderr[:min(len(runData.Stderr), 100)])
+				errMsg = fmt.Sprintf("compilation failed: %s", stderr)
 				t.logger.Printf("Error: %s", errMsg)
 			} else {
 				errMsg = fmt.Sprintf("compilation failed with exit code: %d", runData.ExitCode)
@@ -151,182 +150,396 @@ func (t *Tester) EvaluateSubmission(
 
 	t.logger.Printf("Starting testing for submission: %s", req.Code)
 	gath.StartTesting()
-	for _, test := range req.Tests {
-		t.logger.Printf("Starting test: %d", test.ID)
+	if tlibChecker != nil {
+		t.logger.Printf("Running checker variant")
+		for _, test := range req.Tests {
+			t.logger.Printf("Starting test: %d", test.ID)
 
-		t.logger.Printf("Awaiting test input: %s", test.InputSha256)
-		input, err := t.filestore.AwaitAndGetFile(test.InputSha256)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to get test input: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
+			t.logger.Printf("Awaiting test input: %s", test.InputSha256)
+			input, err := t.filestore.AwaitAndGetFile(test.InputSha256)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to get test input: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			t.logger.Printf("Awaiting test answer: %s", test.AnswerSha256)
+			answer, err := t.filestore.AwaitAndGetFile(test.AnswerSha256)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to get test answer: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			gath.ReachTest(int64(test.ID), input, answer)
+
+			var submData *internal.RuntimeData = nil
+			var checkerRuntimeData *internal.RuntimeData = nil
+
+			submBox, err := isolate.NewBox()
+			if err != nil {
+				errMsg := fmt.Errorf("failed to create isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+			defer submBox.Close()
+
+			err = submBox.AddFile(submFname, submContent)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			// inputReadCloser := io.NopCloser(bytes.NewReader(input))
+			submCmd, err := submBox.Command(req.Language.ExecCmd,
+				&isolate.Constraints{
+					CpuTimeLimInSec:      float64(req.CpuMillis) / 1000,
+					ExtraCpuTimeLimInSec: 0.5,
+					WallTimeLimInSec:     20.0,
+					MemoryLimitInKB:      int64(req.MemoryKiB),
+					MaxProcesses:         256,
+					MaxOpenFiles:         256,
+				})
+			if err != nil {
+				errMsg := fmt.Errorf("failed to run submission: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			submData, err = utils.RunIsolateCmd(submCmd, input)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to run submission: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			if submData.ExitSignal != nil {
+				errMsg := fmt.Errorf("test %d failed with signal: %d", test.ID, *submData.ExitSignal)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submData, nil)
+				continue
+			}
+
+			if submData.ExitCode != 0 ||
+				submData.Stderr == nil ||
+				len(submData.Stderr) > 0 {
+				errMsg := fmt.Errorf("test %d failed with exit code: %d", test.ID, submData.ExitCode)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submData, nil)
+				continue
+			}
+
+			if submData.WallMillis > 14000 { // more than 14 seconds
+				errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.ID, submData.WallMillis)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submData, nil)
+				continue
+			}
+
+			if submData.CpuMillis > int64(req.CpuMillis) {
+				errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.ID, submData.CpuMillis)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submData, nil)
+				continue
+			}
+
+			if submData.MemoryKiBytes > int64(req.MemoryKiB) {
+				errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.ID, submData.MemoryKiBytes)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submData, nil)
+				continue
+			}
+
+			output := submData.Stdout
+			if output == nil {
+				errMsg := fmt.Errorf("submission stdout is nil")
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			t.logger.Printf("Setting up checker for test: %d", test.ID)
+			checkerBox, err := isolate.NewBox()
+			if err != nil {
+				errMsg := fmt.Errorf("failed to create isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+			defer checkerBox.Close()
+
+			err = checkerBox.AddFile("checker", tlibChecker)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add checker to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			err = checkerBox.AddFile("input.txt", input)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add input to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			err = checkerBox.AddFile("output.txt", output)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add output to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			err = checkerBox.AddFile("answer.txt", answer)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add answer to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			t.logger.Printf("Running checker for test: %d", test.ID)
+			checkerProcess, err := checkerBox.Command("./checker input.txt output.txt answer.txt", nil)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to run checker: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			checkerRuntimeData, err = utils.RunIsolateCmd(checkerProcess, nil)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to collect checker runtime data: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			t.logger.Printf("Test %d finished successfully", test.ID)
+			gath.FinishTest(int64(test.ID), submData, checkerRuntimeData)
 		}
+	}
+	if tlibInteractor != nil {
+		t.logger.Printf("Running interactor variant")
+		for _, test := range req.Tests {
+			t.logger.Printf("Starting test: %d", test.ID)
 
-		t.logger.Printf("Awaiting test answer: %s", test.AnswerSha256)
-		answer, err := t.filestore.AwaitAndGetFile(test.AnswerSha256)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to get test answer: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
+			t.logger.Printf("Awaiting test input: %s", test.InputSha256)
+			input, err := t.filestore.AwaitAndGetFile(test.InputSha256)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to get test input: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			t.logger.Printf("Awaiting test answer: %s", test.AnswerSha256)
+			answer, err := t.filestore.AwaitAndGetFile(test.AnswerSha256)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to get test answer: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			gath.ReachTest(int64(test.ID), input, answer)
+
+			var submissionRuntimeData *internal.RuntimeData = nil
+			var checkerRuntimeData *internal.RuntimeData = nil
+
+			t.logger.Printf("Setting up isolate box for submission")
+			submBox, err := isolate.NewBox()
+			if err != nil {
+				errMsg := fmt.Errorf("failed to create isolate box for submission: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+			defer submBox.Close()
+
+			err = submBox.AddFile(submFname, submContent)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			t.logger.Printf("Setting up isolate box for interactor")
+			interactorBox, err := isolate.NewBox()
+			if err != nil {
+				errMsg := fmt.Errorf("failed to create isolate box for interactor: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+			defer interactorBox.Close()
+
+			err = interactorBox.AddFile("interactor", tlibInteractor)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add interactor to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			err = interactorBox.AddFile("input.txt", input)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add input to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			err = interactorBox.AddFile("answer.txt", answer)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add answer to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			// inputReadCloser := io.NopCloser(bytes.NewReader(input))
+			submProcess, err := submBox.Command(req.Language.ExecCmd,
+				&isolate.Constraints{
+					CpuTimeLimInSec:      float64(req.CpuMillis) / 1000,
+					ExtraCpuTimeLimInSec: 0.5,
+					WallTimeLimInSec:     20.0,
+					MemoryLimitInKB:      int64(req.MemoryKiB),
+					MaxProcesses:         256,
+					MaxOpenFiles:         256,
+				})
+			if err != nil {
+				errMsg := fmt.Errorf("failed to run submission: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			submissionRuntimeData, err = utils.RunIsolateCmd(submProcess, nil)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to collect submission runtime data: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			if submissionRuntimeData.ExitSignal != nil {
+				errMsg := fmt.Errorf("test %d failed with signal: %d", test.ID, *submissionRuntimeData.ExitSignal)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
+				continue
+			}
+
+			if submissionRuntimeData.ExitCode != 0 ||
+				submissionRuntimeData.Stderr == nil ||
+				len(submissionRuntimeData.Stderr) != 0 {
+				errMsg := fmt.Errorf("test %d failed with exit code: %d", test.ID, submissionRuntimeData.ExitCode)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
+				continue
+			}
+
+			if submissionRuntimeData.WallMillis > 14000 { // more than 14 seconds
+				errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.ID, submissionRuntimeData.WallMillis)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
+				continue
+			}
+
+			if submissionRuntimeData.CpuMillis > int64(req.CpuMillis) {
+				errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.ID, submissionRuntimeData.CpuMillis)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
+				continue
+			}
+
+			if submissionRuntimeData.MemoryKiBytes > int64(req.MemoryKiB) {
+				errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.ID, submissionRuntimeData.MemoryKiBytes)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
+				continue
+			}
+
+			output := submissionRuntimeData.Stdout
+			if output == nil {
+				errMsg := fmt.Errorf("submission stdout is nil")
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			t.logger.Printf("Setting up checker for test: %d", test.ID)
+			checkerBox, err := isolate.NewBox()
+			if err != nil {
+				errMsg := fmt.Errorf("failed to create isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+			defer checkerBox.Close()
+
+			err = checkerBox.AddFile("checker", tlibChecker)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add checker to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			err = checkerBox.AddFile("input.txt", input)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add input to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			err = checkerBox.AddFile("output.txt", output)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add output to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			err = checkerBox.AddFile("answer.txt", answer)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to add answer to isolate box: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			t.logger.Printf("Running checker for test: %d", test.ID)
+			checkerProcess, err := checkerBox.Command("./checker input.txt output.txt answer.txt", nil)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to run checker: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			checkerRuntimeData, err = utils.RunIsolateCmd(checkerProcess, nil)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to collect checker runtime data: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+
+			t.logger.Printf("Test %d finished successfully", test.ID)
+			gath.FinishTest(int64(test.ID), submissionRuntimeData, checkerRuntimeData)
 		}
-
-		inputStr := string(input)
-		answerStr := string(answer)
-		gath.ReachTest(int64(test.ID), &inputStr, &answerStr)
-
-		var submissionRuntimeData *internal.RuntimeData = nil
-		var checkerRuntimeData *internal.RuntimeData = nil
-
-		submBox, err := isolate.NewBox()
-		if err != nil {
-			errMsg := fmt.Errorf("failed to create isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-		defer submBox.Close()
-
-		err = submBox.AddFile(submFname, submContent)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		inputReadCloser := io.NopCloser(bytes.NewReader(input))
-		submProcess, err := submBox.Run(req.Language.ExecCmd,
-			inputReadCloser, &isolate.Constraints{
-				CpuTimeLimInSec:      float64(req.CpuMillis) / 1000,
-				ExtraCpuTimeLimInSec: 0.5,
-				WallTimeLimInSec:     20.0,
-				MemoryLimitInKB:      int64(req.MemoryKiB),
-				MaxProcesses:         256,
-				MaxOpenFiles:         256,
-			})
-		if err != nil {
-			errMsg := fmt.Errorf("failed to run submission: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		submissionRuntimeData, err = utils.CollectProcessRuntimeData(submProcess)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to collect submission runtime data: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		if submissionRuntimeData.ExitSignal != nil {
-			errMsg := fmt.Errorf("test %d failed with signal: %d", test.ID, *submissionRuntimeData.ExitSignal)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-			continue
-		}
-
-		if submissionRuntimeData.ExitCode != 0 ||
-			submissionRuntimeData.Stderr == nil ||
-			*submissionRuntimeData.Stderr != "" {
-			errMsg := fmt.Errorf("test %d failed with exit code: %d", test.ID, submissionRuntimeData.ExitCode)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-			continue
-		}
-
-		if submissionRuntimeData.WallTimeMillis > 14000 { // more than 14 seconds
-			errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.ID, submissionRuntimeData.WallTimeMillis)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-			continue
-		}
-
-		if submissionRuntimeData.CpuTimeMillis > int64(req.CpuMillis) {
-			errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.ID, submissionRuntimeData.CpuTimeMillis)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-			continue
-		}
-
-		if submissionRuntimeData.MemoryKibiBytes > int64(req.MemoryKiB) {
-			errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.ID, submissionRuntimeData.MemoryKibiBytes)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishTest(int64(test.ID), submissionRuntimeData, nil)
-			continue
-		}
-
-		output := submissionRuntimeData.Stdout
-		if output == nil {
-			errMsg := fmt.Errorf("submission stdout is nil")
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		t.logger.Printf("Setting up checker for test: %d", test.ID)
-		checkerBox, err := isolate.NewBox()
-		if err != nil {
-			errMsg := fmt.Errorf("failed to create isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-		defer checkerBox.Close()
-
-		err = checkerBox.AddFile("checker", tlibChecker)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to add checker to isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		err = checkerBox.AddFile("input.txt", input)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to add input to isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		err = checkerBox.AddFile("output.txt", []byte(*output))
-		if err != nil {
-			errMsg := fmt.Errorf("failed to add output to isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		err = checkerBox.AddFile("answer.txt", answer)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to add answer to isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		t.logger.Printf("Running checker for test: %d", test.ID)
-		checkerProcess, err := checkerBox.Run("./checker input.txt output.txt answer.txt", nil, nil)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to run checker: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		checkerRuntimeData, err = utils.CollectProcessRuntimeData(checkerProcess)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to collect checker runtime data: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-
-		t.logger.Printf("Test %d finished successfully", test.ID)
-		gath.FinishTest(int64(test.ID), submissionRuntimeData, checkerRuntimeData)
 	}
 
 	t.logger.Printf("Finished testing for submission")

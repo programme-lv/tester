@@ -1,16 +1,16 @@
 package internal
 
 type RuntimeData struct {
-	Stdout   *string `json:"stdout"`
-	Stderr   *string `json:"stderr"`
-	ExitCode int64   `json:"exit_code"`
+	Stdout   []byte `json:"stdout"`
+	Stderr   []byte `json:"stderr"`
+	ExitCode int64  `json:"exit_code"`
 
-	CpuTimeMillis   int64 `json:"cpu_time_millis"`
-	WallTimeMillis  int64 `json:"wall_time_millis"`
-	MemoryKibiBytes int64 `json:"memory_kibibytes"`
+	CpuMillis     int64 `json:"cpu_time_millis"`
+	WallMillis    int64 `json:"wall_time_millis"`
+	MemoryKiBytes int64 `json:"memory_kibibytes"`
 
-	ContextSwitchesVoluntary int64 `json:"context_switches_voluntary"`
-	ContextSwitchesForced    int64 `json:"context_switches_forced"`
+	CtxSwVoluntary int64 `json:"context_switches_voluntary"`
+	CtxSwForced    int64 `json:"context_switches_forced"`
 
 	ExitSignal    *int64 `json:"exit_signal"`
 	IsolateStatus string `json:"isolate_status"`

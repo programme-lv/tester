@@ -6,32 +6,32 @@ import (
 	"github.com/programme-lv/tester/internal"
 )
 
-func trimRuntimeData(data *internal.RuntimeData, maxHeight int, maxWidth int) *internal.RuntimeData {
+func trimRunDataOutput(data *internal.RuntimeData, maxHeight int, maxWidth int) *internal.RuntimeData {
 	if data == nil {
 		return nil
 	}
 
 	return &internal.RuntimeData{
-		Stdout:                   trimStringToRectangle(data.Stdout, maxHeight, maxWidth),
-		Stderr:                   trimStringToRectangle(data.Stderr, maxHeight, maxWidth),
-		ExitCode:                 data.ExitCode,
-		CpuTimeMillis:            data.CpuTimeMillis,
-		WallTimeMillis:           data.WallTimeMillis,
-		MemoryKibiBytes:          data.MemoryKibiBytes,
-		ContextSwitchesVoluntary: data.ContextSwitchesVoluntary,
-		ContextSwitchesForced:    data.ContextSwitchesForced,
-		ExitSignal:               data.ExitSignal,
-		IsolateStatus:            data.IsolateStatus,
+		Stdout:         trimStrToRect(data.Stdout, maxHeight, maxWidth),
+		Stderr:         trimStrToRect(data.Stderr, maxHeight, maxWidth),
+		ExitCode:       data.ExitCode,
+		CpuMillis:      data.CpuMillis,
+		WallMillis:     data.WallMillis,
+		MemoryKiBytes:  data.MemoryKiBytes,
+		CtxSwVoluntary: data.CtxSwVoluntary,
+		CtxSwForced:    data.CtxSwForced,
+		ExitSignal:     data.ExitSignal,
+		IsolateStatus:  data.IsolateStatus,
 	}
 }
 
-func trimStringToRectangle(s *string, maxHeight int, maxWidth int) *string {
+func trimStrToRect(s []byte, maxHeight int, maxWidth int) []byte {
 	if s == nil {
 		return nil
 	}
 	// split into lines
 	res := ""
-	lines := strings.Split(*s, "\n")
+	lines := strings.Split(string(s), "\n")
 	if len(lines) > maxHeight {
 		lines = lines[:maxHeight]
 		lines = append(lines, "[...]")
@@ -46,5 +46,5 @@ func trimStringToRectangle(s *string, maxHeight int, maxWidth int) *string {
 			res += line
 		}
 	}
-	return &res
+	return []byte(res)
 }

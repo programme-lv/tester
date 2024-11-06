@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.34.3
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.17.9
+	golang.org/x/sync v0.8.0
 )
 
 require (

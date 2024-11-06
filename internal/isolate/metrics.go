@@ -8,8 +8,8 @@ import (
 )
 
 type Metrics struct {
-	TimeSec      float64
-	TimeWallSec  float64
+	CpuMillis    int64
+	WallMillis   int64
 	MaxRssKb     int64
 	CswVoluntary int64
 	CswForced    int64
@@ -45,9 +45,17 @@ func parseMetaFile(metaFileBytes []byte) (*Metrics, error) {
 func parseLine(key, value string, metrics *Metrics) error {
 	switch key {
 	case "time":
-		return sscanfErr(fmt.Sscanf(value, "%f", &metrics.TimeSec))
+		var timeSec float64
+		if err := sscanfErr(fmt.Sscanf(value, "%f", &timeSec)); err != nil {
+			return err
+		}
+		metrics.CpuMillis = int64(timeSec * 1000.0)
 	case "time-wall":
-		return sscanfErr(fmt.Sscanf(value, "%f", &metrics.TimeWallSec))
+		var timeWallSec float64
+		if err := sscanfErr(fmt.Sscanf(value, "%f", &timeWallSec)); err != nil {
+			return err
+		}
+		metrics.WallMillis = int64(timeWallSec * 1000.0)
 	case "max-rss":
 		return sscanfErr(fmt.Sscanf(value, "%d", &metrics.MaxRssKb))
 	case "csw-voluntary":
