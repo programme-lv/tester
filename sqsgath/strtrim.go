@@ -2,32 +2,11 @@ package sqsgath
 
 import (
 	"strings"
-
-	"github.com/programme-lv/tester/internal"
 )
 
-func trimRunDataOutput(data *internal.RuntimeData, maxHeight int, maxWidth int) *internal.RuntimeData {
-	if data == nil {
-		return nil
-	}
-
-	return &internal.RuntimeData{
-		Stdout:         trimStrToRect(data.Stdout, maxHeight, maxWidth),
-		Stderr:         trimStrToRect(data.Stderr, maxHeight, maxWidth),
-		ExitCode:       data.ExitCode,
-		CpuMillis:      data.CpuMillis,
-		WallMillis:     data.WallMillis,
-		MemoryKiBytes:  data.MemoryKiBytes,
-		CtxSwVoluntary: data.CtxSwVoluntary,
-		CtxSwForced:    data.CtxSwForced,
-		ExitSignal:     data.ExitSignal,
-		IsolateStatus:  data.IsolateStatus,
-	}
-}
-
-func trimStrToRect(s []byte, maxHeight int, maxWidth int) []byte {
-	if s == nil {
-		return nil
+func trimStrToRect(s string, maxHeight int, maxWidth int) string {
+	if s == "" {
+		return ""
 	}
 	// split into lines
 	res := ""
@@ -46,5 +25,5 @@ func trimStrToRect(s []byte, maxHeight int, maxWidth int) []byte {
 			res += line
 		}
 	}
-	return []byte(res)
+	return res
 }

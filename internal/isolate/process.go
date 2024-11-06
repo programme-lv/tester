@@ -40,6 +40,11 @@ type Cmd struct {
 // }
 
 func (process *Cmd) Start() error {
+	if process.started {
+		panic("process should not be started twice")
+	}
+	process.started = true
+
 	var err error
 	process.stdin, err = process.cmd.StdinPipe()
 	if err != nil {
@@ -55,7 +60,6 @@ func (process *Cmd) Start() error {
 	if err != nil {
 		return err
 	}
-
 	return process.cmd.Start()
 }
 

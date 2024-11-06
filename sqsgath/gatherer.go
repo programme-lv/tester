@@ -32,7 +32,7 @@ type Header struct {
 
 type FinishedCompilation struct {
 	Header
-	RuntimeData *internal.RuntimeData `json:"runtime_data"`
+	RuntimeData *RuntimeData `json:"runtime_data"`
 }
 
 const (
@@ -47,7 +47,7 @@ func (s *sqsResQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
 	}
 	msg := FinishedCompilation{
 		Header:      header,
-		RuntimeData: trimRunDataOutput(data, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		RuntimeData: mapRunData(data),
 	}
 	s.send(msg)
 }
@@ -100,9 +100,51 @@ func (s *sqsResQueueGatherer) FinishEvalWithoutError() {
 
 type FinishedTest struct {
 	Header
-	TestId     int64                 `json:"test_id"`
-	Submission *internal.RuntimeData `json:"submission"`
-	Checker    *internal.RuntimeData `json:"checker"`
+	TestId     int64        `json:"test_id"`
+	Submission *RuntimeData `json:"submission"`
+	Checker    *RuntimeData `json:"checker"`
+}
+
+type RuntimeData struct {
+	Stdout   string `json:"stdout"`
+	Stderr   string `json:"stderr"`
+	ExitCode int64  `json:"exit_code"`
+
+	CpuMillis     int64 `json:"cpu_time_millis"`
+	WallMillis    int64 `json:"wall_time_millis"`
+	MemoryKiBytes int64 `json:"memory_kibibytes"`
+
+	CtxSwVoluntary int64 `json:"context_switches_voluntary"`
+	CtxSwForced    int64 `json:"context_switches_forced"`
+
+	ExitSignal    *int64 `json:"exit_signal"`
+	IsolateStatus string `json:"isolate_status"`
+}
+
+func mapRunData(data *internal.RuntimeData) *RuntimeData {
+	if data == nil {
+		return nil
+	}
+	var stdout string = ""
+	if len(data.Stdout) > 0 {
+		stdout = string(data.Stdout)
+	}
+	var stderr string = ""
+	if len(data.Stderr) > 0 {
+		stderr = string(data.Stderr)
+	}
+	return &RuntimeData{
+		Stdout:         trimStrToRect(stdout, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		Stderr:         trimStrToRect(stderr, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		ExitCode:       data.ExitCode,
+		CpuMillis:      data.CpuMillis,
+		WallMillis:     data.WallMillis,
+		MemoryKiBytes:  data.MemoryKiBytes,
+		CtxSwVoluntary: data.CtxSwVoluntary,
+		CtxSwForced:    data.CtxSwForced,
+		ExitSignal:     data.ExitSignal,
+		IsolateStatus:  data.IsolateStatus,
+	}
 }
 
 func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
@@ -112,8 +154,8 @@ func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.Runt
 			MsgType:  MsgTypeFinishedTest,
 		},
 		TestId:     testId,
-		Submission: trimRunDataOutput(submission, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
-		Checker:    trimRunDataOutput(checker, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		Submission: mapRunData(submission),
+		Checker:    mapRunData(checker),
 	}
 	s.send(msg)
 }
@@ -199,15 +241,15 @@ func (s *sqsResQueueGatherer) ReachTest(testId int64, input []byte, answer []byt
 		MsgType:  MsgTypeReachedTest,
 	}
 	var inputStrPtr *string = nil
-	trimmedInput := trimStrToRect(input, MaxRuntimeDataHeight, MaxRuntimeDataWidth)
-	if trimmedInput != nil {
-		inputStr := string(trimmedInput)
+	trimmedInput := trimStrToRect(string(input), MaxRuntimeDataHeight, MaxRuntimeDataWidth)
+	if trimmedInput != "" {
+		inputStr := trimmedInput
 		inputStrPtr = &inputStr
 	}
 	var answerStrPtr *string = nil
-	trimmedAnswer := trimStrToRect(answer, MaxRuntimeDataHeight, MaxRuntimeDataWidth)
-	if trimmedAnswer != nil {
-		answerStr := string(trimmedAnswer)
+	trimmedAnswer := trimStrToRect(string(answer), MaxRuntimeDataHeight, MaxRuntimeDataWidth)
+	if trimmedAnswer != "" {
+		answerStr := trimmedAnswer
 		answerStrPtr = &answerStr
 	}
 	msg := ReachedTest{

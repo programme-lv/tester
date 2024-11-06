@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/programme-lv/tester/internal"
@@ -12,14 +13,21 @@ import (
 func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) {
 	var eg errgroup.Group
 
+	err := p.Start()
+	if err != nil {
+		return nil, fmt.Errorf("failed to start isolate command: %w", err)
+	}
+
 	// write everything to stdin
 	if input != nil {
 		eg.Go(func() error {
-			_, err := io.Copy(p.Stdin(), bytes.NewReader(input))
-			if err != nil {
-				return err
-			}
-			p.Stdin().Close()
+			_, _ = io.Copy(p.Stdin(), bytes.NewReader(input))
+			// if err != nil {
+			// 	// return err if it's not broken pipe
+			// 	if err != io.ErrClosedPipe {
+			// 		return fmt.Errorf("failed to write to stdin: %w", err)
+			// 	}
+			// }
 			return nil
 		})
 	}
@@ -30,7 +38,9 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 		var err error
 		stdout, err = io.ReadAll(p.Stdout())
 		if err != nil {
-			return err
+			if err != io.ErrClosedPipe {
+				return fmt.Errorf("failed to read stdout: %w", err)
+			}
 		}
 		return nil
 	})
@@ -41,19 +51,21 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 		var err error
 		stderr, err = io.ReadAll(p.Stderr())
 		if err != nil {
-			return err
+			if err != io.ErrClosedPipe {
+				return fmt.Errorf("failed to read stderr: %w", err)
+			}
 		}
 		return nil
 	})
 
-	err := eg.Wait()
+	err = eg.Wait()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to wait for isolate command: %w", err)
 	}
 
 	metrics, err := p.Wait()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to wait for isolate command: %w", err)
 	}
 
 	return &internal.RuntimeData{
