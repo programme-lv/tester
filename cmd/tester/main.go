@@ -18,10 +18,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
-	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/filestore"
 	"github.com/programme-lv/tester/internal/tester"
 	"github.com/programme-lv/tester/internal/testlib"
+	internal "github.com/programme-lv/tester/pkg"
 	"github.com/programme-lv/tester/sqsgath"
 )
 
@@ -72,6 +72,18 @@ func main() {
 				if err != nil {
 					log.Printf("failed to delete message, %v", err)
 				}
+				continue
+			}
+
+			// marshall and store as json file in ./logs
+			jsonData, err := json.MarshalIndent(request, "", "\t")
+			if err != nil {
+				log.Printf("failed to marshal request, %v", err)
+				continue
+			}
+			err = os.WriteFile(fmt.Sprintf("./logs/%s.json", request.EvalUuid), jsonData, 0644)
+			if err != nil {
+				log.Printf("failed to write request to file, %v", err)
 				continue
 			}
 

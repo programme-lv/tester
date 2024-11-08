@@ -5,22 +5,22 @@ import (
 	"io"
 	"strings"
 
-	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/internal/utils"
+	pkg "github.com/programme-lv/tester/pkg"
 	"golang.org/x/sync/errgroup"
 )
 
 func (t *Tester) EvaluateSubmission(
 	gath EvalResGatherer,
-	req internal.EvalReq,
+	req pkg.EvalReq,
 ) error {
 	t.logger.Printf("Starting evaluation for submission: %s", req.Code)
 	gath.StartEvaluation(t.systemInfo)
 
 	for _, test := range req.Tests {
 		// t.logger.Printf("Scheduling download for input file: %s", test.InputSha256)
-		if test.InputS3Url == nil || test.AnswerS3Url == nil {
+		if test.InUrl == nil || test.AnsUrl == nil {
 			errMsg := fmt.Errorf("input or answer S3 url is nil")
 			t.logger.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
@@ -75,7 +75,7 @@ func (t *Tester) EvaluateSubmission(
 	if req.Language.CompileCmd != nil {
 		t.logger.Printf("Starting compilation for language: %s", req.Language.LangName)
 		gath.StartCompilation()
-		var runData *internal.RuntimeData
+		var runData *pkg.RuntimeData
 
 		compileBox, err := isolate.NewBox()
 		if err != nil {
@@ -178,8 +178,8 @@ func (t *Tester) EvaluateSubmission(
 
 			gath.ReachTest(int64(test.ID), input, answer)
 
-			var submData *internal.RuntimeData = nil
-			var checkerRuntimeData *internal.RuntimeData = nil
+			var submData *pkg.RuntimeData = nil
+			var checkerRuntimeData *pkg.RuntimeData = nil
 
 			submBox, err := isolate.NewBox()
 			if err != nil {
@@ -356,8 +356,8 @@ func (t *Tester) EvaluateSubmission(
 
 			gath.ReachTest(int64(test.ID), input, answer)
 
-			var submissionRuntimeData *internal.RuntimeData = nil
-			var interactorRuntimeData *internal.RuntimeData = nil
+			var submissionRuntimeData *pkg.RuntimeData = nil
+			var interactorRuntimeData *pkg.RuntimeData = nil
 
 			t.logger.Printf("Setting up isolate box for submission")
 			submBox, err := isolate.NewBox()
@@ -517,7 +517,7 @@ func (t *Tester) EvaluateSubmission(
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
-			submissionRuntimeData = &internal.RuntimeData{
+			submissionRuntimeData = &pkg.RuntimeData{
 				Stdout:        []byte(submStdoutStr.String()),
 				Stderr:        []byte(submStderrStr.String()),
 				ExitCode:      submMetrics.ExitCode,
@@ -534,7 +534,7 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			interactorRuntimeData = &internal.RuntimeData{
+			interactorRuntimeData = &pkg.RuntimeData{
 				Stdout:        []byte(submStdinStr.String()),
 				Stderr:        []byte(interactorStderrStr.String()),
 				ExitCode:      interactorMetrics.ExitCode,

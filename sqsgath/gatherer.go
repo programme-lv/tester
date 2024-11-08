@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-	"github.com/programme-lv/tester/internal"
+	pkg "github.com/programme-lv/tester/pkg"
 )
 
 type sqsResQueueGatherer struct {
@@ -40,7 +40,7 @@ const (
 	MaxRuntimeDataWidth  = 80
 )
 
-func (s *sqsResQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
+func (s *sqsResQueueGatherer) FinishCompilation(data *pkg.RuntimeData) {
 	header := Header{
 		EvalUuid: s.evalUuid,
 		MsgType:  MsgTypeFinishedCompilation,
@@ -121,7 +121,7 @@ type RuntimeData struct {
 	IsolateStatus string `json:"isolate_status"`
 }
 
-func mapRunData(data *internal.RuntimeData) *RuntimeData {
+func mapRunData(data *pkg.RuntimeData) *RuntimeData {
 	if data == nil {
 		return nil
 	}
@@ -147,7 +147,7 @@ func mapRunData(data *internal.RuntimeData) *RuntimeData {
 	}
 }
 
-func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
+func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *pkg.RuntimeData, checker *pkg.RuntimeData) {
 	msg := FinishedTest{
 		Header: Header{
 			EvalUuid: s.evalUuid,

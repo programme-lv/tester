@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/internal/utils"
+	pkg "github.com/programme-lv/tester/pkg"
 )
 
 type TestlibCompiler struct {
@@ -134,7 +134,7 @@ const srcCodeFname = "checker.cpp"
 const compileCmd = "g++ -std=c++17 -o checker checker.cpp -I . -I /usr/include"
 const compiledFname = "checker"
 
-func compile(code string) (compiled []byte, runData *internal.RuntimeData, err error) {
+func compile(code string) (compiled []byte, runData *pkg.RuntimeData, err error) {
 	isolateInstance := isolate.GetInstance()
 
 	log.Println("Creating isolate box...")

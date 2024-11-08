@@ -33,15 +33,13 @@ type EvalReq struct {
 type ReqTest struct {
 	ID int `json:"id"`
 
-	InputSha256  string  `json:"input_sha256"`
-	InputS3Url   *string `json:"input_s3_url"`
-	InputContent *string `json:"input_content"`
-	InputHttpUrl *string `json:"input_http_url"`
+	InSha256  *string `json:"in_sha256"`
+	InUrl     *string `json:"in_url"`
+	InContent *string `json:"in_content"`
 
-	AnswerSha256  string  `json:"answer_sha256"`
-	AnswerS3Url   *string `json:"answer_s3_url"`
-	AnswerContent *string `json:"answer_content"`
-	AnswerHttpUrl *string `json:"answer_http_url"`
+	AnsSha256  *string `json:"ans_sha256"`
+	AnsUrl     *string `json:"ans_url"`
+	AnsContent *string `json:"ans_content"`
 }
 
 type Language struct {

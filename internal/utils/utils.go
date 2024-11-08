@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
+	pkg "github.com/programme-lv/tester/pkg"
 	"golang.org/x/sync/errgroup"
 )
 
-func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) {
+func RunIsolateCmd(p *isolate.Cmd, input []byte) (*pkg.RuntimeData, error) {
 	var eg errgroup.Group
 
 	err := p.Start()
@@ -68,7 +68,7 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 		return nil, fmt.Errorf("failed to wait for isolate command: %w", err)
 	}
 
-	return &internal.RuntimeData{
+	return &pkg.RuntimeData{
 		Stdout:        stdout,
 		Stderr:        stderr,
 		ExitCode:      metrics.ExitCode,
