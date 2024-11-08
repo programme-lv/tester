@@ -1,7 +1,7 @@
-package tester
+package testing
 
 import (
-	pkg "github.com/programme-lv/tester/pkg"
+	"github.com/programme-lv/tester/internal"
 )
 
 type EvalResGatherer interface {
@@ -11,7 +11,7 @@ type EvalResGatherer interface {
 	FinishEvalWithoutError()
 
 	StartCompilation()
-	FinishCompilation(data *pkg.RuntimeData)
+	FinishCompilation(data *internal.RuntimeData)
 
 	StartTesting()
 	FinishTesting()
@@ -19,6 +19,6 @@ type EvalResGatherer interface {
 	ReachTest(testId int64, input []byte, answer []byte)
 	IgnoreTest(testId int64)
 	FinishTest(testId int64,
-		submission *pkg.RuntimeData,
-		checker *pkg.RuntimeData)
+		submission *internal.RuntimeData,
+		checker *internal.RuntimeData)
 }

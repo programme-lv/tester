@@ -1,19 +1,20 @@
-package tester
+package testing
 
 import (
 	"fmt"
 	"io"
 	"strings"
 
+	"github.com/programme-lv/tester"
+	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/internal/utils"
-	pkg "github.com/programme-lv/tester/pkg"
 	"golang.org/x/sync/errgroup"
 )
 
 func (t *Tester) EvaluateSubmission(
 	gath EvalResGatherer,
-	req pkg.EvalReq,
+	req tester.EvalReq,
 ) error {
 	t.logger.Printf("Starting evaluation for submission: %s", req.Code)
 	gath.StartEvaluation(t.systemInfo)
@@ -26,7 +27,14 @@ func (t *Tester) EvaluateSubmission(
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
-		err := t.filestore.ScheduleDownloadFromS3(test.InputSha256, *test.InputS3Url)
+		// url has to start with s3://
+		if !strings.HasPrefix(*test.InUrl, "s3://") {
+			errMsg := fmt.Errorf("input S3 url is invalid: %s", *test.InUrl)
+			t.logger.Printf("Error: %s", errMsg)
+			gath.FinishEvalWithInternalError(errMsg.Error())
+			return errMsg
+		}
+		err := t.filestore.ScheduleDownloadFromS3(*test.InSha256, *test.InUrl)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -35,7 +43,7 @@ func (t *Tester) EvaluateSubmission(
 		}
 
 		// t.logger.Printf("Scheduling download for answer file: %s", test.AnswerSha256)
-		err = t.filestore.ScheduleDownloadFromS3(test.AnswerSha256, *test.AnswerS3Url)
+		err = t.filestore.ScheduleDownloadFromS3(*test.AnsSha256, *test.AnsUrl)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -75,7 +83,7 @@ func (t *Tester) EvaluateSubmission(
 	if req.Language.CompileCmd != nil {
 		t.logger.Printf("Starting compilation for language: %s", req.Language.LangName)
 		gath.StartCompilation()
-		var runData *pkg.RuntimeData
+		var runData *internal.RuntimeData
 
 		compileBox, err := isolate.NewBox()
 		if err != nil {
@@ -158,8 +166,8 @@ func (t *Tester) EvaluateSubmission(
 		for _, test := range req.Tests {
 			t.logger.Printf("Starting test: %d", test.ID)
 
-			t.logger.Printf("Awaiting test input: %s", test.InputSha256)
-			input, err := t.filestore.AwaitAndGetFile(test.InputSha256)
+			t.logger.Printf("Awaiting test input: %s", test.InSha256)
+			input, err := t.filestore.AwaitAndGetFile(*test.InSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test input: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -167,8 +175,8 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			t.logger.Printf("Awaiting test answer: %s", test.AnswerSha256)
-			answer, err := t.filestore.AwaitAndGetFile(test.AnswerSha256)
+			t.logger.Printf("Awaiting test answer: %s", test.AnsSha256)
+			answer, err := t.filestore.AwaitAndGetFile(*test.AnsSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test answer: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -178,8 +186,8 @@ func (t *Tester) EvaluateSubmission(
 
 			gath.ReachTest(int64(test.ID), input, answer)
 
-			var submData *pkg.RuntimeData = nil
-			var checkerRuntimeData *pkg.RuntimeData = nil
+			var submData *internal.RuntimeData = nil
+			var checkerRuntimeData *internal.RuntimeData = nil
 
 			submBox, err := isolate.NewBox()
 			if err != nil {
@@ -336,8 +344,8 @@ func (t *Tester) EvaluateSubmission(
 		for _, test := range req.Tests {
 			t.logger.Printf("Starting test: %d", test.ID)
 
-			t.logger.Printf("Awaiting test input: %s", test.InputSha256)
-			input, err := t.filestore.AwaitAndGetFile(test.InputSha256)
+			t.logger.Printf("Awaiting test input: %s", test.InSha256)
+			input, err := t.filestore.AwaitAndGetFile(*test.InSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test input: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -345,8 +353,8 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			t.logger.Printf("Awaiting test answer: %s", test.AnswerSha256)
-			answer, err := t.filestore.AwaitAndGetFile(test.AnswerSha256)
+			t.logger.Printf("Awaiting test answer: %s", test.AnsSha256)
+			answer, err := t.filestore.AwaitAndGetFile(*test.AnsSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test answer: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -356,8 +364,8 @@ func (t *Tester) EvaluateSubmission(
 
 			gath.ReachTest(int64(test.ID), input, answer)
 
-			var submissionRuntimeData *pkg.RuntimeData = nil
-			var interactorRuntimeData *pkg.RuntimeData = nil
+			var submissionRuntimeData *internal.RuntimeData = nil
+			var interactorRuntimeData *internal.RuntimeData = nil
 
 			t.logger.Printf("Setting up isolate box for submission")
 			submBox, err := isolate.NewBox()
@@ -517,7 +525,7 @@ func (t *Tester) EvaluateSubmission(
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
-			submissionRuntimeData = &pkg.RuntimeData{
+			submissionRuntimeData = &internal.RuntimeData{
 				Stdout:        []byte(submStdoutStr.String()),
 				Stderr:        []byte(submStderrStr.String()),
 				ExitCode:      submMetrics.ExitCode,
@@ -534,7 +542,7 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			interactorRuntimeData = &pkg.RuntimeData{
+			interactorRuntimeData = &internal.RuntimeData{
 				Stdout:        []byte(submStdinStr.String()),
 				Stderr:        []byte(interactorStderrStr.String()),
 				ExitCode:      interactorMetrics.ExitCode,

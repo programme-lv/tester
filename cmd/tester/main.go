@@ -18,10 +18,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
+	"github.com/programme-lv/tester"
 	"github.com/programme-lv/tester/internal/filestore"
-	"github.com/programme-lv/tester/internal/tester"
+	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testlib"
-	internal "github.com/programme-lv/tester/pkg"
 	"github.com/programme-lv/tester/sqsgath"
 )
 
@@ -39,7 +39,7 @@ func main() {
 	filestore := filestore.NewFileStore(GetS3DownloadFunc())
 	filestore.StartDownloadingInBg()
 	tlibCheckers := testlib.NewTestlibCompiler()
-	tester := tester.NewTester(filestore, tlibCheckers)
+	t := testing.NewTester(filestore, tlibCheckers)
 
 	submReqQueueUrl := os.Getenv("SUBM_REQ_QUEUE_URL")
 	if submReqQueueUrl == "" {
@@ -61,7 +61,7 @@ func main() {
 
 		for _, message := range output.Messages {
 			log.Printf("received message: %s", *message.Body)
-			var request internal.EvalReq
+			var request tester.EvalReq
 			err := json.Unmarshal([]byte(*message.Body), &request)
 			if err != nil {
 				log.Printf("failed to unmarshal message, %v", err)
@@ -89,7 +89,7 @@ func main() {
 
 			responseSqsUrl := request.ResSqsUrl
 			gatherer := sqsgath.NewSqsResponseQueueGatherer(request.EvalUuid, responseSqsUrl)
-			err = tester.EvaluateSubmission(gatherer, request)
+			err = t.EvaluateSubmission(gatherer, request)
 			if err != nil {
 				log.Printf("Error: %v", err)
 				continue

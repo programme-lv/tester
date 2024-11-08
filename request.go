@@ -1,20 +1,4 @@
-package internal
-
-type RuntimeData struct {
-	Stdout   []byte `json:"stdout"`
-	Stderr   []byte `json:"stderr"`
-	ExitCode int64  `json:"exit_code"`
-
-	CpuMillis     int64 `json:"cpu_time_millis"`
-	WallMillis    int64 `json:"wall_time_millis"`
-	MemoryKiBytes int64 `json:"memory_kibibytes"`
-
-	CtxSwVoluntary int64 `json:"context_switches_voluntary"`
-	CtxSwForced    int64 `json:"context_switches_forced"`
-
-	ExitSignal    *int64 `json:"exit_signal"`
-	IsolateStatus string `json:"isolate_status"`
-}
+package tester
 
 type EvalReq struct {
 	EvalUuid  string `json:"eval_uuid"`

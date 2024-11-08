@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-	pkg "github.com/programme-lv/tester/pkg"
+	"github.com/programme-lv/tester/internal"
 )
 
 type sqsResQueueGatherer struct {
@@ -40,7 +40,7 @@ const (
 	MaxRuntimeDataWidth  = 80
 )
 
-func (s *sqsResQueueGatherer) FinishCompilation(data *pkg.RuntimeData) {
+func (s *sqsResQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
 	header := Header{
 		EvalUuid: s.evalUuid,
 		MsgType:  MsgTypeFinishedCompilation,
@@ -106,24 +106,29 @@ type FinishedTest struct {
 }
 
 type RuntimeData struct {
-	Stdout   string `json:"stdout"`
-	Stderr   string `json:"stderr"`
-	ExitCode int64  `json:"exit_code"`
+	Stdin    string `json:"in"`
+	Stdout   string `json:"out"`
+	Stderr   string `json:"err"`
+	ExitCode int64  `json:"exit"`
 
-	CpuMillis     int64 `json:"cpu_time_millis"`
-	WallMillis    int64 `json:"wall_time_millis"`
-	MemoryKiBytes int64 `json:"memory_kibibytes"`
+	CpuMillis     int64 `json:"cpu_ms"`
+	WallMillis    int64 `json:"wall_ms"`
+	MemoryKiBytes int64 `json:"mem_kib"`
 
-	CtxSwVoluntary int64 `json:"context_switches_voluntary"`
-	CtxSwForced    int64 `json:"context_switches_forced"`
+	CtxSwV int64 `json:"ctx_sw_v"`
+	CtxSwF int64 `json:"ctx_sw_f"`
 
-	ExitSignal    *int64 `json:"exit_signal"`
+	ExitSignal    *int64 `json:"signal"`
 	IsolateStatus string `json:"isolate_status"`
 }
 
-func mapRunData(data *pkg.RuntimeData) *RuntimeData {
+func mapRunData(data *internal.RuntimeData) *RuntimeData {
 	if data == nil {
 		return nil
+	}
+	var stdin string = ""
+	if len(data.Stdin) > 0 {
+		stdin = string(data.Stdin)
 	}
 	var stdout string = ""
 	if len(data.Stdout) > 0 {
@@ -134,20 +139,21 @@ func mapRunData(data *pkg.RuntimeData) *RuntimeData {
 		stderr = string(data.Stderr)
 	}
 	return &RuntimeData{
-		Stdout:         trimStrToRect(stdout, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
-		Stderr:         trimStrToRect(stderr, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
-		ExitCode:       data.ExitCode,
-		CpuMillis:      data.CpuMillis,
-		WallMillis:     data.WallMillis,
-		MemoryKiBytes:  data.MemoryKiBytes,
-		CtxSwVoluntary: data.CtxSwVoluntary,
-		CtxSwForced:    data.CtxSwForced,
-		ExitSignal:     data.ExitSignal,
-		IsolateStatus:  data.IsolateStatus,
+		Stdin:         trimStrToRect(stdin, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		Stdout:        trimStrToRect(stdout, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		Stderr:        trimStrToRect(stderr, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		ExitCode:      data.ExitCode,
+		CpuMillis:     data.CpuMillis,
+		WallMillis:    data.WallMillis,
+		MemoryKiBytes: data.MemoryKiBytes,
+		CtxSwV:        data.CtxSwVoluntary,
+		CtxSwF:        data.CtxSwForced,
+		ExitSignal:    data.ExitSignal,
+		IsolateStatus: data.IsolateStatus,
 	}
 }
 
-func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *pkg.RuntimeData, checker *pkg.RuntimeData) {
+func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
 	msg := FinishedTest{
 		Header: Header{
 			EvalUuid: s.evalUuid,
