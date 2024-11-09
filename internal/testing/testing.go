@@ -157,7 +157,7 @@ func (t *Tester) EvaluateSubmission(
 		for _, test := range req.Tests {
 			t.logger.Printf("Starting test: %d", test.ID)
 
-			t.logger.Printf("Awaiting test input: %s", test.InSha256)
+			t.logger.Printf("Awaiting test input: %s", (*test.InSha256)[:8])
 			input, err := t.filestore.Await(*test.InSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test input: %w", err)
@@ -166,7 +166,7 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			t.logger.Printf("Awaiting test answer: %s", test.AnsSha256)
+			t.logger.Printf("Awaiting test answer: %s", (*test.AnsSha256)[:8])
 			answer, err := t.filestore.Await(*test.AnsSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test answer: %w", err)
