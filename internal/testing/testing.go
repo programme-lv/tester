@@ -8,6 +8,7 @@ import (
 	"github.com/programme-lv/tester"
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
+	"github.com/programme-lv/tester/internal/testlib"
 	"github.com/programme-lv/tester/internal/utils"
 	"golang.org/x/sync/errgroup"
 )
@@ -20,30 +21,20 @@ func (t *Tester) EvaluateSubmission(
 	gath.StartEvaluation(t.systemInfo)
 
 	for _, test := range req.Tests {
-		// t.logger.Printf("Scheduling download for input file: %s", test.InputSha256)
 		if test.InUrl == nil || test.AnsUrl == nil {
-			errMsg := fmt.Errorf("input or answer S3 url is nil")
+			errMsg := fmt.Errorf("input or answer download url is nil")
 			t.logger.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
-		// url has to start with s3://
-		if !strings.HasPrefix(*test.InUrl, "s3://") {
-			errMsg := fmt.Errorf("input S3 url is invalid: %s", *test.InUrl)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-		err := t.filestore.ScheduleDownloadFromS3(*test.InSha256, *test.InUrl)
+		err := t.filestore.Schedule(*test.InSha256, *test.InUrl)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
-
-		// t.logger.Printf("Scheduling download for answer file: %s", test.AnswerSha256)
-		err = t.filestore.ScheduleDownloadFromS3(*test.AnsSha256, *test.AnsUrl)
+		err = t.filestore.Schedule(*test.AnsSha256, *test.AnsUrl)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -64,7 +55,7 @@ func (t *Tester) EvaluateSubmission(
 		}
 	} else {
 		req.Checker = new(string)
-		*req.Checker = TestlibDefaultChecker
+		*req.Checker = testlib.DefaultChecker
 	}
 
 	var tlibChecker []byte
@@ -167,7 +158,7 @@ func (t *Tester) EvaluateSubmission(
 			t.logger.Printf("Starting test: %d", test.ID)
 
 			t.logger.Printf("Awaiting test input: %s", test.InSha256)
-			input, err := t.filestore.AwaitAndGetFile(*test.InSha256)
+			input, err := t.filestore.Await(*test.InSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test input: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -176,7 +167,7 @@ func (t *Tester) EvaluateSubmission(
 			}
 
 			t.logger.Printf("Awaiting test answer: %s", test.AnsSha256)
-			answer, err := t.filestore.AwaitAndGetFile(*test.AnsSha256)
+			answer, err := t.filestore.Await(*test.AnsSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test answer: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -247,22 +238,22 @@ func (t *Tester) EvaluateSubmission(
 				continue
 			}
 
-			if submData.WallMillis > 14000 { // more than 14 seconds
-				errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.ID, submData.WallMillis)
+			if submData.WallMs > 14000 { // more than 14 seconds
+				errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.ID, submData.WallMs)
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishTest(int64(test.ID), submData, nil)
 				continue
 			}
 
-			if submData.CpuMillis > int64(req.CpuMillis) {
-				errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.ID, submData.CpuMillis)
+			if submData.CpuMs > int64(req.CpuMillis) {
+				errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.ID, submData.CpuMs)
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishTest(int64(test.ID), submData, nil)
 				continue
 			}
 
-			if submData.MemoryKiBytes > int64(req.MemoryKiB) {
-				errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.ID, submData.MemoryKiBytes)
+			if submData.MemKiB > int64(req.MemoryKiB) {
+				errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.ID, submData.MemKiB)
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishTest(int64(test.ID), submData, nil)
 				continue
@@ -345,7 +336,7 @@ func (t *Tester) EvaluateSubmission(
 			t.logger.Printf("Starting test: %d", test.ID)
 
 			t.logger.Printf("Awaiting test input: %s", test.InSha256)
-			input, err := t.filestore.AwaitAndGetFile(*test.InSha256)
+			input, err := t.filestore.Await(*test.InSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test input: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -354,7 +345,7 @@ func (t *Tester) EvaluateSubmission(
 			}
 
 			t.logger.Printf("Awaiting test answer: %s", test.AnsSha256)
-			answer, err := t.filestore.AwaitAndGetFile(*test.AnsSha256)
+			answer, err := t.filestore.Await(*test.AnsSha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test answer: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -526,12 +517,12 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 			submissionRuntimeData = &internal.RuntimeData{
-				Stdout:        []byte(submStdoutStr.String()),
-				Stderr:        []byte(submStderrStr.String()),
-				ExitCode:      submMetrics.ExitCode,
-				CpuMillis:     submMetrics.CpuMillis,
-				WallMillis:    submMetrics.WallMillis,
-				MemoryKiBytes: submMetrics.CgMemKb,
+				Stdout:   []byte(submStdoutStr.String()),
+				Stderr:   []byte(submStderrStr.String()),
+				ExitCode: submMetrics.ExitCode,
+				CpuMs:    submMetrics.CpuMillis,
+				WallMs:   submMetrics.WallMillis,
+				MemKiB:   submMetrics.CgMemKb,
 			}
 
 			interactorMetrics, err := interactorProcess.Wait()
@@ -543,12 +534,12 @@ func (t *Tester) EvaluateSubmission(
 			}
 
 			interactorRuntimeData = &internal.RuntimeData{
-				Stdout:        []byte(submStdinStr.String()),
-				Stderr:        []byte(interactorStderrStr.String()),
-				ExitCode:      interactorMetrics.ExitCode,
-				CpuMillis:     interactorMetrics.CpuMillis,
-				WallMillis:    interactorMetrics.WallMillis,
-				MemoryKiBytes: interactorMetrics.CgMemKb,
+				Stdout:   []byte(submStdinStr.String()),
+				Stderr:   []byte(interactorStderrStr.String()),
+				ExitCode: interactorMetrics.ExitCode,
+				CpuMs:    interactorMetrics.CpuMillis,
+				WallMs:   interactorMetrics.WallMillis,
+				MemKiB:   interactorMetrics.CgMemKb,
 			}
 
 			t.logger.Printf("Test %d finished", test.ID)

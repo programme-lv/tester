@@ -1,6 +1,6 @@
-package testing
+package testlib
 
-const TestlibDefaultChecker string = `#include "testlib.h"
+const DefaultChecker string = `#include "testlib.h"
 
 using namespace std;
 

@@ -3,21 +3,15 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/joho/godotenv"
-	"github.com/klauspost/compress/zstd"
 	"github.com/programme-lv/tester"
 	"github.com/programme-lv/tester/internal/filestore"
 	"github.com/programme-lv/tester/internal/testing"
@@ -36,10 +30,12 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	filestore := filestore.NewFileStore(GetS3DownloadFunc())
-	filestore.StartDownloadingInBg()
-	tlibCheckers := testlib.NewTestlibCompiler()
-	t := testing.NewTester(filestore, tlibCheckers)
+	filestore := filestore.New(filepath.Join("var", "tester", "files"))
+	go filestore.Start()
+
+	tlibCompiler := testlib.NewTestlibCompiler()
+
+	t := testing.NewTester(filestore, tlibCompiler)
 
 	submReqQueueUrl := os.Getenv("SUBM_REQ_QUEUE_URL")
 	if submReqQueueUrl == "" {
@@ -75,18 +71,6 @@ func main() {
 				continue
 			}
 
-			// marshall and store as json file in ./logs
-			jsonData, err := json.MarshalIndent(request, "", "\t")
-			if err != nil {
-				log.Printf("failed to marshal request, %v", err)
-				continue
-			}
-			err = os.WriteFile(fmt.Sprintf("./logs/%s.json", request.EvalUuid), jsonData, 0644)
-			if err != nil {
-				log.Printf("failed to write request to file, %v", err)
-				continue
-			}
-
 			responseSqsUrl := request.ResSqsUrl
 			gatherer := sqsgath.NewSqsResponseQueueGatherer(request.EvalUuid, responseSqsUrl)
 			err = t.EvaluateSubmission(gatherer, request)
@@ -104,74 +88,4 @@ func main() {
 			}
 		}
 	}
-}
-
-// GetS3DownloadFunc returns a function that downloads a file from S3 to a local path.
-// If the file is zstd compressed, it will be decompressed.
-func GetS3DownloadFunc() func(s3Url string, path string) error {
-
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("eu-central-1"))
-	if err != nil {
-		panic(fmt.Sprintf("unable to load SDK config, %v", err))
-	}
-	s3Client := s3.NewFromConfig(cfg)
-
-	return func(s3Url string, path string) error {
-		u, err := url.Parse(s3Url)
-		if err != nil {
-			return fmt.Errorf("failed to parse s3 url %s: %w", s3Url, err)
-		}
-
-		if u.Scheme != "https" {
-			return fmt.Errorf("invalid s3 url scheme: %s", u.Scheme)
-		}
-
-		// Extract bucket from host, assuming format bucket.s3.region.amazonaws.com
-		hostParts := strings.Split(u.Host, ".")
-		if len(hostParts) < 3 || hostParts[1] != "s3" {
-			return fmt.Errorf("invalid s3 url host format: %s", u.Host)
-		}
-		bucket := hostParts[0]
-		key := strings.TrimPrefix(u.Path, "/")
-
-		out, err := os.Create(path)
-		if err != nil {
-			return fmt.Errorf("failed to create file %s: %w", path, err)
-		}
-		defer out.Close()
-
-		log.Printf("Downloading file %s from s3", s3Url)
-		obj, err := s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		})
-		if err != nil {
-			return fmt.Errorf("failed to download file %s from s3: %w (bucket: %s, key: %s)", s3Url, err, bucket, key)
-		}
-
-		if (obj.ContentType != nil && *obj.ContentType == "application/zstd") ||
-			filepath.Ext(u.Path) == ".zst" {
-
-			d, err := zstd.NewReader(obj.Body)
-			if err != nil {
-				return fmt.Errorf("failed to create zstd reader: %w", err)
-			}
-			defer d.Close()
-			_, err = io.Copy(out, d)
-			if err != nil {
-				return fmt.Errorf("failed to write file %s: %w", path, err)
-			}
-
-			return nil
-		}
-
-		_, err = io.Copy(out, obj.Body)
-		if err != nil {
-			return fmt.Errorf("failed to write file %s: %w", path, err)
-		}
-
-		return nil
-	}
-
 }

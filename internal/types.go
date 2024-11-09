@@ -6,12 +6,12 @@ type RuntimeData struct {
 	Stderr   []byte
 	ExitCode int64
 
-	CpuMillis     int64
-	WallMillis    int64
-	MemoryKiBytes int64
+	CpuMs  int64
+	WallMs int64
+	MemKiB int64
 
-	CtxSwVoluntary int64
-	CtxSwForced    int64
+	CtxSwV int64
+	CtxSwF int64
 
 	ExitSignal    *int64
 	IsolateStatus string

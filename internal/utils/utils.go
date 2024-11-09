@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
@@ -21,13 +22,10 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 	// write everything to stdin
 	if input != nil {
 		eg.Go(func() error {
-			_, _ = io.Copy(p.Stdin(), bytes.NewReader(input))
-			// if err != nil {
-			// 	// return err if it's not broken pipe
-			// 	if err != io.ErrClosedPipe {
-			// 		return fmt.Errorf("failed to write to stdin: %w", err)
-			// 	}
-			// }
+			_, err := io.Copy(p.Stdin(), bytes.NewReader(input))
+			if err != nil {
+				log.Printf("failed to write to stdin: %v", err)
+			}
 			return nil
 		})
 	}
@@ -35,26 +33,20 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 	// read everything from stdout
 	var stdout []byte
 	eg.Go(func() error {
-		// var err error
-		stdout, _ = io.ReadAll(p.Stdout())
-		// if err != nil {
-		// 	if err != io.ErrClosedPipe {
-		// 		return fmt.Errorf("failed to read stdout: %w", err)
-		// 	}
-		// }
+		stdout, err = io.ReadAll(p.Stdout())
+		if err != nil {
+			log.Printf("failed to read stdout: %v", err)
+		}
 		return nil
 	})
 
 	// read everything from stderr
 	var stderr []byte
 	eg.Go(func() error {
-		// var err error
-		stderr, _ = io.ReadAll(p.Stderr())
-		// if err != nil {
-		// 	if err != io.ErrClosedPipe {
-		// 		return fmt.Errorf("failed to read stderr: %w", err)
-		// 	}
-		// }
+		stderr, err = io.ReadAll(p.Stderr())
+		if err != nil {
+			log.Printf("failed to read stderr: %v", err)
+		}
 		return nil
 	})
 
@@ -69,11 +61,12 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 	}
 
 	return &internal.RuntimeData{
-		Stdout:        stdout,
-		Stderr:        stderr,
-		ExitCode:      metrics.ExitCode,
-		CpuMillis:     metrics.CpuMillis,
-		WallMillis:    metrics.WallMillis,
-		MemoryKiBytes: metrics.CgMemKb,
+		Stdin:    input,
+		Stdout:   stdout,
+		Stderr:   stderr,
+		ExitCode: metrics.ExitCode,
+		CpuMs:    metrics.CpuMillis,
+		WallMs:   metrics.WallMillis,
+		MemKiB:   metrics.CgMemKb,
 	}, nil
 }
