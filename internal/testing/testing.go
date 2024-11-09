@@ -21,25 +21,47 @@ func (t *Tester) EvaluateSubmission(
 	gath.StartEvaluation(t.systemInfo)
 
 	for _, test := range req.Tests {
-		if test.InUrl == nil || test.AnsUrl == nil {
-			errMsg := fmt.Errorf("input or answer download url is nil")
+		if (test.InUrl == nil && test.InContent == nil) || (test.AnsUrl == nil && test.AnsContent == nil) {
+			errMsg := fmt.Errorf("input or answer download url is nil and content is nil")
 			t.logger.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
-		err := t.filestore.Schedule(*test.InSha256, *test.InUrl)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
+		if test.InContent != nil {
+			var err error
+			*test.InSha256, err = t.filestore.Store([]byte(*test.InContent))
+			if err != nil {
+				errMsg := fmt.Errorf("failed to store input content: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+		} else {
+			err := t.filestore.Schedule(*test.InSha256, *test.InUrl)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
 		}
-		err = t.filestore.Schedule(*test.AnsSha256, *test.AnsUrl)
-		if err != nil {
-			errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
+		if test.AnsContent != nil {
+			var err error
+			*test.AnsSha256, err = t.filestore.Store([]byte(*test.AnsContent))
+			if err != nil {
+				errMsg := fmt.Errorf("failed to store answer content: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
+		} else {
+			err := t.filestore.Schedule(*test.AnsSha256, *test.AnsUrl)
+			if err != nil {
+				errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
+				t.logger.Printf("Error: %s", errMsg)
+				gath.FinishEvalWithInternalError(errMsg.Error())
+				return errMsg
+			}
 		}
 	}
 

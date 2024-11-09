@@ -72,6 +72,27 @@ func (fs *FileStore) Await(key string) ([]byte, error) {
 	return fs.Get(key)
 }
 
+func (fs *FileStore) Store(data []byte) (string, error) {
+	// get sha256 hash of the data
+	hasher := sha256.New()
+	_, err := hasher.Write(data)
+	if err != nil {
+		errMsg := "failed to compute SHA256 of data: %w"
+		return "", fmt.Errorf(errMsg, err)
+	}
+	sha256Key := hex.EncodeToString(hasher.Sum(nil))
+
+	// save the data to the file store
+	filePath := fs.path(sha256Key)
+	err = os.WriteFile(filePath, data, 0644)
+	if err != nil {
+		errMsg := "failed to write data to file %s: %w"
+		return "", fmt.Errorf(errMsg, filePath, err)
+	}
+
+	return sha256Key, nil
+}
+
 func (fs *FileStore) Schedule(sha256Key string, downlUrl string) error {
 	if err := validateHexSha256(sha256Key); err != nil {
 		errMsg := "invalid file key %s: %w"
