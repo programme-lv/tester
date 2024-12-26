@@ -95,6 +95,7 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 	} else {
+		// TODO: wtf
 		req.Checker = new(string)
 		*req.Checker = testlib.DefaultChecker
 	}
@@ -570,12 +571,18 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 			submissionRuntimeData = &internal.RuntimeData{
-				Stdout:   []byte(submStdoutStr.String()),
-				Stderr:   []byte(submStderrStr.String()),
-				ExitCode: submMetrics.ExitCode,
-				CpuMs:    submMetrics.CpuMillis,
-				WallMs:   submMetrics.WallMillis,
-				MemKiB:   submMetrics.CgMemKb,
+				Stdin:         []byte(submStdinStr.String()),
+				Stdout:        []byte(submStdoutStr.String()),
+				Stderr:        []byte(submStderrStr.String()),
+				ExitCode:      submMetrics.ExitCode,
+				CpuMs:         submMetrics.CpuMillis,
+				WallMs:        submMetrics.WallMillis,
+				MemKiB:        submMetrics.CgMemKb,
+				CtxSwV:        submMetrics.CswVoluntary,
+				CtxSwF:        submMetrics.CswForced,
+				ExitSignal:    submMetrics.ExitSig,
+				IsolateStatus: submMetrics.Status,
+				IsolateMsg:    submMetrics.Message,
 			}
 
 			interactorMetrics, err := interactorProcess.Wait()
@@ -587,12 +594,18 @@ func (t *Tester) EvaluateSubmission(
 			}
 
 			interactorRuntimeData = &internal.RuntimeData{
-				Stdout:   []byte(submStdinStr.String()),
-				Stderr:   []byte(interactorStderrStr.String()),
-				ExitCode: interactorMetrics.ExitCode,
-				CpuMs:    interactorMetrics.CpuMillis,
-				WallMs:   interactorMetrics.WallMillis,
-				MemKiB:   interactorMetrics.CgMemKb,
+				Stdout:        []byte(submStdinStr.String()),
+				Stderr:        []byte(interactorStderrStr.String()),
+				ExitCode:      interactorMetrics.ExitCode,
+				CpuMs:         interactorMetrics.CpuMillis,
+				WallMs:        interactorMetrics.WallMillis,
+				MemKiB:        interactorMetrics.CgMemKb,
+				Stdin:         []byte(submStdinStr.String()),
+				IsolateStatus: interactorMetrics.Status,
+				CtxSwV:        interactorMetrics.CswVoluntary,
+				CtxSwF:        interactorMetrics.CswForced,
+				ExitSignal:    interactorMetrics.ExitSig,
+				IsolateMsg:    interactorMetrics.Message,
 			}
 
 			t.logger.Printf("Test %d finished", test.ID)

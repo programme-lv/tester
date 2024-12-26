@@ -14,5 +14,6 @@ type RuntimeData struct {
 	CtxSwF int64
 
 	ExitSignal    *int64
-	IsolateStatus string
+	IsolateStatus *string
+	IsolateMsg    *string
 }

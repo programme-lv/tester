@@ -15,8 +15,8 @@ type Metrics struct {
 	CswForced    int64
 	CgMemKb      int64
 	ExitCode     int64
-	Status       string
-	Message      string
+	Status       *string
+	Message      *string
 	Killed       int64
 	ExitSig      *int64
 }
@@ -67,11 +67,11 @@ func parseLine(key, value string, metrics *Metrics) error {
 	case "exitcode":
 		return sscanfErr(fmt.Sscanf(value, "%d", &metrics.ExitCode))
 	case "status":
-		metrics.Status = value
+		metrics.Status = &value
 	case "killed":
 		return sscanfErr(fmt.Sscanf(value, "%d", &metrics.Killed))
 	case "message":
-		metrics.Message = value
+		metrics.Message = &value
 	case "exitsig":
 		var exitsig int64
 		if err := sscanfErr(fmt.Sscanf(value, "%d", &exitsig)); err != nil {

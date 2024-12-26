@@ -118,8 +118,9 @@ type RuntimeData struct {
 	CtxSwV int64 `json:"ctx_sw_v"`
 	CtxSwF int64 `json:"ctx_sw_f"`
 
-	ExitSignal    *int64 `json:"signal"`
-	IsolateStatus string `json:"isolate_status"`
+	ExitSignal    *int64  `json:"signal"`
+	IsolateStatus *string `json:"isolate_status"`
+	IsolateMsg    *string `json:"isolate_msg"`
 }
 
 func mapRunData(data *internal.RuntimeData) *RuntimeData {
@@ -150,6 +151,7 @@ func mapRunData(data *internal.RuntimeData) *RuntimeData {
 		CtxSwF:        data.CtxSwF,
 		ExitSignal:    data.ExitSignal,
 		IsolateStatus: data.IsolateStatus,
+		IsolateMsg:    data.IsolateMsg,
 	}
 }
 

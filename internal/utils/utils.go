@@ -61,12 +61,17 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 	}
 
 	return &internal.RuntimeData{
-		Stdin:    input,
-		Stdout:   stdout,
-		Stderr:   stderr,
-		ExitCode: metrics.ExitCode,
-		CpuMs:    metrics.CpuMillis,
-		WallMs:   metrics.WallMillis,
-		MemKiB:   metrics.CgMemKb,
+		Stdin:         input,
+		Stdout:        stdout,
+		Stderr:        stderr,
+		ExitCode:      metrics.ExitCode,
+		CpuMs:         metrics.CpuMillis,
+		WallMs:        metrics.WallMillis,
+		MemKiB:        metrics.CgMemKb,
+		IsolateStatus: metrics.Status,
+		CtxSwV:        metrics.CswVoluntary,
+		CtxSwF:        metrics.CswForced,
+		ExitSignal:    metrics.ExitSig,
+		IsolateMsg:    metrics.Message,
 	}, nil
 }
