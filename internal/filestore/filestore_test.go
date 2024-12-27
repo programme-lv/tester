@@ -9,13 +9,19 @@ import (
 )
 
 func TestFileStore(t *testing.T) {
-	tmp, err := os.MkdirTemp("", "filestore_test*")
+	fileDir, err := os.MkdirTemp("", "filestore_test_files*")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	defer os.RemoveAll(tmp)
+	defer os.RemoveAll(fileDir)
 
-	fs := filestore.New(tmp)
+	downlDir, err := os.MkdirTemp("", "filestore_test_downl*")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	defer os.RemoveAll(downlDir)
+
+	fs := filestore.New(fileDir, downlDir)
 	go fs.Start()
 
 	err = fs.Schedule("572619f3013c7840cfd6113674ca0aefbdb573d4b334e3ee4e5be1642e27bd5a",

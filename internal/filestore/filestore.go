@@ -13,32 +13,41 @@ import (
 	"sync"
 
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/google/uuid"
 	"github.com/klauspost/compress/zstd"
 	"github.com/puzpuzpuz/xsync/v3"
 )
 
 type FileStore struct {
-	dir   string             // file directory
-	await mapset.Set[string] // awaited keys (prioritized)
-	cond  *sync.Cond         // change announcements
-	queue chan string        // queue of scheduled keys
-	urls  *xsync.MapOf[string, chan *url.URL]
+	fileDir string             // file directory
+	tmpDir  string             // temporary directory
+	await   mapset.Set[string] // awaited keys (prioritized)
+	cond    *sync.Cond         // change announcements
+	queue   chan string        // queue of scheduled keys
+	urls    *xsync.MapOf[string, chan *url.URL]
 }
 
-func New(path string) *FileStore {
+func New(fileDir string, tmpDir string) *FileStore {
 
-	err := os.MkdirAll(path, 0755)
+	err := os.MkdirAll(fileDir, 0755)
 	if err != nil {
 		errMsg := "failed to create directory %s: %w"
-		panic(fmt.Errorf(errMsg, path, err))
+		panic(fmt.Errorf(errMsg, fileDir, err))
+	}
+
+	err = os.MkdirAll(tmpDir, 0755)
+	if err != nil {
+		errMsg := "failed to create directory %s: %w"
+		panic(fmt.Errorf(errMsg, tmpDir, err))
 	}
 
 	fs := &FileStore{
-		dir:   path,
-		await: mapset.NewSet[string](),
-		urls:  xsync.NewMapOf[string, chan *url.URL](),
-		queue: make(chan string, 1024),
-		cond:  sync.NewCond(&sync.Mutex{}),
+		fileDir: fileDir,
+		tmpDir:  tmpDir,
+		await:   mapset.NewSet[string](),
+		urls:    xsync.NewMapOf[string, chan *url.URL](),
+		queue:   make(chan string, 1024),
+		cond:    sync.NewCond(&sync.Mutex{}),
 	}
 
 	return fs
@@ -168,7 +177,7 @@ func (fs *FileStore) download(key string) error {
 		if fs.Exists(key) {
 			break
 		}
-		err := download(url.String(), fs.path(key), key)
+		err := download(url.String(), fs.tmpDir, fs.path(key), key)
 		if err != nil {
 			errMsg := "failed to download file %s from %s: %w"
 			fs.cond.Broadcast()
@@ -182,7 +191,7 @@ func (fs *FileStore) download(key string) error {
 }
 
 func (fs *FileStore) path(key string) string {
-	return filepath.Join(fs.dir, key)
+	return filepath.Join(fs.fileDir, key)
 }
 
 func (fs *FileStore) Get(key string) ([]byte, error) {
@@ -204,7 +213,7 @@ func (fs *FileStore) Exists(key string) bool {
 // If the file is compressed with zstd, as indicated by the Content-Type or ext,
 // it will be decompressed before saving. URL scheme must be HTTPS.
 // Adds integrity check using a provided SHA256 hash.
-func download(downlURL string, saveToPath string, expectedSha256 string) error {
+func download(downlURL string, tmpDir string, saveToPath string, expectedSha256 string) error {
 	u, err := url.Parse(downlURL)
 	if err != nil {
 		errMsg := "failed to parse URL %s: %w"
@@ -222,8 +231,7 @@ func download(downlURL string, saveToPath string, expectedSha256 string) error {
 		return fmt.Errorf(errMsg, expectedSha256, err)
 	}
 
-	// Create a temporary file in the default OS temp directory
-	tmpFile, err := os.CreateTemp("", "download-*.tmp")
+	tmpFile, err := os.Create(filepath.Join(tmpDir, uuid.New().String()))
 	if err != nil {
 		errMsg := "failed to create temp file: %w"
 		return fmt.Errorf(errMsg, err)

@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.27.27
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.34.3
 	github.com/deckarep/golang-set/v2 v2.6.0
+	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.17.9
 	github.com/puzpuzpuz/xsync/v3 v3.4.0
