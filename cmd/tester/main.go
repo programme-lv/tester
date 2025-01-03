@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"log"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/joho/godotenv"
+	"github.com/klauspost/compress/zstd"
 	"github.com/programme-lv/tester"
 	"github.com/programme-lv/tester/internal/filestore"
 	"github.com/programme-lv/tester/internal/testing"
@@ -63,16 +65,46 @@ func main() {
 
 		for _, message := range output.Messages {
 			log.Printf("received message: %s", *message.Body)
-			var request tester.EvalReq
-			err := json.Unmarshal([]byte(*message.Body), &request)
+
+			// Decode base64
+			compressed, err := base64.StdEncoding.DecodeString(*message.Body)
 			if err != nil {
-				log.Printf("failed to unmarshal message, %v", err)
+				log.Printf("failed to decode base64 message: %v", err)
 				_, err = sqsClient.DeleteMessage(context.TODO(), &sqs.DeleteMessageInput{
 					QueueUrl:      aws.String(submReqQueueUrl),
 					ReceiptHandle: message.ReceiptHandle,
 				})
 				if err != nil {
-					log.Printf("failed to delete message, %v", err)
+					log.Printf("failed to delete message: %v", err)
+				}
+				continue
+			}
+
+			// Decompress zstd
+			decoder, err := zstd.NewReader(nil)
+			if err != nil {
+				log.Printf("failed to create zstd decoder: %v", err)
+				continue
+			}
+
+			jsonReq, err := decoder.DecodeAll(compressed, nil)
+			if err != nil {
+				log.Printf("failed to decode zstd message: %v", err)
+				continue
+			}
+			decoder.Close()
+
+			// Unmarshal JSON
+			var request tester.EvalReq
+			err = json.Unmarshal(jsonReq, &request)
+			if err != nil {
+				log.Printf("failed to unmarshal message: %v", err)
+				_, err = sqsClient.DeleteMessage(context.TODO(), &sqs.DeleteMessageInput{
+					QueueUrl:      aws.String(submReqQueueUrl),
+					ReceiptHandle: message.ReceiptHandle,
+				})
+				if err != nil {
+					log.Printf("failed to delete message: %v", err)
 				}
 				continue
 			}
@@ -90,7 +122,7 @@ func main() {
 				ReceiptHandle: message.ReceiptHandle,
 			})
 			if err != nil {
-				log.Printf("failed to delete message, %v", err)
+				log.Printf("failed to delete message: %v", err)
 			}
 		}
 	}
