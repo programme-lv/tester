@@ -1,6 +1,6 @@
 # Programme.lv Tester Service
 
-A secure code execution and testing service for Programme.lv, designed to safely run and evaluate programming contest submissions.
+A code execution and testing service for Programme.lv, designed to safely run and evaluate programming contest submissions.
 
 ## Features
 
@@ -10,7 +10,6 @@ A secure code execution and testing service for Programme.lv, designed to safely
 - Test case management and execution
 - Real-time result streaming via AWS SQS
 - File system isolation and cleanup
-- Execution metrics collection
 
 ## Core Components
 
@@ -98,7 +97,7 @@ export TESTER_WORK_DIR=/path/to/work/directory
 ### Running the Service
 
 ```bash
-./tester serve
+./go run ./cmd/tester
 ```
 
 ### Configuration
