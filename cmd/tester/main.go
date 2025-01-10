@@ -64,8 +64,6 @@ func main() {
 		}
 
 		for _, message := range output.Messages {
-			log.Printf("received message: %s", *message.Body)
-
 			// Decode base64
 			compressed, err := base64.StdEncoding.DecodeString(*message.Body)
 			if err != nil {
@@ -108,6 +106,8 @@ func main() {
 				}
 				continue
 			}
+
+			log.Printf("received request with uuid: %s", request.EvalUuid)
 
 			responseSqsUrl := request.ResSqsUrl
 			gatherer := sqsgath.NewSqsResponseQueueGatherer(request.EvalUuid, responseSqsUrl)
