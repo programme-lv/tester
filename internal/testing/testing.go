@@ -95,9 +95,10 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 	} else {
-		// TODO: wtf
-		req.Checker = new(string)
-		*req.Checker = testlib.DefaultChecker
+		if req.Checker == nil {
+			req.Checker = new(string)
+			*req.Checker = testlib.DefaultChecker
+		}
 	}
 
 	var tlibChecker []byte

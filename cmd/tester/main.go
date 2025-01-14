@@ -108,6 +108,9 @@ func main() {
 			}
 
 			log.Printf("received request with uuid: %s", request.EvalUuid)
+			if request.Checker != nil {
+				log.Printf("checker: %s", *request.Checker)
+			}
 
 			responseSqsUrl := request.ResSqsUrl
 			gatherer := sqsgath.NewSqsResponseQueueGatherer(request.EvalUuid, responseSqsUrl)
