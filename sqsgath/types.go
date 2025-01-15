@@ -47,7 +47,7 @@ func (s *sqsResQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
 	}
 	msg := FinishedCompilation{
 		Header:      header,
-		RuntimeData: mapRunData(data),
+		RuntimeData: mapRunData(data, MaxRuntimeDataHeight*2, MaxRuntimeDataWidth*2),
 	}
 	s.send(msg)
 }
@@ -123,7 +123,7 @@ type RuntimeData struct {
 	IsolateMsg    *string `json:"isolate_msg"`
 }
 
-func mapRunData(data *internal.RuntimeData) *RuntimeData {
+func mapRunData(data *internal.RuntimeData, ioHeight int, ioWidth int) *RuntimeData {
 	if data == nil {
 		return nil
 	}
@@ -140,9 +140,9 @@ func mapRunData(data *internal.RuntimeData) *RuntimeData {
 		stderr = string(data.Stderr)
 	}
 	return &RuntimeData{
-		Stdin:         trimStrToRect(stdin, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
-		Stdout:        trimStrToRect(stdout, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
-		Stderr:        trimStrToRect(stderr, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		Stdin:         trimStrToRect(stdin, ioHeight, ioWidth),
+		Stdout:        trimStrToRect(stdout, ioHeight, ioWidth),
+		Stderr:        trimStrToRect(stderr, ioHeight, ioWidth),
 		ExitCode:      data.ExitCode,
 		CpuMillis:     data.CpuMs,
 		WallMillis:    data.WallMs,
@@ -162,8 +162,8 @@ func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.Runt
 			MsgType:  MsgTypeFinishedTest,
 		},
 		TestId:     testId,
-		Submission: mapRunData(submission),
-		Checker:    mapRunData(checker),
+		Submission: mapRunData(submission, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
+		Checker:    mapRunData(checker, MaxRuntimeDataHeight, MaxRuntimeDataWidth),
 	}
 	s.send(msg)
 }
