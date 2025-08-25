@@ -153,7 +153,7 @@ func (t *Tester) EvaluateSubmission(
 		}
 		gath.FinishCompilation(runData)
 
-		if runData.ExitCode != 0 || len(runData.Stderr) > 0 {
+		if runData.ExitCode != 0 {
 			errMsg := ""
 			if len(runData.Stderr) > 0 {
 				stderr := string(runData.Stderr[:min(len(runData.Stderr), 100)])
