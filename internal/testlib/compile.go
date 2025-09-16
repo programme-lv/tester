@@ -147,6 +147,7 @@ func compile(code string, testlibHeaderStr string) (compiled []byte, runData *in
 	var box *isolate.Box
 	box, err = isolateInstance.NewBox()
 	if err != nil {
+		err = fmt.Errorf("failed to create isolate box: %w", err)
 		return
 	}
 	log.Println("Created isolate box:", box.Path())
@@ -158,12 +159,14 @@ func compile(code string, testlibHeaderStr string) (compiled []byte, runData *in
 	log.Println("Adding checker code to isolate box...")
 	err = box.AddFile(srcCodeFname, []byte(code))
 	if err != nil {
+		err = fmt.Errorf("failed to add checker code to isolate box: %w", err)
 		return
 	}
 
 	log.Println("Adding testlib.h to isolate box...")
 	err = box.AddFile("testlib.h", []byte(testlibHeaderStr))
 	if err != nil {
+		err = fmt.Errorf("failed to add testlib.h to isolate box: %w", err)
 		return
 	}
 
@@ -171,6 +174,7 @@ func compile(code string, testlibHeaderStr string) (compiled []byte, runData *in
 	var iCmd *isolate.Cmd
 	iCmd, err = box.Command(compileCmd, nil)
 	if err != nil {
+		err = fmt.Errorf("failed to create isolate command: %w ", err)
 		return
 	}
 
@@ -185,6 +189,7 @@ func compile(code string, testlibHeaderStr string) (compiled []byte, runData *in
 		log.Println("Retrieving compiled executable...")
 		compiled, err = box.GetFile(compiledFname)
 		if err != nil {
+			err = fmt.Errorf("failed to get compiled executable: %w", err)
 			return
 		}
 	}
