@@ -27,9 +27,10 @@ func main() {
 		log.Fatalf("unable to load SDK config, %v", err)
 	}
 
+	// Try to load .env file if it exists, but don't fail if it doesn't
 	err = godotenv.Load()
 	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Printf("No .env file found or error loading .env file: %v (this is optional)", err)
 	}
 
 	// Initialize XDG directories

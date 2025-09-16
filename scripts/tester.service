@@ -7,11 +7,18 @@ StartLimitBurst=5
 [Service]
 Type=simple
 User=tester
-ExecStart=/usr/bin/nice -19 tester
+ExecStart=/usr/bin/nice -19 /usr/local/bin/tester
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
+
+# Load environment variables from configuration file
+EnvironmentFile=-/etc/tester/tester.env
+
+# XDG Base Directory Specification (optional, will use defaults if not set)
+Environment="XDG_DATA_DIRS=/usr/local/share:/usr/share"
+Environment="XDG_CONFIG_DIRS=/etc/xdg"
 
 # Security settings
 NoNewPrivileges=true
