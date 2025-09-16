@@ -177,6 +177,7 @@ func compile(code string, testlibHeaderStr string) (compiled []byte, runData *in
 	log.Println("Collecting compilation runtime data...")
 	runData, err = utils.RunIsolateCmd(iCmd, nil)
 	if err != nil {
+		err = fmt.Errorf("failed to collect runtime data: %s, %w ", iCmd.String(), err)
 		return
 	}
 

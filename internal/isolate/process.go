@@ -18,6 +18,10 @@ type Cmd struct {
 	Constraints  Constraints
 }
 
+func (process *Cmd) String() string {
+	return process.cmd.String()
+}
+
 // func (process *Cmd) CombinedOutput() (*Metrics, []byte, error) {
 // 	combinedOut, err := process.cmd.CombinedOutput()
 // 	if err != nil {
