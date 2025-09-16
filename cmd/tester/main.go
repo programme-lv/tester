@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -18,6 +17,7 @@ import (
 	"github.com/programme-lv/tester/internal/filestore"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testlib"
+	"github.com/programme-lv/tester/internal/xdg"
 	"github.com/programme-lv/tester/sqsgath"
 )
 
@@ -32,13 +32,24 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	tmpDir := filepath.Join("/", "var", "tester", "tmp")
-	err = os.MkdirAll(tmpDir, 0755)
+	// Initialize XDG directories
+	xdgDirs := xdg.NewXDGDirs()
+
+	// Use XDG cache directory for file storage (persistent across restarts)
+	fileDir := xdgDirs.AppCacheDir("tester/files")
+	err = xdgDirs.EnsureDir(fileDir)
+	if err != nil {
+		log.Fatalf("failed to create file storage directory: %v", err)
+	}
+
+	// Use XDG runtime directory for temporary files (cleaned on logout/reboot)
+	tmpDir := xdgDirs.AppRuntimeDir("tester")
+	err = xdgDirs.EnsureRuntimeDir(tmpDir)
 	if err != nil {
 		log.Fatalf("failed to create tmp directory: %v", err)
 	}
 
-	filestore := filestore.New(filepath.Join("/", "var", "tester", "files"), tmpDir)
+	filestore := filestore.New(fileDir, tmpDir)
 	go filestore.Start()
 
 	tlibCompiler := testlib.NewTestlibCompiler()

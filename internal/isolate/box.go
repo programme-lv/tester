@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/programme-lv/tester/internal/xdg"
 )
 
 type Box struct {
@@ -75,7 +77,24 @@ func (box *Box) Command(
 }
 
 func newTempIsolateFilePath() (string, error) {
-	file, err := os.CreateTemp("", "isolate.*.txt")
+	// Use XDG runtime directory for isolate temporary files
+	xdgDirs := xdg.NewXDGDirs()
+	tempDir := xdgDirs.AppRuntimeDir("tester/isolate")
+	err := xdgDirs.EnsureRuntimeDir(tempDir)
+	if err != nil {
+		// Fallback to system temp if XDG runtime dir fails
+		file, err := os.CreateTemp("", "isolate.*.txt")
+		if err != nil {
+			return "", err
+		}
+		err = file.Close()
+		if err != nil {
+			return "", err
+		}
+		return file.Name(), nil
+	}
+
+	file, err := os.CreateTemp(tempDir, "isolate.*.txt")
 	if err != nil {
 		return "", err
 	}

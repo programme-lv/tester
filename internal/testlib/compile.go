@@ -12,6 +12,7 @@ import (
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/internal/utils"
+	"github.com/programme-lv/tester/internal/xdg"
 )
 
 type TestlibCompiler struct {
@@ -22,17 +23,22 @@ type TestlibCompiler struct {
 }
 
 func NewTestlibCompiler() *TestlibCompiler {
+	// Initialize XDG directories
+	xdgDirs := xdg.NewXDGDirs()
+
+	// Use XDG cache directory for compiled checkers and interactors
+	// These are cached compiled binaries that can be regenerated
 	tc := &TestlibCompiler{
-		checkerDir:    filepath.Join("var", "tester", "checkers"),
-		interactorDir: filepath.Join("var", "tester", "interactors"),
+		checkerDir:    xdgDirs.AppCacheDir("tester/checkers"),
+		interactorDir: xdgDirs.AppCacheDir("tester/interactors"),
 	}
 
-	err := os.MkdirAll(tc.checkerDir, 0777)
+	err := xdgDirs.EnsureDir(tc.checkerDir)
 	if err != nil {
 		log.Fatalf("failed to create testlib checker directory: %v", err)
 	}
 
-	err = os.MkdirAll(tc.interactorDir, 0777)
+	err = xdgDirs.EnsureDir(tc.interactorDir)
 	if err != nil {
 		log.Fatalf("failed to create testlib interactor directory: %v", err)
 	}

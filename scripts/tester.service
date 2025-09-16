@@ -6,7 +6,7 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
-User=kp
+User=tester
 ExecStart=/usr/bin/nice -19 tester
 Restart=on-failure
 RestartSec=5
