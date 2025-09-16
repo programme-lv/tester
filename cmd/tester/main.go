@@ -32,13 +32,13 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	tmpDir := filepath.Join(".", "var", "tester", "tmp")
+	tmpDir := filepath.Join("/", "var", "tester", "tmp")
 	err = os.MkdirAll(tmpDir, 0755)
 	if err != nil {
 		log.Fatalf("failed to create tmp directory: %v", err)
 	}
 
-	filestore := filestore.New(filepath.Join(".", "var", "tester", "files"), tmpDir)
+	filestore := filestore.New(filepath.Join("/", "var", "tester", "files"), tmpDir)
 	go filestore.Start()
 
 	tlibCompiler := testlib.NewTestlibCompiler()
