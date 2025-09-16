@@ -67,6 +67,7 @@ func (i *Isolate) cleanupBox(boxId int) error {
 
 	cleanCmd := exec.Command("/usr/bin/bash", "-c", cleanCmdStr)
 	cmdOutput, err := cleanCmd.CombinedOutput()
+	cmdOutput = []byte(strings.TrimSpace(string(cmdOutput)))
 	if err != nil {
 		err = fmt.Errorf("failed to cleanup box using command: %s, output: %s, error: %w", cleanCmdStr, string(cmdOutput), err)
 		return err
@@ -80,6 +81,7 @@ func (i *Isolate) initBox(boxId int) (string, error) {
 
 	initCmd := exec.Command("/usr/bin/bash", "-c", initCmdStr)
 	cmdOutput, err := initCmd.CombinedOutput()
+	cmdOutput = []byte(strings.TrimSpace(string(cmdOutput)))
 	if err != nil {
 		err = fmt.Errorf("failed to init box using command: %s, output: %s, error: %w", initCmdStr, string(cmdOutput), err)
 		return "", err
