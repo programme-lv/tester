@@ -36,12 +36,12 @@ func (i *Isolate) NewBox() (*Box, error) {
 
 	err := i.cleanupBox(id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to cleanup box: %w", err)
 	}
 
 	path, err := i.initBox(id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to init box: %w", err)
 	}
 
 	i.idsInUse = append(i.idsInUse, id)
@@ -67,6 +67,10 @@ func (i *Isolate) cleanupBox(boxId int) error {
 
 	cleanCmd := exec.Command("/usr/bin/bash", "-c", cleanCmdStr)
 	_, err := cleanCmd.CombinedOutput()
+	if err != nil {
+		err = fmt.Errorf("failed to cleanup box using command: %s, %w", cleanCmdStr, err)
+		return err
+	}
 	return err
 }
 
@@ -77,6 +81,7 @@ func (i *Isolate) initBox(boxId int) (string, error) {
 	initCmd := exec.Command("/usr/bin/bash", "-c", initCmdStr)
 	cmdOutput, err := initCmd.CombinedOutput()
 	if err != nil {
+		err = fmt.Errorf("failed to init box using command: %s, %w", initCmdStr, err)
 		return "", err
 	}
 
