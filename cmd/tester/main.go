@@ -55,7 +55,37 @@ func main() {
 
 	tlibCompiler := testlib.NewTestlibCompiler()
 
-	t := testing.NewTester(filestore, tlibCompiler)
+	// Read configuration assets from /usr/local/etc/tester
+	configDir := "/usr/local/etc/tester"
+
+	readFileIfExists := func(path string) (string, error) {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return "", nil
+			}
+			return "", err
+		}
+		return string(data), nil
+	}
+
+	systemInfoTxt, err := readFileIfExists(configDir + "/system.txt")
+	if err != nil {
+		log.Fatalf("failed to read system.txt: %v", err)
+	}
+	if systemInfoTxt == "" {
+		log.Printf("system.txt not found or empty in %s; proceeding with empty system info", configDir)
+	}
+
+	testlibHStr, err := readFileIfExists(configDir + "/testlib.h")
+	if err != nil {
+		log.Fatalf("failed to read testlib.h: %v", err)
+	}
+	if testlibHStr == "" {
+		log.Printf("testlib.h not found or empty in %s; checker/interactor compilation may fail", configDir)
+	}
+
+	t := testing.NewTester(filestore, tlibCompiler, systemInfoTxt, testlibHStr)
 
 	submReqQueueUrl := os.Getenv("SUBM_REQ_QUEUE_URL")
 	if submReqQueueUrl == "" {

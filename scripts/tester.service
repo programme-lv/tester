@@ -14,7 +14,7 @@ StandardOutput=journal
 StandardError=journal
 
 # Load environment variables from configuration file
-EnvironmentFile=-/etc/tester/tester.env
+EnvironmentFile=-/usr/local/etc/tester/tester.env
 
 # XDG Base Directory Specification (optional, will use defaults if not set)
 Environment="XDG_DATA_DIRS=/usr/local/share:/usr/share"

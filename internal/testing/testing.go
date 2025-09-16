@@ -87,7 +87,7 @@ func (t *Tester) EvaluateSubmission(
 	var tlibInteractor []byte
 	if req.Interactor != nil {
 		var err error
-		tlibInteractor, err = t.tlibCheckers.CompileInteractor(*req.Interactor)
+		tlibInteractor, err = t.tlibCheckers.CompileInteractor(*req.Interactor, t.testlibHStr)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to get testlib interactor: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -104,7 +104,7 @@ func (t *Tester) EvaluateSubmission(
 	var tlibChecker []byte
 	if req.Checker != nil {
 		var err error
-		tlibChecker, err = t.tlibCheckers.CompileChecker(*req.Checker)
+		tlibChecker, err = t.tlibCheckers.CompileChecker(*req.Checker, t.testlibHStr)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to get testlib checker: %w", err)
 			t.logger.Printf("Error: %s", errMsg)

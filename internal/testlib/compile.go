@@ -46,7 +46,7 @@ func NewTestlibCompiler() *TestlibCompiler {
 	return tc
 }
 
-func (tc *TestlibCompiler) CompileChecker(sourceCode string) ([]byte, error) {
+func (tc *TestlibCompiler) CompileChecker(sourceCode string, testlibHeaderStr string) ([]byte, error) {
 	sourceCodeSha256 := getStringSha256(sourceCode)
 	tc.lock.Lock()
 	defer tc.lock.Unlock()
@@ -55,7 +55,7 @@ func (tc *TestlibCompiler) CompileChecker(sourceCode string) ([]byte, error) {
 		return os.ReadFile(compiledPath)
 	}
 
-	compiled, runData, err := compile(sourceCode)
+	compiled, runData, err := compile(sourceCode, testlibHeaderStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile checker: %w", err)
 	}
@@ -88,7 +88,7 @@ func (tc *TestlibCompiler) CompileChecker(sourceCode string) ([]byte, error) {
 	return compiled, nil
 }
 
-func (tc *TestlibCompiler) CompileInteractor(sourceCode string) ([]byte, error) {
+func (tc *TestlibCompiler) CompileInteractor(sourceCode string, testlibHeaderStr string) ([]byte, error) {
 	sourceCodeSha256 := getStringSha256(sourceCode)
 	tc.lock.Lock()
 	defer tc.lock.Unlock()
@@ -97,7 +97,7 @@ func (tc *TestlibCompiler) CompileInteractor(sourceCode string) ([]byte, error) 
 		return os.ReadFile(compiledPath)
 	}
 
-	compiled, runData, err := compile(sourceCode)
+	compiled, runData, err := compile(sourceCode, testlibHeaderStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile interactor: %w", err)
 	}
@@ -140,7 +140,7 @@ const srcCodeFname = "checker.cpp"
 const compileCmd = "g++ -std=c++17 -o checker checker.cpp -I . -I /usr/include"
 const compiledFname = "checker"
 
-func compile(code string) (compiled []byte, runData *internal.RuntimeData, err error) {
+func compile(code string, testlibHeaderStr string) (compiled []byte, runData *internal.RuntimeData, err error) {
 	isolateInstance := isolate.GetInstance()
 
 	log.Println("Creating isolate box...")
@@ -162,13 +162,7 @@ func compile(code string) (compiled []byte, runData *internal.RuntimeData, err e
 	}
 
 	log.Println("Adding testlib.h to isolate box...")
-	var testlibBytes []byte
-	testlibPath := filepath.Join("data", "testlib.h")
-	testlibBytes, err = os.ReadFile(testlibPath)
-	if err != nil {
-		return
-	}
-	err = box.AddFile("testlib.h", testlibBytes)
+	err = box.AddFile("testlib.h", []byte(testlibHeaderStr))
 	if err != nil {
 		return
 	}

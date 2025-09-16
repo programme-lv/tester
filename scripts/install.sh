@@ -22,17 +22,25 @@ if ! id "tester" &>/dev/null; then
     sudo useradd -m tester
 fi
 
-# Create configuration directory
-sudo mkdir -p /etc/tester
+# Create configuration directory (prefer /usr/local/etc over /etc)
+sudo mkdir -p /usr/local/etc/tester
 
 # Copy service file to systemd directory
 sudo cp "$SCRIPT_DIR/$SERVICE_FILE" "$SERVICE_PATH"
 
 # Copy environment template if config doesn't exist
-if [ ! -f "/etc/tester/tester.env" ]; then
+if [ ! -f "/usr/local/etc/tester/tester.env" ]; then
     echo "Creating environment configuration template..."
-    sudo cp "$SCRIPT_DIR/tester.env.example" "/etc/tester/tester.env"
-    echo "Please edit /etc/tester/tester.env to configure your environment variables"
+    sudo cp "$SCRIPT_DIR/tester.env.example" "/usr/local/etc/tester/tester.env"
+    echo "Please edit /usr/local/etc/tester/tester.env to configure your environment variables"
+fi
+
+# Copy additional configuration assets
+if [ -f "$SCRIPT_DIR/system.txt" ]; then
+    sudo cp "$SCRIPT_DIR/system.txt" "/usr/local/etc/tester/system.txt"
+fi
+if [ -f "$SCRIPT_DIR/testlib.h" ]; then
+    sudo cp "$SCRIPT_DIR/testlib.h" "/usr/local/etc/tester/testlib.h"
 fi
 
 # Reload systemd to recognize the new service
@@ -48,7 +56,7 @@ echo ""
 echo "Tester service installed successfully!"
 echo ""
 echo "IMPORTANT: Before starting the service, please:"
-echo "1. Edit /etc/tester/tester.env to configure your environment variables"
+echo "1. Edit /usr/local/etc/tester/tester.env to configure your environment variables"
 echo "2. Set at minimum the SUBM_REQ_QUEUE_URL variable"
 echo ""
 echo "After configuration, you can:"
