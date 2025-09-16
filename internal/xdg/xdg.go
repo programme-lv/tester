@@ -58,7 +58,7 @@ func NewXDGDirs() *XDGDirs {
 	if xdg.runtimeDir == "" {
 		// Create a fallback runtime directory if not set
 		// According to spec, we should print a warning and use a replacement
-		xdg.runtimeDir = filepath.Join("/tmp", "tester-runtime-"+os.Getenv("USER"))
+		xdg.runtimeDir = filepath.Join("/tmp", "tester")
 	}
 
 	// XDG_DATA_DIRS: preference-ordered base directories to search for data files

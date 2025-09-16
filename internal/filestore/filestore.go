@@ -10,7 +10,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
@@ -304,12 +306,55 @@ func download(downlURL string, tmpDir string, saveToPath string, expectedSha256 
 
 	// Rename the temporary file to the target path atomically
 	if err := os.Rename(tmpFile.Name(), saveToPath); err != nil {
-		errMsg := "failed to rename temp file %s to %s: %w"
-		return fmt.Errorf(errMsg, tmpFile.Name(), saveToPath, err)
+		if !strings.Contains(err.Error(), "cross-device") &&
+			!strings.Contains(err.Error(), "EXDEV") {
+			errMsg := "failed to rename temp file %s to %s: %w"
+			return fmt.Errorf(errMsg, tmpFile.Name(), saveToPath, err)
+		} else {
+			err := copyFile(tmpFile.Name(), saveToPath)
+			if err != nil {
+				errMsg := "failed to copy temp file %s to %s: %w"
+				return fmt.Errorf(errMsg, tmpFile.Name(), saveToPath, err)
+			}
+		}
 	}
 
 	log.Printf("Successfully downloaded and moved file to %s", saveToPath)
 	return nil
+}
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	st, err := in.Stat()
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+
+	// Create with same perms (just the mode bits)
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, st.Mode().Perm())
+	if err != nil {
+		return err
+	}
+	defer func() { _ = out.Close() }()
+
+	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
+	// Ensure data hits disk if needed:
+	if err := out.Sync(); err != nil {
+		return err
+	}
+
+	// Optionally preserve modtime:
+	return os.Chtimes(dst, time.Now(), st.ModTime())
 }
 
 func validateHexSha256(key string) error {
