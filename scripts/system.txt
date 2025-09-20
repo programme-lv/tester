@@ -1,3 +1,0 @@
-Processor: AMD Ryzen 5 5600G, 3.9 GHz
-Cache: L1 384 KB, L2 3 MB, L3 16 MB
-Memory: 8 GB DDR4-3200 (1x8 GB) CL22

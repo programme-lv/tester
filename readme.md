@@ -1,6 +1,8 @@
-# Programme.lv Tester Service
+A code execution worker for https://programme.lv to safely run user submitted code.
 
-A code execution and testing service for Programme.lv, designed to safely run and evaluate programming contest submissions.
+Based on great work on untrusted program sandboxing tool at https://github.com/ioi/isolate .
+
+Tester polls an AWS SQS queue for new jobs. Job specification is a JSON object tha
 
 ## Features
 
