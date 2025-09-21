@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
-	"github.com/programme-lv/tester"
+	"github.com/programme-lv/tester/api"
 	"github.com/programme-lv/tester/internal/filestore"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testlib"
@@ -135,7 +135,7 @@ func main() {
 			decoder.Close()
 
 			// Unmarshal JSON
-			var request tester.EvalReq
+			var request api.EvalReq
 			err = json.Unmarshal(jsonReq, &request)
 			if err != nil {
 				log.Printf("failed to unmarshal message: %v", err)

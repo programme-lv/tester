@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/programme-lv/tester"
+	"github.com/programme-lv/tester/api"
 	"github.com/programme-lv/tester/internal"
 	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/internal/testlib"
@@ -15,7 +15,7 @@ import (
 
 func (t *Tester) EvaluateSubmission(
 	gath EvalResGatherer,
-	req tester.EvalReq,
+	req api.EvalReq,
 ) error {
 	t.logger.Printf("Starting evaluation for submission: %s", req.Code)
 	gath.StartEvaluation(t.systemInfo)

@@ -1,8 +1,7 @@
-package tester
+package api
 
 type EvalReq struct {
-	EvalUuid  string `json:"eval_uuid"`
-	ResSqsUrl string `json:"res_sqs_url"`
+	EvalUuid string `json:"eval_uuid"`
 
 	Code       string    `json:"code"`
 	Language   Language  `json:"language"`
@@ -12,13 +11,18 @@ type EvalReq struct {
 
 	CpuMillis int `json:"cpu_millis"`
 	MemoryKiB int `json:"memory_kib"`
+
+	ResSqsUrl string `json:"res_sqs_url"`
 }
 
 type ReqTest struct {
 	ID int `json:"id"`
 
-	InSha256  *string `json:"in_sha256"`
-	InUrl     *string `json:"in_url"`
+	// Sha256 to check if file exists in cache
+	InSha256 *string `json:"in_sha256"`
+	// URL to download file if missing
+	InUrl *string `json:"in_url"`
+	// Content directly as an alternative to URL
 	InContent *string `json:"in_content"`
 
 	AnsSha256  *string `json:"ans_sha256"`

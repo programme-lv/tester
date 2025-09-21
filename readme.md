@@ -15,9 +15,9 @@ TODO: add support for defining programming languages that must be supported in s
 and an entrypoint in the tester executable to test that these languages are supported
 on the system.
 
-To run system verification of supported languages, run
+To run system verification of supported languages and sample program expected results, run
 ```bash
-tester verify ./languages.json
+tester verify ./behaviour.toml
 ```
 
 ```bash
@@ -25,3 +25,5 @@ tester listen sqs
 ```
 
 I should define the response format too...
+
+Okay, I came here to implement partial scoring on tasks.
