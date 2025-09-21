@@ -1,0 +1,44 @@
+[[tests]]
+description = """
+C++17 snippet that won't compile with C++14 or earlier.
+Tests C++17 language support.
+"""
+
+[[tests.request]]
+code = """
+#include <iostream>
+#include <utility>
+#include <type_traits>
+
+template <typename... Ts>
+auto sum(Ts... ts) { return (ts + ...); }
+
+int main() {
+    int a, b;
+    if (!(std::cin >> a >> b)) return 0;
+
+    auto [x, y] = std::pair{a, b};
+    if constexpr (std::is_integral_v<decltype(x)>) {
+        std::cout << sum(x, y) << '\n';
+    }
+}
+"""
+
+tests = [
+    { in = "10 20", ans = "30" },
+    { in = "10 20", ans = "31" },
+    { in = "69 420", ans = "489" }
+]
+
+[tests.request.language]
+lang_name = "C++17"
+code_fname = "solution.cpp"
+compile_cmd = "g++ -std=c++17 -O2 -o solution solution.cpp"
+compiled_fname = "solution"
+exec_cmd = "./solution"
+
+[[tests.expect]]
+status = "success"
+verdicts = "AC WA AC"
+
+

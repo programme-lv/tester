@@ -6,7 +6,7 @@ package api
 // Server that runs code is called "tester"
 // The name "tester" sounds better than executioner
 type ExecReq struct {
-	EvalUuid string `json:"eval_uuid"`
+	Uuid string `json:"uuid"`
 
 	Code string `json:"code"`
 	Lang PrLang `json:"language"`
@@ -17,17 +17,16 @@ type ExecReq struct {
 	Interactor *string `json:"interactor"`
 
 	// Using integers is easier to work with than floats
-	CpuMillis int32 `json:"cpu_millis"`
+	CpuMs int32 `json:"cpu_ms"`
 	// Kibibytes are more precise than kilobytes
-	MemoryKiB int32 `json:"memory_kib"`
+	RamKiB int32 `json:"ram_kib"`
 }
 
 // Test or test case is a pair of input and answer
 // If checker or interactor is present, answer may stay unused
 type Test struct {
-	ID  int32 `json:"id"` // = idx+1 in test slice
-	In  File  `json:"in"`
-	Ans File  `json:"ans"`
+	In  File `json:"in"`
+	Ans File `json:"ans"`
 }
 
 type File struct {

@@ -15,10 +15,10 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/programme-lv/tester/api"
 	"github.com/programme-lv/tester/internal/filestore"
+	"github.com/programme-lv/tester/internal/sqsgath"
 	"github.com/programme-lv/tester/internal/testing"
 	"github.com/programme-lv/tester/internal/testlib"
 	"github.com/programme-lv/tester/internal/xdg"
-	"github.com/programme-lv/tester/sqsgath"
 )
 
 func main() {
@@ -154,12 +154,12 @@ func main() {
 				continue
 			}
 
-			log.Printf("received request with uuid: %s", request.EvalUuid)
+			log.Printf("received request with uuid: %s", request.Uuid)
 			if request.Checker != nil {
 				log.Printf("checker: %s", *request.Checker)
 			}
 
-			gatherer := sqsgath.NewSqsResponseQueueGatherer(request.EvalUuid, responseQueueUrl)
+			gatherer := sqsgath.NewSqsResponseQueueGatherer(request.Uuid, responseQueueUrl)
 			err = t.EvaluateSubmission(gatherer, request)
 			if err != nil {
 				log.Printf("Error: %v", err)

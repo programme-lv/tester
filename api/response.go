@@ -1,165 +1,68 @@
 package api
 
-import "time"
+// Simple, non-streaming response types for execution results
 
-// MsgType represents a message type as a string alias
-type MsgType string
+// TestResult represents the result of a single test case
+type TestResult struct {
+	TestId int32 `json:"test_id"`
 
-// Message type constants
+	// Resource usage (only if execution succeeded)
+	CpuMillis     *int64 `json:"cpu_ms,omitempty"`
+	WallMillis    *int64 `json:"wall_ms,omitempty"`
+	MemoryKiBytes *int64 `json:"mem_kib,omitempty"`
+
+	// Exit information
+	ExitCode   *int64 `json:"exit_code,omitempty"`
+	ExitSignal *int64 `json:"exit_signal,omitempty"`
+
+	// Error message if execution failed
+	ErrorMessage *string `json:"error_message,omitempty"`
+
+	// Output (truncated for simple response)
+	Stdout *string `json:"stdout,omitempty"`
+	Stderr *string `json:"stderr,omitempty"`
+}
+
+// CompileResult represents compilation outcome
+type CompileResult struct {
+	Success bool    `json:"success"`
+	Error   *string `json:"error,omitempty"`
+
+	// Resource usage during compilation
+	CpuMillis     *int64 `json:"cpu_ms,omitempty"`
+	WallMillis    *int64 `json:"wall_ms,omitempty"`
+	MemoryKiBytes *int64 `json:"mem_kib,omitempty"`
+}
+
+type ExecStatus string
+
 const (
-	ReceiveJob     MsgType = "job_receive"
-	StartCompile   MsgType = "compile_start"
-	FinishCompile  MsgType = "compile_finish"
-	ReachTestCase  MsgType = "test_reach"
-	IgnoreTestCase MsgType = "test_ignore"
-	FinishTestCase MsgType = "test_finish"
-	FinishJob      MsgType = "job_finish"
+	Success       ExecStatus = "success"
+	CompileError  ExecStatus = "compile_error"
+	InternalError ExecStatus = "internal_error"
 )
 
-// Runtime data size constraints
-const (
-	MaxRuntimeDataHeight = 40
-	MaxRuntimeDataWidth  = 80
-)
+// ExecResponse is a simple, complete response for code execution
+type ExecResponse struct {
+	EvalUuid string `json:"eval_uuid"`
 
-// Header is the common header for all response messages
-type Header struct {
-	EvalUuid string  `json:"eval_uuid"`
-	MsgType  MsgType `json:"msg_type"`
-}
+	// Overall execution status
+	Status ExecStatus `json:"status"`
 
-// RuntimeData contains execution information for a process
-type RuntimeData struct {
-	Stdin    string `json:"in"`
-	Stdout   string `json:"out"`
-	Stderr   string `json:"err"`
-	ExitCode int64  `json:"exit"`
+	// Compilation result
+	Compilation CompileResult `json:"compilation"`
 
-	CpuMillis     int64 `json:"cpu_ms"`
-	WallMillis    int64 `json:"wall_ms"`
-	MemoryKiBytes int64 `json:"mem_kib"`
+	// Test results (empty if compilation failed)
+	TestResults []TestResult `json:"test_results"`
 
-	CtxSwV int64 `json:"ctx_sw_v"`
-	CtxSwF int64 `json:"ctx_sw_f"`
+	// Overall error message (for internal errors)
+	ErrorMessage *string `json:"error_message,omitempty"`
 
-	ExitSignal    *int64  `json:"signal"`
-	IsolateStatus *string `json:"isolate_status"`
-	IsolateMsg    *string `json:"isolate_msg"`
-}
+	// Execution metadata
+	StartTime   string `json:"start_time"`
+	FinishTime  string `json:"finish_time"`
+	TotalTimeMs int64  `json:"total_time_ms"`
 
-// StartedEvaluation message sent when evaluation begins
-type StartedEvaluation struct {
-	Header
-	SystemInfo  string `json:"system_info"`
-	StartedTime string `json:"started_time"`
-}
-
-// StartedCompilation message sent when compilation begins
-type StartedCompilation struct {
-	Header
-}
-
-// FinishedCompilation message sent when compilation completes
-type FinishedCompilation struct {
-	Header
-	RuntimeData *RuntimeData `json:"runtime_data"`
-}
-
-// StartedTesting message sent when testing begins
-type StartedTesting struct {
-	Header
-}
-
-// ReachedTest message sent when a test is reached
-type ReachedTest struct {
-	Header
-	TestId int64   `json:"test_id"`
-	Input  *string `json:"input"`
-	Answer *string `json:"answer"`
-}
-
-// IgnoredTest message sent when a test is ignored
-type IgnoredTest struct {
-	Header
-	TestId int64 `json:"test_id"`
-}
-
-// FinishedTest message sent when a test completes
-type FinishedTest struct {
-	Header
-	TestId     int64        `json:"test_id"`
-	Submission *RuntimeData `json:"submission"`
-	Checker    *RuntimeData `json:"checker"`
-}
-
-// FinishedEvaluation message sent when evaluation completes
-type FinishedEvaluation struct {
-	Header
-	ErrorMessage  *string `json:"error_message"`
-	CompileError  bool    `json:"compile_error"`
-	InternalError bool    `json:"internal_error"`
-}
-
-// Helper function to create a header
-func NewHeader(evalUuid string, msgType MsgType) Header {
-	return Header{
-		EvalUuid: evalUuid,
-		MsgType:  msgType,
-	}
-}
-
-// Helper functions to create specific message types
-func NewStartedEvaluation(evalUuid, systemInfo string) StartedEvaluation {
-	return StartedEvaluation{
-		Header:      NewHeader(evalUuid, ReceiveJob),
-		SystemInfo:  systemInfo,
-		StartedTime: time.Now().Format(time.RFC3339),
-	}
-}
-
-func NewStartedCompilation(evalUuid string) StartedCompilation {
-	return StartedCompilation{
-		Header: NewHeader(evalUuid, StartCompile),
-	}
-}
-
-func NewFinishedCompilation(evalUuid string, runtimeData *RuntimeData) FinishedCompilation {
-	return FinishedCompilation{
-		Header:      NewHeader(evalUuid, FinishCompile),
-		RuntimeData: runtimeData,
-	}
-}
-
-func NewReachedTest(evalUuid string, testId int64, input, answer *string) ReachedTest {
-	return ReachedTest{
-		Header: NewHeader(evalUuid, ReachTestCase),
-		TestId: testId,
-		Input:  input,
-		Answer: answer,
-	}
-}
-
-func NewIgnoredTest(evalUuid string, testId int64) IgnoredTest {
-	return IgnoredTest{
-		Header: NewHeader(evalUuid, IgnoreTestCase),
-		TestId: testId,
-	}
-}
-
-func NewFinishedTest(evalUuid string, testId int64, submission, checker *RuntimeData) FinishedTest {
-	return FinishedTest{
-		Header:     NewHeader(evalUuid, FinishTestCase),
-		TestId:     testId,
-		Submission: submission,
-		Checker:    checker,
-	}
-}
-
-func NewFinishedEvaluation(evalUuid string, errorMessage *string, compileError, internalError bool) FinishedEvaluation {
-	return FinishedEvaluation{
-		Header:        NewHeader(evalUuid, FinishJob),
-		ErrorMessage:  errorMessage,
-		CompileError:  compileError,
-		InternalError: internalError,
-	}
+	// System information
+	SystemInfo *string `json:"system_info,omitempty"`
 }

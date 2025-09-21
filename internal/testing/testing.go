@@ -196,8 +196,9 @@ func (t *Tester) EvaluateSubmission(
 	t.logger.Printf("Starting testing for submission: %s", req.Code)
 	if tlibChecker != nil {
 		t.logger.Printf("Running checker variant")
-		for _, test := range req.Tests {
-			t.logger.Printf("Starting test: %d", test.ID)
+		for i, test := range req.Tests {
+			testID := i + 1
+			t.logger.Printf("Starting test: %d", testID)
 
 			if test.In.Sha256 == nil {
 				errMsg := fmt.Errorf("input sha256 is nil")
@@ -229,7 +230,7 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			gath.ReachTest(int64(test.ID), input, answer)
+			gath.ReachTest(int64(testID), input, answer)
 
 			var submData *internal.RuntimeData = nil
 			var checkerRuntimeData *internal.RuntimeData = nil
@@ -254,10 +255,10 @@ func (t *Tester) EvaluateSubmission(
 			// inputReadCloser := io.NopCloser(bytes.NewReader(input))
 			submCmd, err := submBox.Command(req.Lang.ExecCmd,
 				&isolate.Constraints{
-					CpuTimeLimInSec:      float64(req.CpuMillis) / 1000,
+					CpuTimeLimInSec:      float64(req.CpuMs) / 1000,
 					ExtraCpuTimeLimInSec: 0.5,
 					WallTimeLimInSec:     20.0,
-					MemoryLimitInKB:      int64(req.MemoryKiB),
+					MemoryLimitInKB:      int64(req.RamKiB),
 					MaxProcesses:         256,
 					MaxOpenFiles:         256,
 				})
@@ -277,39 +278,39 @@ func (t *Tester) EvaluateSubmission(
 			}
 
 			if submData.ExitSignal != nil {
-				errMsg := fmt.Errorf("test %d failed with signal: %d", test.ID, *submData.ExitSignal)
+				errMsg := fmt.Errorf("test %d failed with signal: %d", testID, *submData.ExitSignal)
 				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submData, nil)
+				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
 
 			if submData.ExitCode != 0 ||
 				submData.Stderr == nil ||
 				len(submData.Stderr) > 0 {
-				errMsg := fmt.Errorf("test %d failed with exit code: %d", test.ID, submData.ExitCode)
+				errMsg := fmt.Errorf("test %d failed with exit code: %d", testID, submData.ExitCode)
 				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submData, nil)
+				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
 
 			if submData.WallMs > 14000 { // more than 14 seconds
-				errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", test.ID, submData.WallMs)
+				errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", testID, submData.WallMs)
 				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submData, nil)
+				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
 
-			if submData.CpuMs > int64(req.CpuMillis) {
-				errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", test.ID, submData.CpuMs)
+			if submData.CpuMs > int64(req.CpuMs) {
+				errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", testID, submData.CpuMs)
 				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submData, nil)
+				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
 
-			if submData.MemKiB > int64(req.MemoryKiB) {
-				errMsg := fmt.Errorf("test %d exceeded memory limit: %d", test.ID, submData.MemKiB)
+			if submData.MemKiB > int64(req.RamKiB) {
+				errMsg := fmt.Errorf("test %d exceeded memory limit: %d", testID, submData.MemKiB)
 				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishTest(int64(test.ID), submData, nil)
+				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
 
@@ -321,7 +322,7 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			t.logger.Printf("Setting up checker for test: %d", test.ID)
+			t.logger.Printf("Setting up checker for test: %d", testID)
 			checkerBox, err := isolate.NewBox()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to create isolate box: %w", err)
@@ -363,7 +364,7 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			t.logger.Printf("Running checker for test: %d", test.ID)
+			t.logger.Printf("Running checker for test: %d", testID)
 			checkerProcess, err := checkerBox.Command("./checker input.txt output.txt answer.txt", nil)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to run checker: %w", err)
@@ -380,14 +381,15 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			t.logger.Printf("Test %d finished successfully", test.ID)
-			gath.FinishTest(int64(test.ID), submData, checkerRuntimeData)
+			t.logger.Printf("Test %d finished successfully", testID)
+			gath.FinishTest(int64(testID), submData, checkerRuntimeData)
 		}
 	}
 	if tlibInteractor != nil {
 		t.logger.Printf("Running interactor variant")
-		for _, test := range req.Tests {
-			t.logger.Printf("Starting test: %d", test.ID)
+		for i, test := range req.Tests {
+			testID := i + 1
+			t.logger.Printf("Starting test: %d", testID)
 
 			t.logger.Printf("Awaiting test input: %s", *test.In.Sha256)
 			input, err := t.filestore.Await(*test.In.Sha256)
@@ -407,7 +409,7 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			gath.ReachTest(int64(test.ID), input, answer)
+			gath.ReachTest(int64(testID), input, answer)
 
 			var submissionRuntimeData *internal.RuntimeData = nil
 			var interactorRuntimeData *internal.RuntimeData = nil
@@ -473,10 +475,10 @@ func (t *Tester) EvaluateSubmission(
 			}
 
 			submConstraints := &isolate.Constraints{
-				CpuTimeLimInSec:      float64(req.CpuMillis) / 1000,
+				CpuTimeLimInSec:      float64(req.CpuMs) / 1000,
 				ExtraCpuTimeLimInSec: 0.5,
 				WallTimeLimInSec:     20.0,
-				MemoryLimitInKB:      int64(req.MemoryKiB),
+				MemoryLimitInKB:      int64(req.RamKiB),
 				MaxProcesses:         256,
 				MaxOpenFiles:         256,
 			}
@@ -608,8 +610,8 @@ func (t *Tester) EvaluateSubmission(
 				IsolateMsg:    interactorMetrics.Message,
 			}
 
-			t.logger.Printf("Test %d finished", test.ID)
-			gath.FinishTest(int64(test.ID), submissionRuntimeData, interactorRuntimeData)
+			t.logger.Printf("Test %d finished", testID)
+			gath.FinishTest(int64(testID), submissionRuntimeData, interactorRuntimeData)
 		}
 	}
 
