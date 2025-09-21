@@ -135,7 +135,7 @@ func main() {
 			decoder.Close()
 
 			// Unmarshal JSON
-			var request api.EvalReq
+			var request api.ExecReq
 			err = json.Unmarshal(jsonReq, &request)
 			if err != nil {
 				log.Printf("failed to unmarshal message: %v", err)

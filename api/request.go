@@ -1,40 +1,60 @@
 package api
 
-type EvalReq struct {
+// ExecReq stands for code execution request
+// Execution runs code on an ordered set of tests
+// It's not within scope to assign a score here
+// Server that runs code is called "tester"
+// The name "tester" sounds better than executioner
+type ExecReq struct {
 	EvalUuid string `json:"eval_uuid"`
 
-	Code       string    `json:"code"`
-	Language   Language  `json:"language"`
-	Tests      []ReqTest `json:"tests"`
-	Checker    *string   `json:"checker"`
-	Interactor *string   `json:"interactor"`
+	Code string `json:"code"`
+	Lang PrLang `json:"language"`
 
-	CpuMillis int `json:"cpu_millis"`
-	MemoryKiB int `json:"memory_kib"`
+	Tests []Test `json:"tests"`
+
+	Checker    *string `json:"checker"`
+	Interactor *string `json:"interactor"`
+
+	// Using integers is easier to work with than floats
+	CpuMillis int32 `json:"cpu_millis"`
+	// Kibibytes are more precise than kilobytes
+	MemoryKiB int32 `json:"memory_kib"`
 
 	ResSqsUrl string `json:"res_sqs_url"`
 }
 
-type ReqTest struct {
-	ID int `json:"id"`
-
-	// Sha256 to check if file exists in cache
-	InSha256 *string `json:"in_sha256"`
-	// URL to download file if missing
-	InUrl *string `json:"in_url"`
-	// Content directly as an alternative to URL
-	InContent *string `json:"in_content"`
-
-	AnsSha256  *string `json:"ans_sha256"`
-	AnsUrl     *string `json:"ans_url"`
-	AnsContent *string `json:"ans_content"`
+// Test or test case is a pair of input and answer
+// If checker or interactor is present, answer may stay unused
+type Test struct {
+	ID  int32 `json:"id"` // = idx+1 in test slice
+	In  File  `json:"in"`
+	Ans File  `json:"ans"`
 }
 
-type Language struct {
-	LangID        string  `json:"lang_id"`
-	LangName      string  `json:"lang_name"`
-	CodeFname     string  `json:"code_fname"`
-	CompileCmd    *string `json:"compile_cmd"`
+type File struct {
+	// SHA to check if file exists in cache
+	Sha256 *string `json:"sha256"`
+	// URL to download file if missing
+	Url *string `json:"url"`
+	// Content directly as an alternative to URL
+	Content *string `json:"content"`
+}
+
+// Defines programming language compilation, execution commands
+type PrLang struct {
+	// Practically only for logging purposes
+	LangName string `json:"lang_name"`
+
+	// Place code in sandbox as this file
+	CodeFname string `json:"code_fname"`
+
+	// If programming lang has compilation step
+	CompileCmd *string `json:"compile_cmd"`
+
+	// After compilation, extract executable from sandbox
 	CompiledFname *string `json:"compiled_fname"`
-	ExecCmd       string  `json:"exec_cmd"`
+
+	// With executable in sandbox, run this command
+	ExecCmd string `json:"exec_cmd"`
 }

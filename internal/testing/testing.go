@@ -15,25 +15,25 @@ import (
 
 func (t *Tester) EvaluateSubmission(
 	gath EvalResGatherer,
-	req api.EvalReq,
+	req api.ExecReq,
 ) error {
 	t.logger.Printf("Starting evaluation for submission: %s", req.Code)
 	gath.StartEvaluation(t.systemInfo)
 
 	for i := range req.Tests {
 		test := &req.Tests[i]
-		if (test.InUrl == nil && test.InContent == nil) || (test.AnsUrl == nil && test.AnsContent == nil) {
+		if (test.In.Url == nil && test.In.Content == nil) || (test.Ans.Url == nil && test.Ans.Content == nil) {
 			errMsg := fmt.Errorf("input or answer download url is nil and content is nil")
 			t.logger.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
-		if test.InContent != nil {
+		if test.In.Content != nil {
 			var err error
-			if test.InSha256 == nil {
-				test.InSha256 = new(string)
+			if test.In.Sha256 == nil {
+				test.In.Sha256 = new(string)
 			}
-			*test.InSha256, err = t.filestore.Store([]byte(*test.InContent))
+			*test.In.Sha256, err = t.filestore.Store([]byte(*test.In.Content))
 			if err != nil {
 				errMsg := fmt.Errorf("failed to store input content: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -41,13 +41,13 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 		} else {
-			if test.InSha256 == nil {
+			if test.In.Sha256 == nil {
 				errMsg := fmt.Errorf("input sha256 is nil")
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
-			err := t.filestore.Schedule(*test.InSha256, *test.InUrl)
+			err := t.filestore.Schedule(*test.In.Sha256, *test.In.Url)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -55,12 +55,12 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 		}
-		if test.AnsContent != nil {
+		if test.Ans.Content != nil {
 			var err error
-			if test.AnsSha256 == nil {
-				test.AnsSha256 = new(string)
+			if test.Ans.Sha256 == nil {
+				test.Ans.Sha256 = new(string)
 			}
-			*test.AnsSha256, err = t.filestore.Store([]byte(*test.AnsContent))
+			*test.Ans.Sha256, err = t.filestore.Store([]byte(*test.Ans.Content))
 			if err != nil {
 				errMsg := fmt.Errorf("failed to store answer content: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -68,13 +68,13 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 		} else {
-			if test.AnsSha256 == nil {
+			if test.Ans.Sha256 == nil {
 				errMsg := fmt.Errorf("answer sha256 is nil")
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
-			err := t.filestore.Schedule(*test.AnsSha256, *test.AnsUrl)
+			err := t.filestore.Schedule(*test.Ans.Sha256, *test.Ans.Url)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -114,8 +114,8 @@ func (t *Tester) EvaluateSubmission(
 	}
 
 	var compiled []byte
-	if req.Language.CompileCmd != nil {
-		t.logger.Printf("Starting compilation for language: %s", req.Language.LangName)
+	if req.Lang.CompileCmd != nil {
+		t.logger.Printf("Starting compilation for language: %s", req.Lang.LangName)
 		gath.StartCompilation()
 		var runData *internal.RuntimeData
 
@@ -128,7 +128,7 @@ func (t *Tester) EvaluateSubmission(
 		}
 		defer compileBox.Close()
 
-		err = compileBox.AddFile(req.Language.CodeFname, []byte(req.Code))
+		err = compileBox.AddFile(req.Lang.CodeFname, []byte(req.Code))
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -136,7 +136,7 @@ func (t *Tester) EvaluateSubmission(
 			return errMsg
 		}
 
-		compileProcess, err := compileBox.Command(*req.Language.CompileCmd, nil)
+		compileProcess, err := compileBox.Command(*req.Lang.CompileCmd, nil)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to run compilation: %w", err)
 			t.logger.Printf("Error: %s", errMsg)
@@ -167,8 +167,8 @@ func (t *Tester) EvaluateSubmission(
 			return nil
 		}
 
-		if compileBox.HasFile(*req.Language.CompiledFname) {
-			compiled, err = compileBox.GetFile(*req.Language.CompiledFname)
+		if compileBox.HasFile(*req.Lang.CompiledFname) {
+			compiled, err = compileBox.GetFile(*req.Lang.CompiledFname)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get compiled executable: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -183,9 +183,9 @@ func (t *Tester) EvaluateSubmission(
 		}
 	}
 
-	submFname := req.Language.CodeFname
+	submFname := req.Lang.CodeFname
 	if compiled != nil {
-		submFname = *req.Language.CompiledFname
+		submFname = *req.Lang.CompiledFname
 	}
 
 	submContent := compiled
@@ -200,14 +200,14 @@ func (t *Tester) EvaluateSubmission(
 		for _, test := range req.Tests {
 			t.logger.Printf("Starting test: %d", test.ID)
 
-			if test.InSha256 == nil {
+			if test.In.Sha256 == nil {
 				errMsg := fmt.Errorf("input sha256 is nil")
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
-			t.logger.Printf("Awaiting test input: %s", (*test.InSha256)[:8])
-			input, err := t.filestore.Await(*test.InSha256)
+			t.logger.Printf("Awaiting test input: %s", (*test.In.Sha256)[:8])
+			input, err := t.filestore.Await(*test.In.Sha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test input: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -215,14 +215,14 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			if test.AnsSha256 == nil {
+			if test.Ans.Sha256 == nil {
 				errMsg := fmt.Errorf("answer sha256 is nil")
 				t.logger.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
-			t.logger.Printf("Awaiting test answer: %s", (*test.AnsSha256)[:8])
-			answer, err := t.filestore.Await(*test.AnsSha256)
+			t.logger.Printf("Awaiting test answer: %s", (*test.Ans.Sha256)[:8])
+			answer, err := t.filestore.Await(*test.Ans.Sha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test answer: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -253,7 +253,7 @@ func (t *Tester) EvaluateSubmission(
 			}
 
 			// inputReadCloser := io.NopCloser(bytes.NewReader(input))
-			submCmd, err := submBox.Command(req.Language.ExecCmd,
+			submCmd, err := submBox.Command(req.Lang.ExecCmd,
 				&isolate.Constraints{
 					CpuTimeLimInSec:      float64(req.CpuMillis) / 1000,
 					ExtraCpuTimeLimInSec: 0.5,
@@ -390,8 +390,8 @@ func (t *Tester) EvaluateSubmission(
 		for _, test := range req.Tests {
 			t.logger.Printf("Starting test: %d", test.ID)
 
-			t.logger.Printf("Awaiting test input: %s", *test.InSha256)
-			input, err := t.filestore.Await(*test.InSha256)
+			t.logger.Printf("Awaiting test input: %s", *test.In.Sha256)
+			input, err := t.filestore.Await(*test.In.Sha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test input: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -399,8 +399,8 @@ func (t *Tester) EvaluateSubmission(
 				return errMsg
 			}
 
-			t.logger.Printf("Awaiting test answer: %s", *test.AnsSha256)
-			answer, err := t.filestore.Await(*test.AnsSha256)
+			t.logger.Printf("Awaiting test answer: %s", *test.Ans.Sha256)
+			answer, err := t.filestore.Await(*test.Ans.Sha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test answer: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
@@ -481,7 +481,7 @@ func (t *Tester) EvaluateSubmission(
 				MaxProcesses:         256,
 				MaxOpenFiles:         256,
 			}
-			submProcess, err := submBox.Command(req.Language.ExecCmd, submConstraints)
+			submProcess, err := submBox.Command(req.Lang.ExecCmd, submConstraints)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to run submission: %w", err)
 				t.logger.Printf("Error: %s", errMsg)
