@@ -194,7 +194,6 @@ func (t *Tester) EvaluateSubmission(
 	}
 
 	t.logger.Printf("Starting testing for submission: %s", req.Code)
-	gath.StartTesting()
 	if tlibChecker != nil {
 		t.logger.Printf("Running checker variant")
 		for _, test := range req.Tests {
@@ -613,9 +612,6 @@ func (t *Tester) EvaluateSubmission(
 			gath.FinishTest(int64(test.ID), submissionRuntimeData, interactorRuntimeData)
 		}
 	}
-
-	t.logger.Printf("Finished testing for submission")
-	gath.FinishTesting()
 
 	t.logger.Printf("Evaluation completed for submission")
 	gath.FinishEvalWithoutError()

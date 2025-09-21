@@ -7,15 +7,13 @@ type MsgType string
 
 // Message type constants
 const (
-	ReceiveJob     MsgType = "started_evaluation"
-	StartCompile   MsgType = "started_compilation"
-	FinishCompile  MsgType = "finished_compilation"
-	StartTesting   MsgType = "started_testing"
-	ReachTestCase  MsgType = "reached_test"
-	IgnoreTestCase MsgType = "ignored_test"
-	FinishTestCase MsgType = "finished_test"
-	FinishTesting  MsgType = "finished_testing"
-	FinishJob      MsgType = "finished_evaluation"
+	ReceiveJob     MsgType = "job_receive"
+	StartCompile   MsgType = "compile_start"
+	FinishCompile  MsgType = "compile_finish"
+	ReachTestCase  MsgType = "test_reach"
+	IgnoreTestCase MsgType = "test_ignore"
+	FinishTestCase MsgType = "test_finish"
+	FinishJob      MsgType = "job_finish"
 )
 
 // Runtime data size constraints
@@ -94,11 +92,6 @@ type FinishedTest struct {
 	Checker    *RuntimeData `json:"checker"`
 }
 
-// FinishedTesting message sent when all testing completes
-type FinishedTesting struct {
-	Header
-}
-
 // FinishedEvaluation message sent when evaluation completes
 type FinishedEvaluation struct {
 	Header
@@ -137,12 +130,6 @@ func NewFinishedCompilation(evalUuid string, runtimeData *RuntimeData) FinishedC
 	}
 }
 
-func NewStartedTesting(evalUuid string) StartedTesting {
-	return StartedTesting{
-		Header: NewHeader(evalUuid, StartTesting),
-	}
-}
-
 func NewReachedTest(evalUuid string, testId int64, input, answer *string) ReachedTest {
 	return ReachedTest{
 		Header: NewHeader(evalUuid, ReachTestCase),
@@ -165,12 +152,6 @@ func NewFinishedTest(evalUuid string, testId int64, submission, checker *Runtime
 		TestId:     testId,
 		Submission: submission,
 		Checker:    checker,
-	}
-}
-
-func NewFinishedTesting(evalUuid string) FinishedTesting {
-	return FinishedTesting{
-		Header: NewHeader(evalUuid, FinishTesting),
 	}
 }
 

@@ -74,11 +74,6 @@ func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.Runt
 	s.send(msg)
 }
 
-// FinishTesting implements tester.EvalResGatherer.
-func (s *sqsResQueueGatherer) FinishTesting() {
-	s.send(api.NewFinishedTesting(s.evalUuid))
-}
-
 // IgnoreTest implements tester.EvalResGatherer.
 func (s *sqsResQueueGatherer) IgnoreTest(testId int64) {
 	s.send(api.NewIgnoredTest(s.evalUuid, testId))
@@ -109,9 +104,4 @@ func (s *sqsResQueueGatherer) ReachTest(testId int64, input []byte, answer []byt
 		answerStrPtr = &answerStr
 	}
 	s.send(api.NewReachedTest(s.evalUuid, testId, inputStrPtr, answerStrPtr))
-}
-
-// StartTesting implements tester.EvalResGatherer.
-func (s *sqsResQueueGatherer) StartTesting() {
-	s.send(api.NewStartedTesting(s.evalUuid))
 }

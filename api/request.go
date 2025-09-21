@@ -20,8 +20,6 @@ type ExecReq struct {
 	CpuMillis int32 `json:"cpu_millis"`
 	// Kibibytes are more precise than kilobytes
 	MemoryKiB int32 `json:"memory_kib"`
-
-	ResSqsUrl string `json:"res_sqs_url"`
 }
 
 // Test or test case is a pair of input and answer

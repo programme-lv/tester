@@ -92,6 +92,11 @@ func main() {
 		log.Fatal("SUBM_REQ_QUEUE_URL environment variable is not set")
 	}
 
+	responseQueueUrl := os.Getenv("RESPONSE_QUEUE_URL")
+	if responseQueueUrl == "" {
+		log.Fatal("RESPONSE_QUEUE_URL environment variable is not set")
+	}
+
 	sqsClient := sqs.NewFromConfig(cfg)
 	for {
 		output, err := sqsClient.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
@@ -154,8 +159,7 @@ func main() {
 				log.Printf("checker: %s", *request.Checker)
 			}
 
-			responseSqsUrl := request.ResSqsUrl
-			gatherer := sqsgath.NewSqsResponseQueueGatherer(request.EvalUuid, responseSqsUrl)
+			gatherer := sqsgath.NewSqsResponseQueueGatherer(request.EvalUuid, responseQueueUrl)
 			err = t.EvaluateSubmission(gatherer, request)
 			if err != nil {
 				log.Printf("Error: %v", err)

@@ -13,9 +13,6 @@ type EvalResGatherer interface {
 	StartCompilation()
 	FinishCompilation(data *internal.RuntimeData)
 
-	StartTesting()
-	FinishTesting()
-
 	ReachTest(testId int64, input []byte, answer []byte)
 	IgnoreTest(testId int64)
 	FinishTest(testId int64,
