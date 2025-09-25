@@ -36,7 +36,7 @@ func (constraints *Constraints) ToArgs() []string {
 }
 
 func (constraints *Constraints) MemLimArg() string {
-	return fmt.Sprintf("--mem=%d", constraints.MemoryLimitInKB)
+	return fmt.Sprintf("--cg-mem=%d", constraints.MemoryLimitInKB)
 }
 
 func (constraints *Constraints) CpuTimeLimArg() string {
