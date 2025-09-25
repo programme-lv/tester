@@ -16,4 +16,6 @@ type RuntimeData struct {
 	ExitSignal    *int64
 	IsolateStatus *string
 	IsolateMsg    *string
+
+	FullReport string
 }

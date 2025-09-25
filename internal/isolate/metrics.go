@@ -19,10 +19,12 @@ type Metrics struct {
 	Message      *string
 	Killed       int64
 	ExitSig      *int64
+	FullReport   string
 }
 
 func parseMetaFile(metaFileBytes []byte) (*Metrics, error) {
 	metrics := &Metrics{}
+	metrics.FullReport = string(metaFileBytes)
 	for _, line := range strings.Split(string(metaFileBytes), "\n") {
 		if line == "" {
 			continue

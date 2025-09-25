@@ -85,5 +85,6 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 		CtxSwF:        metrics.CswForced,
 		ExitSignal:    metrics.ExitSig,
 		IsolateMsg:    metrics.Message,
+		FullReport:    metrics.FullReport,
 	}, nil
 }
