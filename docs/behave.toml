@@ -5,7 +5,7 @@ Tests C++17 language support.
 """
 
 [[tests.request]]
-code = """
+code = '''
 #include <iostream>
 #include <utility>
 #include <type_traits>
@@ -22,12 +22,12 @@ int main() {
         std::cout << sum(x, y) << '\n';
     }
 }
-"""
+'''
 
 tests = [
-    { in = "10 20", ans = "30" },
-    { in = "10 20", ans = "31" },
-    { in = "69 420", ans = "489" }
+    { in = "10 20", ans = "30", expect = "AC" },
+    { in = "10 20", ans = "31", expect = "WA" },
+    { in = "69 420", ans = "489", expect = "AC" }
 ]
 
 [tests.request.language]
@@ -36,9 +36,3 @@ code_fname = "solution.cpp"
 compile_cmd = "g++ -std=c++17 -O2 -o solution solution.cpp"
 compiled_fname = "solution"
 exec_cmd = "./solution"
-
-[[tests.expect]]
-status = "success"
-verdicts = "AC WA AC"
-
-
