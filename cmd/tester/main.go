@@ -19,7 +19,7 @@ import (
 	"github.com/programme-lv/tester/internal/filecache"
 	"github.com/programme-lv/tester/internal/gatherer/sqsgath"
 	"github.com/programme-lv/tester/internal/gatherer/termgath"
-	testerpkg "github.com/programme-lv/tester/internal/testing"
+	testerpkg "github.com/programme-lv/tester/internal/tester"
 	"github.com/programme-lv/tester/internal/testlib"
 	"github.com/programme-lv/tester/internal/xdg"
 	"github.com/urfave/cli/v3"
@@ -134,7 +134,7 @@ func cmdListenSQS() {
 			}
 
 			gatherer := sqsgath.NewSqsResponseQueueGatherer(request.Uuid, responseQueueUrl)
-			err = t.EvaluateSubmission(gatherer, request)
+			err = t.ExecTests(gatherer, request)
 			if err != nil {
 				log.Printf("Error: %v", err)
 				continue
@@ -160,7 +160,7 @@ func cmdVerify(path string) error {
 	g := termgath.New()
 	for _, c := range cases {
 		fmt.Printf("\n=== Suite: %s ===\n", c.Name)
-		if err := t.EvaluateSubmission(g, c.Request); err != nil {
+		if err := t.ExecTests(g, c.Request); err != nil {
 			return err
 		}
 	}

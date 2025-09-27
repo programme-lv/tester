@@ -1,4 +1,4 @@
-package testing
+package tester
 
 import (
 	"fmt"
@@ -13,10 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (t *Tester) EvaluateSubmission(
-	gath EvalResGatherer,
-	req api.ExecReq,
-) error {
+func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 	t.logger.Printf("Starting evaluation for submission: %s", req.Code)
 	gath.StartEvaluation(t.systemInfo)
 

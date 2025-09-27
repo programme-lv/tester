@@ -1,10 +1,10 @@
-package testing
+package tester
 
 import (
 	"github.com/programme-lv/tester/internal"
 )
 
-type EvalResGatherer interface {
+type ResultGatherer interface {
 	StartEvaluation(systemInfo string)
 	FinishEvalWithCompileError(msg string)
 	FinishEvalWithInternalError(msg string)
