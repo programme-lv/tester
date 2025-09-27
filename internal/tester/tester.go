@@ -2,6 +2,7 @@ package tester
 
 import (
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/programme-lv/tester/internal/filecache"
@@ -13,7 +14,8 @@ type Tester struct {
 	systemInfo   string
 	tlibCheckers *testlib.TestlibCompiler
 	testlibHStr  string
-	logger       *log.Logger
+	loggerOld    *log.Logger
+	logger       *slog.Logger
 }
 
 func NewTester(
@@ -27,6 +29,7 @@ func NewTester(
 		systemInfo:   systemInfoTxt,
 		tlibCheckers: tlibCheckers,
 		testlibHStr:  testlibHStr,
-		logger:       logger,
+		loggerOld:    logger,
+		logger:       slog.Default(),
 	}
 }

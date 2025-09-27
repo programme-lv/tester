@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
+	"github.com/lmittmann/tint"
 	"github.com/programme-lv/tester/api"
 	"github.com/programme-lv/tester/internal/behave"
 	"github.com/programme-lv/tester/internal/filecache"
@@ -26,6 +28,13 @@ import (
 )
 
 func main() {
+	w := os.Stderr
+	slog.SetDefault(slog.New(
+		tint.NewHandler(w, &tint.Options{
+			Level:      slog.LevelDebug,
+			TimeFormat: time.Kitchen,
+		}),
+	))
 	root := &cli.Command{
 		Name:  "tester",
 		Usage: "code execution worker",

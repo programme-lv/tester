@@ -1,6 +1,7 @@
 package tester
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -14,71 +15,19 @@ import (
 )
 
 func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
-	t.logger.Printf("Starting evaluation for submission: %s", req.Code)
+	t.loggerOld.Printf("Starting evaluation for submission: %s", req.Code)
+	l := t.logger.With("uuid", req.Uuid)
+	l.Info("start job", "lang", req.Lang.LangName,
+		"code_len", len(req.Code), "tests", len(req.Tests),
+		"cpu_sec", req.CpuMs/1000, "ram_mib", req.RamKiB/1024,
+		"checker", req.Checker != nil, "interactor", req.Interactor != nil)
 	gath.StartEvaluation(t.systemInfo)
 
-	for i := range req.Tests {
-		test := &req.Tests[i]
-		if (test.In.Url == nil && test.In.Content == nil) || (test.Ans.Url == nil && test.Ans.Content == nil) {
-			errMsg := fmt.Errorf("input or answer download url is nil and content is nil")
-			t.logger.Printf("Error: %s", errMsg)
-			gath.FinishEvalWithInternalError(errMsg.Error())
-			return errMsg
-		}
-		if test.In.Content != nil {
-			var err error
-			if test.In.Sha256 == nil {
-				test.In.Sha256 = new(string)
-			}
-			*test.In.Sha256, err = t.filestore.Store([]byte(*test.In.Content))
-			if err != nil {
-				errMsg := fmt.Errorf("failed to store input content: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
-			}
-		} else {
-			if test.In.Sha256 == nil {
-				errMsg := fmt.Errorf("input sha256 is nil")
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
-			}
-			err := t.filestore.Schedule(*test.In.Sha256, *test.In.Url)
-			if err != nil {
-				errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
-			}
-		}
-		if test.Ans.Content != nil {
-			var err error
-			if test.Ans.Sha256 == nil {
-				test.Ans.Sha256 = new(string)
-			}
-			*test.Ans.Sha256, err = t.filestore.Store([]byte(*test.Ans.Content))
-			if err != nil {
-				errMsg := fmt.Errorf("failed to store answer content: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
-			}
-		} else {
-			if test.Ans.Sha256 == nil {
-				errMsg := fmt.Errorf("answer sha256 is nil")
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
-			}
-			err := t.filestore.Schedule(*test.Ans.Sha256, *test.Ans.Url)
-			if err != nil {
-				errMsg := fmt.Errorf("failed to schedule file for download: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
-				gath.FinishEvalWithInternalError(errMsg.Error())
-				return errMsg
-			}
-		}
+	err := t.scheduleAndStoreTests(req.Tests)
+	if err != nil {
+		l.Error("failed to schedule and store tests", "error", err)
+		err = fmt.Errorf("failed to schedule and store tests: %w", err)
+		return err
 	}
 
 	var tlibInteractor []byte
@@ -87,7 +36,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 		tlibInteractor, err = t.tlibCheckers.CompileInteractor(*req.Interactor, t.testlibHStr)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to get testlib interactor: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
+			t.loggerOld.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
@@ -104,7 +53,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 		tlibChecker, err = t.tlibCheckers.CompileChecker(*req.Checker, t.testlibHStr)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to get testlib checker: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
+			t.loggerOld.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
@@ -112,14 +61,14 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 
 	var compiled []byte
 	if req.Lang.CompileCmd != nil {
-		t.logger.Printf("Starting compilation for language: %s", req.Lang.LangName)
+		t.loggerOld.Printf("Starting compilation for language: %s", req.Lang.LangName)
 		gath.StartCompilation()
 		var runData *internal.RuntimeData
 
 		compileBox, err := isolate.NewBox()
 		if err != nil {
 			errMsg := fmt.Errorf("failed to create isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
+			t.loggerOld.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
@@ -128,7 +77,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 		err = compileBox.AddFile(req.Lang.CodeFname, []byte(req.Code))
 		if err != nil {
 			errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
+			t.loggerOld.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
@@ -136,7 +85,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 		compileProcess, err := compileBox.Command(*req.Lang.CompileCmd, nil)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to run compilation: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
+			t.loggerOld.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
@@ -144,7 +93,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 		runData, err = utils.RunIsolateCmd(compileProcess, nil)
 		if err != nil {
 			errMsg := fmt.Errorf("failed to collect compilation runtime data: %w", err)
-			t.logger.Printf("Error: %s", errMsg)
+			t.loggerOld.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
@@ -155,10 +104,10 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			if len(runData.Stderr) > 0 {
 				stderr := string(runData.Stderr[:min(len(runData.Stderr), 100)])
 				errMsg = fmt.Sprintf("compilation failed: %s", stderr)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 			} else {
 				errMsg = fmt.Sprintf("compilation failed with exit code: %d", runData.ExitCode)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 			}
 			gath.FinishEvalWithCompileError(errMsg)
 			return nil
@@ -168,13 +117,13 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			compiled, err = compileBox.GetFile(*req.Lang.CompiledFname)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get compiled executable: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 		} else {
 			errMsg := fmt.Errorf("compiled executable not found")
-			t.logger.Printf("Error: %s", errMsg)
+			t.loggerOld.Printf("Error: %s", errMsg)
 			gath.FinishEvalWithInternalError(errMsg.Error())
 			return errMsg
 		}
@@ -190,39 +139,39 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 		submContent = []byte(req.Code)
 	}
 
-	t.logger.Printf("Starting testing for submission: %s", req.Code)
+	t.loggerOld.Printf("Starting testing for submission: %s", req.Code)
 	if tlibChecker != nil {
-		t.logger.Printf("Running checker variant")
+		t.loggerOld.Printf("Running checker variant")
 		for i, test := range req.Tests {
 			testID := i + 1
-			t.logger.Printf("Starting test: %d", testID)
+			t.loggerOld.Printf("Starting test: %d", testID)
 
 			if test.In.Sha256 == nil {
 				errMsg := fmt.Errorf("input sha256 is nil")
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
-			t.logger.Printf("Awaiting test input: %s", (*test.In.Sha256)[:8])
+			t.loggerOld.Printf("Awaiting test input: %s", (*test.In.Sha256)[:8])
 			input, err := t.filestore.Await(*test.In.Sha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test input: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
 			if test.Ans.Sha256 == nil {
 				errMsg := fmt.Errorf("answer sha256 is nil")
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
-			t.logger.Printf("Awaiting test answer: %s", (*test.Ans.Sha256)[:8])
+			t.loggerOld.Printf("Awaiting test answer: %s", (*test.Ans.Sha256)[:8])
 			answer, err := t.filestore.Await(*test.Ans.Sha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test answer: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -235,7 +184,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			submBox, err := isolate.NewBox()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to create isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -244,7 +193,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = submBox.AddFile(submFname, submContent)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -261,7 +210,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 				})
 			if err != nil {
 				errMsg := fmt.Errorf("failed to run submission: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -269,14 +218,14 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			submData, err = utils.RunIsolateCmd(submCmd, input)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to run submission: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
 			if submData.ExitSignal != nil {
 				errMsg := fmt.Errorf("test %d failed with signal: %d", testID, *submData.ExitSignal)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
@@ -285,28 +234,28 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 				submData.Stderr == nil ||
 				len(submData.Stderr) > 0 {
 				errMsg := fmt.Errorf("test %d failed with exit code: %d", testID, submData.ExitCode)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
 
 			if submData.WallMs > 14000 { // more than 14 seconds
 				errMsg := fmt.Errorf("test %d exceeded wall time limit: %d", testID, submData.WallMs)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
 
 			if submData.CpuMs > int64(req.CpuMs) {
 				errMsg := fmt.Errorf("test %d exceeded CPU time limit: %d", testID, submData.CpuMs)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
 
 			if submData.MemKiB > int64(req.RamKiB) {
 				errMsg := fmt.Errorf("test %d exceeded memory limit: %d", testID, submData.MemKiB)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishTest(int64(testID), submData, nil)
 				continue
 			}
@@ -314,16 +263,16 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			output := submData.Stdout
 			if output == nil {
 				errMsg := fmt.Errorf("submission stdout is nil")
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
-			t.logger.Printf("Setting up checker for test: %d", testID)
+			t.loggerOld.Printf("Setting up checker for test: %d", testID)
 			checkerBox, err := isolate.NewBox()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to create isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -332,7 +281,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = checkerBox.AddFile("checker", tlibChecker)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to add checker to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -340,7 +289,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = checkerBox.AddFile("input.txt", input)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to add input to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -348,7 +297,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = checkerBox.AddFile("output.txt", output)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to add output to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -356,16 +305,16 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = checkerBox.AddFile("answer.txt", answer)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to add answer to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
-			t.logger.Printf("Running checker for test: %d", testID)
+			t.loggerOld.Printf("Running checker for test: %d", testID)
 			checkerProcess, err := checkerBox.Command("./checker input.txt output.txt answer.txt", nil)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to run checker: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -373,35 +322,35 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			checkerRuntimeData, err = utils.RunIsolateCmd(checkerProcess, nil)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to collect checker runtime data: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
-			t.logger.Printf("Test %d finished successfully", testID)
+			t.loggerOld.Printf("Test %d finished successfully", testID)
 			gath.FinishTest(int64(testID), submData, checkerRuntimeData)
 		}
 	}
 	if tlibInteractor != nil {
-		t.logger.Printf("Running interactor variant")
+		t.loggerOld.Printf("Running interactor variant")
 		for i, test := range req.Tests {
 			testID := i + 1
-			t.logger.Printf("Starting test: %d", testID)
+			t.loggerOld.Printf("Starting test: %d", testID)
 
-			t.logger.Printf("Awaiting test input: %s", *test.In.Sha256)
+			t.loggerOld.Printf("Awaiting test input: %s", *test.In.Sha256)
 			input, err := t.filestore.Await(*test.In.Sha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test input: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
-			t.logger.Printf("Awaiting test answer: %s", *test.Ans.Sha256)
+			t.loggerOld.Printf("Awaiting test answer: %s", *test.Ans.Sha256)
 			answer, err := t.filestore.Await(*test.Ans.Sha256)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to get test answer: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -411,11 +360,11 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			var submissionRuntimeData *internal.RuntimeData = nil
 			var interactorRuntimeData *internal.RuntimeData = nil
 
-			t.logger.Printf("Setting up isolate box for submission")
+			t.loggerOld.Printf("Setting up isolate box for submission")
 			submBox, err := isolate.NewBox()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to create isolate box for submission: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -424,16 +373,16 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = submBox.AddFile(submFname, submContent)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to add submission to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
 
-			t.logger.Printf("Setting up isolate box for interactor")
+			t.loggerOld.Printf("Setting up isolate box for interactor")
 			interactorBox, err := isolate.NewBox()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to create isolate box for interactor: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -442,7 +391,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = interactorBox.AddFile("interactor", tlibInteractor)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to add interactor to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -450,7 +399,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = interactorBox.AddFile("input.txt", input)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to add input to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -458,7 +407,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = interactorBox.AddFile("answer.txt", answer)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to add answer to isolate box: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -466,7 +415,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			interactorProcess, err := interactorBox.Command("./interactor input.txt output.txt answer.txt", nil)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to run interactor: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -482,7 +431,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			submProcess, err := submBox.Command(req.Lang.ExecCmd, submConstraints)
 			if err != nil {
 				errMsg := fmt.Errorf("failed to run submission: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -490,7 +439,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = interactorProcess.Start()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to start interactor: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -498,7 +447,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = submProcess.Start()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to start submission: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -519,7 +468,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			eg.Go(func() error {
 				_, err := io.Copy(io.MultiWriter(submStdin, &submStdinStr), interactorStdout)
 				if err != nil {
-					t.logger.Printf("Error copying interactor stdout to submission stdin: %v", err)
+					t.loggerOld.Printf("Error copying interactor stdout to submission stdin: %v", err)
 				}
 				submStdin.Close()
 				interactorStdout.Close()
@@ -529,7 +478,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			eg.Go(func() error {
 				_, err := io.Copy(io.MultiWriter(interactorStdin, &submStdoutStr), submStdout)
 				if err != nil {
-					t.logger.Printf("Error copying submission stdout to interactor stdin: %v", err)
+					t.loggerOld.Printf("Error copying submission stdout to interactor stdin: %v", err)
 				}
 				submStdout.Close()
 				interactorStdin.Close()
@@ -539,7 +488,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			eg.Go(func() error {
 				_, err := io.Copy(&interactorStderrStr, interactorStderr)
 				if err != nil {
-					t.logger.Printf("Error copying interactor stderr to string: %v", err)
+					t.loggerOld.Printf("Error copying interactor stderr to string: %v", err)
 				}
 				interactorStderr.Close()
 				return nil
@@ -548,7 +497,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			eg.Go(func() error {
 				_, err := io.Copy(&submStderrStr, submStderr)
 				if err != nil {
-					t.logger.Printf("Error copying submission stderr to string: %v", err)
+					t.loggerOld.Printf("Error copying submission stderr to string: %v", err)
 				}
 				submStderr.Close()
 				return nil
@@ -557,7 +506,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			err = eg.Wait()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to wait for interactor and submission: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -565,7 +514,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			submMetrics, err := submProcess.Wait()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to wait for submission: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -587,7 +536,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			interactorMetrics, err := interactorProcess.Wait()
 			if err != nil {
 				errMsg := fmt.Errorf("failed to wait for interactor: %w", err)
-				t.logger.Printf("Error: %s", errMsg)
+				t.loggerOld.Printf("Error: %s", errMsg)
 				gath.FinishEvalWithInternalError(errMsg.Error())
 				return errMsg
 			}
@@ -607,13 +556,60 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 				IsolateMsg:    interactorMetrics.Message,
 			}
 
-			t.logger.Printf("Test %d finished", testID)
+			t.loggerOld.Printf("Test %d finished", testID)
 			gath.FinishTest(int64(testID), submissionRuntimeData, interactorRuntimeData)
 		}
 	}
 
-	t.logger.Printf("Evaluation completed for submission")
+	t.loggerOld.Printf("Evaluation completed for submission")
 	gath.FinishEvalWithoutError()
+
+	return nil
+}
+
+func (t *Tester) scheduleAndStoreTests(tests []api.Test) error {
+	for i := range tests {
+		test := &tests[i]
+		if (test.In.Url == nil && test.In.Content == nil) || (test.Ans.Url == nil && test.Ans.Content == nil) {
+			return errors.New("input or answer download url and content are nil")
+		}
+		if test.In.Content != nil {
+			var err error
+			if test.In.Sha256 == nil {
+				test.In.Sha256 = new(string)
+			}
+			*test.In.Sha256, err = t.filestore.Store([]byte(*test.In.Content))
+			if err != nil {
+				return fmt.Errorf("failed to store input content: %w", err)
+			}
+		} else {
+			if test.In.Sha256 == nil {
+				return errors.New("input sha256 is nil")
+			}
+			err := t.filestore.Schedule(*test.In.Sha256, *test.In.Url)
+			if err != nil {
+				return fmt.Errorf("failed to schedule input file for download: %w", err)
+			}
+		}
+		if test.Ans.Content != nil {
+			var err error
+			if test.Ans.Sha256 == nil {
+				test.Ans.Sha256 = new(string)
+			}
+			*test.Ans.Sha256, err = t.filestore.Store([]byte(*test.Ans.Content))
+			if err != nil {
+				return fmt.Errorf("failed to store answer content: %w", err)
+			}
+		} else {
+			if test.Ans.Sha256 == nil {
+				return errors.New("answer sha256 is nil")
+			}
+			err := t.filestore.Schedule(*test.Ans.Sha256, *test.Ans.Url)
+			if err != nil {
+				return fmt.Errorf("failed to schedule answer file for download: %w", err)
+			}
+		}
+	}
 
 	return nil
 }
