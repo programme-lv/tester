@@ -1,4 +1,4 @@
-package filestore
+package filecache
 
 import (
 	"crypto/sha256"

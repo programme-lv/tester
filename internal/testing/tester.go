@@ -4,12 +4,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/programme-lv/tester/internal/filestore"
+	"github.com/programme-lv/tester/internal/filecache"
 	"github.com/programme-lv/tester/internal/testlib"
 )
 
 type Tester struct {
-	filestore    *filestore.FileStore
+	filestore    *filecache.FileStore
 	systemInfo   string
 	tlibCheckers *testlib.TestlibCompiler
 	testlibHStr  string
@@ -17,7 +17,7 @@ type Tester struct {
 }
 
 func NewTester(
-	filestore *filestore.FileStore,
+	filestore *filecache.FileStore,
 	tlibCheckers *testlib.TestlibCompiler,
 	systemInfoTxt string,
 	testlibHStr string) *Tester {

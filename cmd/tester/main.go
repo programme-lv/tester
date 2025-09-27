@@ -16,7 +16,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/programme-lv/tester/api"
 	"github.com/programme-lv/tester/internal/behave"
-	"github.com/programme-lv/tester/internal/filestore"
+	"github.com/programme-lv/tester/internal/filecache"
 	"github.com/programme-lv/tester/internal/sqsgath"
 	"github.com/programme-lv/tester/internal/termgath"
 	testerpkg "github.com/programme-lv/tester/internal/testing"
@@ -196,7 +196,7 @@ func buildTester() (*testerpkg.Tester, string, string) {
 		log.Fatalf("failed to create tmp directory: %v", err)
 	}
 
-	filestore := filestore.New(fileDir, tmpDir)
+	filestore := filecache.New(fileDir, tmpDir)
 	go filestore.Start()
 
 	tlibCompiler := testlib.NewTestlibCompiler()
