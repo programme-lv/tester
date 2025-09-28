@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/fatih/color"
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
 	"github.com/lmittmann/tint"
@@ -42,16 +43,17 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:      "verify",
-				Usage:     "Run system tests",
+				Usage:     "Run system tests (see docs/behave.toml for an example)",
 				ArgsUsage: "<behave.toml>",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{Name: "verbose", Aliases: []string{"v"}, Usage: "enable verbose logs"},
+					&cli.BoolFlag{Name: "no-color", Usage: "disable colorized output"},
 				},
 				Action: func(ctx context.Context, c *cli.Command) error {
 					if c.NArg() < 1 {
-						return fmt.Errorf("path to behave.toml is required")
+						return cli.Exit("path to behave.toml is required; see --help", 1)
 					}
-					return cmdVerify(c.Args().First(), c.Bool("verbose"))
+					return cmdVerify(c.Args().First(), c.Bool("verbose"), c.Bool("no-color"))
 				},
 			},
 			{
@@ -164,7 +166,7 @@ func cmdListenSQS() {
 	}
 }
 
-func cmdVerify(path string, verbose bool) error {
+func cmdVerify(path string, verbose bool, noColor bool) error {
 	cases, err := behave.Parse(path)
 	if err != nil {
 		return err
@@ -176,24 +178,34 @@ func cmdVerify(path string, verbose bool) error {
 	} else {
 		// default pretty logger already set; nothing to do
 	}
+	// Configure colors
+	if noColor {
+		color.NoColor = true
+	}
+
 	for _, c := range cases {
-		fmt.Printf("\n=== Scenario: %s ===\n", c.Name)
+		fmt.Printf("=== Scenario: %s ===\n", c.Name)
 		// Use response builder gatherer to produce a full ExecResponse
 		rb := respbuilder.New(c.Request.Uuid)
 		if err := t.ExecTests(rb, c.Request); err != nil {
 			return err
 		}
 		response := rb.Response()
-		// Print a compact JSON of the ExecResponse for now
-		b, _ := json.MarshalIndent(response, "", "  ")
-		fmt.Println(string(b))
+		if verbose {
+			// Print a compact JSON of the ExecResponse for now
+			b, _ := json.MarshalIndent(response, "", "  ")
+			fmt.Println(string(b))
+		}
 
 		// compare the response status
 		if c.Expect.Status != string(response.Status) {
 			msg := fmt.Sprintf("status mismatch: expected %s, got %s", c.Expect.Status, response.Status)
+			color.New(color.FgRed).Fprintln(os.Stderr, "FAIL")
 			return cli.Exit(msg, 1)
 		}
 
+		// pretty print success
+		color.New(color.FgGreen).Fprintln(os.Stdout, "OK")
 	}
 	return nil
 }

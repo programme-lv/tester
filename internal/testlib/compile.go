@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -35,12 +34,12 @@ func NewTestlibCompiler() *TestlibCompiler {
 
 	err := xdgDirs.EnsureDir(tc.checkerDir)
 	if err != nil {
-		log.Fatalf("failed to create testlib checker directory: %v", err)
+		panic(fmt.Sprintf("failed to create testlib checker directory: %v", err))
 	}
 
 	err = xdgDirs.EnsureDir(tc.interactorDir)
 	if err != nil {
-		log.Fatalf("failed to create testlib interactor directory: %v", err)
+		panic(fmt.Sprintf("failed to create testlib interactor directory: %v", err))
 	}
 
 	return tc
@@ -142,35 +141,29 @@ const compiledFname = "checker"
 
 func compile(code string, testlibHeaderStr string) (compiled []byte, runData *internal.RunData, err error) {
 	isolateInstance := isolate.GetInstance()
-
-	log.Println("Creating isolate box...")
 	var box *isolate.Box
 	box, err = isolateInstance.NewBox()
 	if err != nil {
 		err = fmt.Errorf("failed to create isolate box: %w", err)
 		return
 	}
-	log.Println("Created isolate box:", box.Path())
 
 	defer func(box *isolate.Box) {
 		_ = box.Close()
 	}(box)
 
-	log.Println("Adding checker code to isolate box...")
 	err = box.AddFile(srcCodeFname, []byte(code))
 	if err != nil {
 		err = fmt.Errorf("failed to add checker code to isolate box: %w", err)
 		return
 	}
 
-	log.Println("Adding testlib.h to isolate box...")
 	err = box.AddFile("testlib.h", []byte(testlibHeaderStr))
 	if err != nil {
 		err = fmt.Errorf("failed to add testlib.h to isolate box: %w", err)
 		return
 	}
 
-	log.Println("Running checker compilation...")
 	var iCmd *isolate.Cmd
 	iCmd, err = box.Command(compileCmd, nil)
 	if err != nil {
@@ -178,7 +171,6 @@ func compile(code string, testlibHeaderStr string) (compiled []byte, runData *in
 		return
 	}
 
-	log.Println("Collecting compilation runtime data...")
 	runData, err = utils.RunIsolateCmd(iCmd, nil)
 	if err != nil {
 		err = fmt.Errorf("failed to collect runtime data: %s, %w ", iCmd.String(), err)
@@ -186,14 +178,12 @@ func compile(code string, testlibHeaderStr string) (compiled []byte, runData *in
 	}
 
 	if box.HasFile(compiledFname) {
-		log.Println("Retrieving compiled executable...")
 		compiled, err = box.GetFile(compiledFname)
 		if err != nil {
 			err = fmt.Errorf("failed to get compiled executable: %w", err)
 			return
 		}
 	}
-	log.Println("Checker compilation finished!")
 
 	return
 }

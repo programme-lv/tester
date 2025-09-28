@@ -3,7 +3,6 @@ package isolate
 import (
 	"errors"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 )
@@ -73,7 +72,6 @@ func (process *Cmd) Wait() (*Metrics, error) {
 		panic("process should be started before waiting")
 	}
 
-	log.Printf("Waiting for isolate command to finish")
 	err := process.cmd.Wait()
 
 	if err != nil {
@@ -82,7 +80,6 @@ func (process *Cmd) Wait() (*Metrics, error) {
 			return nil, err
 		}
 	}
-	log.Printf("Isolate command finished")
 
 	metaFileBytes, err := os.ReadFile(process.metaFilePath)
 	if err != nil {

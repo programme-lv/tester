@@ -37,6 +37,7 @@ func (t *Tester) ExecTests(gath internal.ResultGatherer, req api.ExecReq) error 
 
 	var tlibInteractor []byte
 	if req.Interactor != nil {
+		l.Info("compiling testlib interactor")
 		var err error
 		tlibInteractor, err = t.tlibCheckers.CompileInteractor(*req.Interactor, t.testlibHStr)
 		if err != nil {
@@ -55,16 +56,19 @@ func (t *Tester) ExecTests(gath internal.ResultGatherer, req api.ExecReq) error 
 
 	var tlibChecker []byte
 	if req.Checker != nil {
+		l.Info("compiling testlib checker")
 		var err error
 		tlibChecker, err = t.tlibCheckers.CompileChecker(*req.Checker, t.testlibHStr)
 		if err != nil {
-			errMsg := fmt.Errorf("get testlib checker: %w", err)
-			l.Error("get testlib checker", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
+			msg := "get testlib checker"
+			l.Error(msg, "error", err)
+			wrapped := fmt.Errorf("%s: %w", msg, err)
+			gath.InternalError(wrapped.Error())
+			return wrapped
 		}
 	}
 
+	l.Info("compiling submission")
 	compiled, err := t.compileSubmission(req, gath, l)
 	if err != nil {
 		if errors.Is(err, errCompileFailed) {

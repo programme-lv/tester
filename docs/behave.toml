@@ -1,7 +1,7 @@
 [[scenarios]]
 description = """
-C++17 snippet that won't compile with C++14 or earlier.
-Tests C++17 language support.
+C++17 snippet that won't compile with C++14 or earlier. \
+Tests C++17 language support. \
 """
 
 [[scenarios.request]]
@@ -42,5 +42,5 @@ compiled_fname = "solution"
 exec_cmd = "./solution"
 
 [scenarios.expect]
-status = "compile_error"
+status = "success2"
 test_results = [{ verdict = "OK" }, { verdict = "WA" }, { verdict = "OK" }]
