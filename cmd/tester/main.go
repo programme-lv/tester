@@ -168,7 +168,7 @@ func cmdVerify(path string) error {
 	t, _, _ := buildTester()
 	g := termgath.New()
 	for _, c := range cases {
-		fmt.Printf("\n=== Suite: %s ===\n", c.Name)
+		fmt.Printf("\n=== Scenario: %s ===\n", c.Name)
 		if err := t.ExecTests(g, c.Request); err != nil {
 			return err
 		}
