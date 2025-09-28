@@ -1,12 +1,4 @@
 [[languages]]
-id = "cpp"
-lang_name = "C++"
-code_fname = "solution.cpp"
-compile_cmd = "g++ -O2 -o solution solution.cpp"
-compiled_fname = "solution"
-exec_cmd = "./solution"
-
-[[languages]]
 id = "cpp17"
 lang_name = "C++17"
 code_fname = "solution.cpp"
@@ -19,6 +11,7 @@ id = "py313"
 lang_name = "Python 3.13"
 code_fname = "solution.py"
 exec_cmd = "python3.13 solution.py"
+version_cmd = "python3.13 --version | grep 3.13"
 
 [[languages]]
 id = "go125"
@@ -27,6 +20,7 @@ code_fname = "main.go"
 compile_cmd = "go build main.go"
 compiled_fname = "main"
 exec_cmd = "./main"
+version_cmd = "go version | grep 1.25"
 
 [[languages]]
 id = "java25"
@@ -35,6 +29,7 @@ code_fname = "Main.java"
 compile_cmd = "javac --release 25 Main.java"
 compiled_fname = "Main.class"
 exec_cmd = "java -Xss64M -Xmx1024M -Xms8M -XX:NewRatio=2 -XX:TieredStopAtLevel=1 -XX:+UseSerialGC Main"
+version_cmd = "java --version | grep 25"
 
 [[scenarios]]
 description = """
@@ -60,7 +55,7 @@ wall_ms = 200
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_id = "cpp"
+lang_id = "cpp17"
 
 [scenarios.expect]
 status = "success"
@@ -91,7 +86,7 @@ wall_ms = 200
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_id = "cpp"
+lang_id = "cpp17"
 
 [scenarios.expect]
 status = "success"
@@ -123,7 +118,7 @@ wall_ms = 500
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_id = "cpp"
+lang_id = "cpp17"
 
 [scenarios.expect]
 status = "success"
@@ -152,7 +147,7 @@ wall_ms = 200
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_id = "cpp"
+lang_id = "cpp17"
 
 [scenarios.expect]
 status = "success"
@@ -284,7 +279,7 @@ wall_ms = 200
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_id = "cpp"
+lang_id = "cpp17"
 
 [scenarios.expect]
 status = "compile_error"
@@ -319,7 +314,7 @@ wall_ms = 200
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_id = "cpp"
+lang_id = "cpp17"
 
 [scenarios.expect]
 status = "success"

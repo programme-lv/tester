@@ -60,17 +60,20 @@ type specSuite struct {
 	Expect      SpecExpect    `toml:"expect"`
 }
 
+type Lang struct {
+	ID            string `toml:"id"`
+	LangName      string `toml:"lang_name"`
+	CodeFname     string `toml:"code_fname"`
+	CompileCmd    string `toml:"compile_cmd"`
+	CompiledFname string `toml:"compiled_fname"`
+	ExecCmd       string `toml:"exec_cmd"`
+	VersionCmd    string `toml:"version_cmd"`
+}
+
 type specRoot struct {
 	Suites []specSuite `toml:"scenarios"`
 	// Optional registry of languages available for reference via lang_id
-	Languages []struct {
-		ID            string `toml:"id"`
-		LangName      string `toml:"lang_name"`
-		CodeFname     string `toml:"code_fname"`
-		CompileCmd    string `toml:"compile_cmd"`
-		CompiledFname string `toml:"compiled_fname"`
-		ExecCmd       string `toml:"exec_cmd"`
-	} `toml:"languages"`
+	Languages []Lang `toml:"languages"`
 }
 
 // Case is a runnable scenario converted from TOML
@@ -81,14 +84,14 @@ type Case struct {
 }
 
 // Parse reads a behaviour TOML file and converts it to runnable cases using api.ExecReq
-func Parse(path string) ([]Case, error) {
+func Parse(path string) ([]Lang, []Case, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read behaviour file: %w", err)
+		return nil, nil, fmt.Errorf("failed to read behaviour file: %w", err)
 	}
 	var root specRoot
 	if err := toml.Unmarshal(data, &root); err != nil {
-		return nil, fmt.Errorf("failed to parse TOML: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse TOML: %w", err)
 	}
 
 	// Build language registry if provided
@@ -109,7 +112,7 @@ func Parse(path string) ([]Case, error) {
 	cases := make([]Case, 0, len(root.Suites))
 	for _, suite := range root.Suites {
 		if len(suite.RequestAOT) == 0 {
-			return nil, fmt.Errorf("scenario entry is missing request block")
+			return nil, nil, fmt.Errorf("scenario entry is missing request block")
 		}
 		reqSpec := suite.RequestAOT[0]
 
@@ -120,7 +123,7 @@ func Parse(path string) ([]Case, error) {
 		if reqSpec.Language.LangID != "" {
 			base, ok := langByID[reqSpec.Language.LangID]
 			if !ok {
-				return nil, fmt.Errorf("unknown language id: %s", reqSpec.Language.LangID)
+				return nil, nil, fmt.Errorf("unknown language id: %s", reqSpec.Language.LangID)
 			}
 			eff = base
 		}
@@ -143,7 +146,7 @@ func Parse(path string) ([]Case, error) {
 
 		// Validate required fields after merge
 		if eff.LangName == "" || eff.CodeFname == "" || eff.ExecCmd == "" {
-			return nil, fmt.Errorf("language specification incomplete; require lang_name, code_fname, exec_cmd (lang_id=%q)", reqSpec.Language.LangID)
+			return nil, nil, fmt.Errorf("language specification incomplete; require lang_name, code_fname, exec_cmd (lang_id=%q)", reqSpec.Language.LangID)
 		}
 
 		// Map to api.PrLang
@@ -198,5 +201,5 @@ func Parse(path string) ([]Case, error) {
 		})
 	}
 
-	return cases, nil
+	return root.Languages, cases, nil
 }

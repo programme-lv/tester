@@ -23,8 +23,10 @@ import (
 	"github.com/programme-lv/tester/internal/filecache"
 	"github.com/programme-lv/tester/internal/gatherer/respbuilder"
 	"github.com/programme-lv/tester/internal/gatherer/sqsgath"
+	"github.com/programme-lv/tester/internal/isolate"
 	testerpkg "github.com/programme-lv/tester/internal/tester"
 	"github.com/programme-lv/tester/internal/testlib"
+	"github.com/programme-lv/tester/internal/utils"
 	"github.com/programme-lv/tester/internal/xdg"
 	"github.com/urfave/cli/v3"
 )
@@ -168,7 +170,7 @@ func cmdListenSQS() {
 }
 
 func cmdVerify(path string, verbose bool, noColor bool) error {
-	cases, err := behave.Parse(path)
+	langs, cases, err := behave.Parse(path)
 	if err != nil {
 		return err
 	}
@@ -182,6 +184,50 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 	// Configure colors
 	if noColor {
 		color.NoColor = true
+	}
+
+	for _, l := range langs {
+		fmt.Printf("=== Language: %s ===\n", l.LangName)
+		fmt.Printf("ID: %s\n", l.ID)
+		fmt.Printf("Code Fname: %s\n", l.CodeFname)
+		fmt.Printf("Compile Cmd: %s\n", l.CompileCmd)
+		fmt.Printf("Compiled Fname: %s\n", l.CompiledFname)
+		fmt.Printf("Exec Cmd: %s\n", l.ExecCmd)
+		fmt.Printf("Version Cmd: %s\n", l.VersionCmd)
+
+		// If no version command is provided, warn and skip version check
+		if l.VersionCmd == "" {
+			color.New(color.FgYellow).Fprintln(os.Stdout, "WARNING")
+			fmt.Println("no version command configured; skipping version check")
+			continue
+		}
+
+		box, err := isolate.NewBox()
+		if err != nil {
+			msg := "failed to create isolate box"
+			wrapped := fmt.Errorf("%s: %w", msg, err)
+			return cli.Exit(wrapped.Error(), 1)
+		}
+		cmd, err := box.Command(l.VersionCmd, nil)
+		if err != nil {
+			msg := "failed to create isolate command"
+			wrapped := fmt.Errorf("%s: %w", msg, err)
+			return cli.Exit(wrapped.Error(), 1)
+		}
+		runData, err := utils.RunIsolateCmd(cmd, nil)
+		if err != nil {
+			msg := "failed to run isolate command"
+			wrapped := fmt.Errorf("%s: %w", msg, err)
+			return cli.Exit(wrapped.Error(), 1)
+		}
+		if runData.ExitCode != 0 {
+			msg := "programming language version check command failed"
+			color.New(color.FgRed).Fprintln(os.Stderr, "FAIL")
+			return cli.Exit(msg, 1)
+		}
+
+		color.New(color.FgGreen).Fprintln(os.Stdout, "OK")
+
 	}
 
 	for _, c := range cases {
