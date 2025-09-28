@@ -1,7 +1,0 @@
-no uuid
-
-in and ans of tests always defined as content
-
-tests may be empty.
-
-in this case we only check the compilation

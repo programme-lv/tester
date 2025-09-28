@@ -174,6 +174,7 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 	if err != nil {
 		return err
 	}
+	warningCount := 0
 	t, _, _ := buildTester()
 	if !verbose {
 		// use a no-op handler to suppress logs
@@ -199,6 +200,7 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 		if l.VersionCmd == "" {
 			color.New(color.FgYellow).Fprintln(os.Stdout, "WARNING")
 			fmt.Println("no version command configured; skipping version check")
+			warningCount++
 			continue
 		}
 
@@ -301,6 +303,14 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 		// pretty print success
 		color.New(color.FgGreen).Fprintln(os.Stdout, "OK")
 	}
+	// Print total warnings summary
+	var warningColor color.Attribute
+	if warningCount == 0 {
+		warningColor = color.FgGreen
+	} else {
+		warningColor = color.FgYellow
+	}
+	color.New(warningColor).Fprintf(os.Stdout, "Total warnings: %d\n", warningCount)
 	return nil
 }
 

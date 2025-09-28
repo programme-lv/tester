@@ -5,6 +5,7 @@ code_fname = "solution.cpp"
 compile_cmd = "g++ -std=c++17 -O2 -o solution solution.cpp"
 compiled_fname = "solution"
 exec_cmd = "./solution"
+version_cmd = "g++ -std=c++17 -x c++ -o /dev/null - <<< 'int main(){}'"
 
 [[languages]]
 id = "py313"
