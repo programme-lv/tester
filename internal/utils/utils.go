@@ -49,12 +49,12 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RunData, error) {
 
 	metrics, err := p.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("failed to wait for isolate command: %w", err)
+		return nil, fmt.Errorf("wait for isolate command: %w", err)
 	}
 
 	err = eg.Wait()
 	if err != nil {
-		return nil, fmt.Errorf("failed to wait for isolate command: %w", err)
+		return nil, fmt.Errorf("wait for isolate command: %w", err)
 	}
 
 	return &internal.RunData{

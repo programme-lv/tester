@@ -16,7 +16,7 @@ type Builder struct {
 	finished *time.Time
 
 	// compilation runtime data
-	compileRun *api.RunData
+	compileRun *api.RuntimeData
 
 	// tests
 	testResults []api.TestResult
@@ -48,7 +48,7 @@ func (b *Builder) FinishCompile(data *internal.RunData) {
 		b.compileRun = nil
 		return
 	}
-	rd := &api.RunData{
+	rd := &api.RuntimeData{
 		CpuMillis:  int64(data.CpuMs),
 		WallMillis: int64(data.WallMs),
 		RamKiBytes: int64(data.MemKiB),
@@ -59,13 +59,6 @@ func (b *Builder) FinishCompile(data *internal.RunData) {
 	if data.ExitSignal != nil {
 		sig := *data.ExitSignal
 		rd.ExitSignal = &sig
-	}
-	if data.IsolateStatus != nil {
-		msg := *data.IsolateStatus
-		if data.IsolateMsg != nil {
-			msg += ": " + *data.IsolateMsg
-		}
-		rd.ErrorMsg = &msg
 	}
 	b.compileRun = rd
 }
@@ -83,11 +76,11 @@ func (b *Builder) IgnoreTest(testId int64) {
 func (b *Builder) FinishTest(testId int64, subm *internal.RunData, chkr *internal.RunData) {
 	tr := api.TestResult{TestId: int32(testId)}
 	// Map helper
-	mapRun := func(src *internal.RunData) *api.RunData {
+	mapRun := func(src *internal.RunData) *api.RuntimeData {
 		if src == nil {
 			return nil
 		}
-		rd := &api.RunData{}
+		rd := &api.RuntimeData{}
 		rd.CpuMillis = int64(src.CpuMs)
 		rd.WallMillis = int64(src.WallMs)
 		rd.RamKiBytes = int64(src.MemKiB)
@@ -103,7 +96,8 @@ func (b *Builder) FinishTest(testId int64, subm *internal.RunData, chkr *interna
 			if src.IsolateMsg != nil {
 				msg += ": " + *src.IsolateMsg
 			}
-			rd.ErrorMsg = &msg
+			rd.IsolateStatus = &msg
+			rd.IsolateMsg = src.IsolateMsg
 		}
 		return rd
 	}

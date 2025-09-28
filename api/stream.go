@@ -28,25 +28,6 @@ type Header struct {
 	MsgType  MsgType `json:"msg_type"`
 }
 
-// RuntimeData contains execution information for a process (streaming version)
-type RuntimeData struct {
-	Stdin    string `json:"in"`
-	Stdout   string `json:"out"`
-	Stderr   string `json:"err"`
-	ExitCode int64  `json:"exit"`
-
-	CpuMillis     int64 `json:"cpu_ms"`
-	WallMillis    int64 `json:"wall_ms"`
-	MemoryKiBytes int64 `json:"mem_kib"`
-
-	CtxSwV int64 `json:"ctx_sw_v"`
-	CtxSwF int64 `json:"ctx_sw_f"`
-
-	ExitSignal    *int64  `json:"signal"`
-	IsolateStatus *string `json:"isolate_status"`
-	IsolateMsg    *string `json:"isolate_msg"`
-}
-
 // StartJob message sent when evaluation begins
 type StartJob struct {
 	Header

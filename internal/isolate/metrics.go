@@ -2,7 +2,6 @@ package isolate
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
 	"strings"
 )
@@ -14,6 +13,7 @@ type Metrics struct {
 	CswVoluntary int64
 	CswForced    int64
 	CgMemKb      int64
+	CgOomKilled  bool
 	ExitCode     int64
 	Status       *string
 	Message      *string
@@ -31,14 +31,12 @@ func parseMetaFile(metaFileBytes []byte) (*Metrics, error) {
 		}
 		parts := strings.Split(line, ":")
 		if len(parts) != 2 {
-			slog.Info("invalid meta file line", slog.String("line", line))
 			return nil, fmt.Errorf("invalid meta file line: %s", line)
 		}
 
 		key, value := parts[0], parts[1]
 		if err := parseLine(key, value, metrics); err != nil {
-			log.Println("Error parsing meta file: ", string(metaFileBytes))
-			return nil, err
+			return nil, fmt.Errorf("error parsing meta file: %w", err)
 		}
 	}
 	return metrics, nil
@@ -80,10 +78,16 @@ func parseLine(key, value string, metrics *Metrics) error {
 			return err
 		}
 		metrics.ExitSig = &exitsig
+	case "cg-oom-killed":
+		var cgOomKilled int64
+		if err := sscanfErr(fmt.Sscanf(value, "%d", &cgOomKilled)); err != nil {
+			return err
+		}
+		metrics.CgOomKilled = cgOomKilled == 1
 	case "":
 		// ignore
 	default:
-		slog.Info("unknown meta file line", slog.String("line", key+":"+value))
+		slog.Warn("unknown meta file line", slog.String("line", key+":"+value))
 		return fmt.Errorf("unknown meta file line: %s", key+":"+value)
 	}
 	return nil

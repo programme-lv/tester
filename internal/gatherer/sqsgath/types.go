@@ -55,7 +55,7 @@ func mapRunData(data *internal.RunData, ioHeight int, ioWidth int) *api.RuntimeD
 		ExitCode:      data.ExitCode,
 		CpuMillis:     data.CpuMs,
 		WallMillis:    data.WallMs,
-		MemoryKiBytes: data.MemKiB,
+		RamKiBytes:    data.MemKiB,
 		CtxSwV:        data.CtxSwV,
 		CtxSwF:        data.CtxSwF,
 		ExitSignal:    data.ExitSignal,

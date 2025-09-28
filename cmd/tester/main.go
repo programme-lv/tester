@@ -9,6 +9,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -73,7 +74,8 @@ func main() {
 		},
 	}
 	if err := root.Run(context.Background(), os.Args); err != nil {
-		log.Fatal(err)
+		slog.Error("cli fatal error", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -213,21 +215,36 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 		for i, e := range c.Expect.TestResults {
 			res := response.TestResults[i]
 			verdict := "?"
+			reason := ""
 
-			if res.Subm.ExitCode != 0 || res.Subm.Stderr != "" || res.Subm.ExitSignal != nil {
-				verdict = "RE"
+			if res.Subm.RamKiBytes > int64(c.Request.RamKiB) || res.Subm.CgOomKilled {
+				verdict = "MLE"
+				reason = fmt.Sprintf("memory usage %dKiB > %dKiB", res.Subm.RamKiBytes, c.Request.RamKiB)
 			} else if res.Subm.CpuMillis > int64(c.Request.CpuMs) {
 				verdict = "TLE"
-			} else if res.Subm.RamKiBytes > int64(c.Request.RamKiB) {
-				verdict = "MLE"
+				reason = fmt.Sprintf("cpu time %dms > %dms", res.Subm.CpuMillis, c.Request.CpuMs)
+			} else if res.Subm.ExitCode != 0 || res.Subm.Stderr != "" || res.Subm.ExitSignal != nil {
+				verdict = "RE"
+				if res.Subm.ExitSignal != nil {
+					reason = fmt.Sprintf("signal=%d", *res.Subm.ExitSignal)
+				} else if res.Subm.Stderr != "" {
+					stderr := res.Subm.Stderr
+					if len(stderr) > 100 {
+						stderr = stderr[:100] + "..."
+					}
+					reason = fmt.Sprintf("stderr=%s", stderr)
+				} else {
+					reason = fmt.Sprintf("exit code=%d", res.Subm.ExitCode)
+				}
 			} else if res.Chkr.ExitCode != 0 {
 				verdict = "WA"
+				reason = fmt.Sprintf("checker exit code: %d", res.Chkr.ExitCode)
 			} else {
 				verdict = "OK"
 			}
 
 			if verdict != e.Verdict {
-				msg := fmt.Sprintf("test %d verdict mismatch: expected %s, got %s", i+1, e.Verdict, verdict)
+				msg := fmt.Sprintf("test %d verdict mismatch: expected %s, got %s (reason: %s)", i+1, e.Verdict, verdict, strings.ReplaceAll(reason, "\n", ""))
 				color.New(color.FgRed).Fprintln(os.Stderr, "FAIL")
 				return cli.Exit(msg, 1)
 			}
