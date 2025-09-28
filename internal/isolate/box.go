@@ -64,6 +64,11 @@ func (box *Box) Command(
 	args = append(args, "--env=HOME=/box")
 	args = append(args, "--env=PATH")
 
+	if _, err := os.Stat("/etc/alternatives"); err == nil {
+		// for some reason, java on ubuntu symlinks to /etc/alternatives/java
+		args = append(args, "--dir=/etc/alternatives")
+	}
+
 	cmdStr := fmt.Sprintf(
 		"isolate %s --run -- /usr/bin/bash -c \"%s\"",
 		strings.Join(args, " "),
