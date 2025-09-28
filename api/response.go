@@ -2,8 +2,8 @@ package api
 
 // Simple, non-streaming response types for execution results
 
-// ExecRuntimeData contains execution information for a process (simple response)
-type ExecRuntimeData struct {
+// RunData contains execution information for a process (simple response)
+type RunData struct {
 	CpuMillis  int64 `json:"cpu_ms"`
 	WallMillis int64 `json:"wall_ms"`
 	RamKiBytes int64 `json:"ram_kib"`
@@ -24,8 +24,8 @@ type TestResult struct {
 	TestId int32 `json:"test_id"`
 
 	// Runtime data for submission and for checker/interactor
-	Submission *ExecRuntimeData `json:"submission"`
-	Checker    *ExecRuntimeData `json:"checker"`
+	Subm *RunData `json:"subm"`
+	Chkr *RunData `json:"chkr"`
 }
 
 // CompileResult represents compilation outcome
@@ -55,13 +55,13 @@ type ExecResponse struct {
 	Status ExecStatus `json:"status"`
 
 	// Compilation result
-	Compilation CompileResult `json:"compilation"`
+	Compilation *RunData `json:"compilation"`
 
 	// Test results (empty if compilation failed)
 	TestResults []TestResult `json:"test_results"`
 
 	// Overall error message (for internal errors)
-	ErrorMessage *string `json:"error_message"`
+	ErrorMsg *string `json:"error_msg"`
 
 	// Execution metadata
 	StartTime   string `json:"start_time"`

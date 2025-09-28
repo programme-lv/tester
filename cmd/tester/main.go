@@ -210,36 +210,28 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 			color.New(color.FgRed).Fprintln(os.Stderr, "FAIL")
 			return cli.Exit(msg, 1)
 		}
-		// for i, e := range c.Expect.TestResults {
-		// 	res := response.TestResults[i]
-		// 	verdict := "?"
+		for i, e := range c.Expect.TestResults {
+			res := response.TestResults[i]
+			verdict := "?"
 
-		// 	if res.ExitCode != 0 || res.Stderr != "" || res.ExitSignal != nil {
-		// 		verdict = "RE"
-		// 	} else if res.CpuMillis > int64(c.Request.CpuMs) {
-		// 		verdict = "TLE"
-		// 	} else if res.RamKiBytes > int64(c.Request.RamKiB) {
-		// 		verdict = "MLE"
-		// 	}
-		// 	// TODO: checker verdict
+			if res.Subm.ExitCode != 0 || res.Subm.Stderr != "" || res.Subm.ExitSignal != nil {
+				verdict = "RE"
+			} else if res.Subm.CpuMillis > int64(c.Request.CpuMs) {
+				verdict = "TLE"
+			} else if res.Subm.RamKiBytes > int64(c.Request.RamKiB) {
+				verdict = "MLE"
+			} else if res.Chkr.ExitCode != 0 {
+				verdict = "WA"
+			} else {
+				verdict = "OK"
+			}
 
-		// 	// else if u.Subm.Signal != nil {
-		// 	// } else if u.Subm.CpuMs > int64(eval.CpuLimMs) {
-		// 	// 	eval.Tests[u.TestID-1].Tle = true
-		// 	// } else if u.Subm.MemKiB > int64(eval.MemLimKiB) {
-		// 	// 	eval.Tests[u.TestID-1].Mle = true
-		// 	// } else if u.Checker != nil {
-		// 	// 	if u.Checker.ExitCode == 0 {
-		// 	// 		eval.Tests[u.TestID-1].Ac = true
-		// 	// 	} else {
-		// 	// 		eval.Tests[u.TestID-1].Wa = true
-		// 	// 	}
-		// 	// }
-		// 	// cpuMs := int(u.Subm.CpuMs)
-		// 	// eval.Tests[u.TestID-1].CpuMs = &cpuMs
-		// 	// memKiB := int(u.Subm.MemKiB)
-		// 	// eval.Tests[u.TestID-1].MemKiB = &memKiB
-		// }
+			if verdict != e.Verdict {
+				msg := fmt.Sprintf("test %d verdict mismatch: expected %s, got %s", i+1, e.Verdict, verdict)
+				color.New(color.FgRed).Fprintln(os.Stderr, "FAIL")
+				return cli.Exit(msg, 1)
+			}
+		}
 
 		// pretty print success
 		color.New(color.FgGreen).Fprintln(os.Stdout, "OK")

@@ -15,8 +15,8 @@ type Builder struct {
 	started  time.Time
 	finished *time.Time
 
-	// compilation
-	compileResult api.CompileResult
+	// compilation runtime data
+	compileRun *api.RunData
 
 	// tests
 	testResults []api.TestResult
@@ -44,24 +44,30 @@ func (b *Builder) StartCompile() {}
 
 // FinishCompile implements ResultGatherer.
 func (b *Builder) FinishCompile(data *internal.RunData) {
-	// default to success unless exit != 0
-	b.compileResult.Success = true
-	if data != nil {
-		if data.ExitCode != 0 {
-			b.compileResult.Success = false
-			msg := "compilation failed"
-			if len(data.Stderr) > 0 {
-				msg = string(data.Stderr)
-			}
-			b.compileResult.Error = &msg
-		}
-		cpu := int64(data.CpuMs)
-		wall := int64(data.WallMs)
-		mem := int64(data.MemKiB)
-		b.compileResult.CpuMillis = &cpu
-		b.compileResult.WallMillis = &wall
-		b.compileResult.RamKiBytes = &mem
+	if data == nil {
+		b.compileRun = nil
+		return
 	}
+	rd := &api.RunData{
+		CpuMillis:  int64(data.CpuMs),
+		WallMillis: int64(data.WallMs),
+		RamKiBytes: int64(data.MemKiB),
+		ExitCode:   int64(data.ExitCode),
+		Stdout:     string(data.Stdout),
+		Stderr:     string(data.Stderr),
+	}
+	if data.ExitSignal != nil {
+		sig := *data.ExitSignal
+		rd.ExitSignal = &sig
+	}
+	if data.IsolateStatus != nil {
+		msg := *data.IsolateStatus
+		if data.IsolateMsg != nil {
+			msg += ": " + *data.IsolateMsg
+		}
+		rd.ErrorMsg = &msg
+	}
+	b.compileRun = rd
 }
 
 // ReachTest implements ResultGatherer.
@@ -77,11 +83,11 @@ func (b *Builder) IgnoreTest(testId int64) {
 func (b *Builder) FinishTest(testId int64, subm *internal.RunData, chkr *internal.RunData) {
 	tr := api.TestResult{TestId: int32(testId)}
 	// Map helper
-	mapRun := func(src *internal.RunData) *api.ExecRuntimeData {
+	mapRun := func(src *internal.RunData) *api.RunData {
 		if src == nil {
 			return nil
 		}
-		rd := &api.ExecRuntimeData{}
+		rd := &api.RunData{}
 		rd.CpuMillis = int64(src.CpuMs)
 		rd.WallMillis = int64(src.WallMs)
 		rd.RamKiBytes = int64(src.MemKiB)
@@ -101,8 +107,8 @@ func (b *Builder) FinishTest(testId int64, subm *internal.RunData, chkr *interna
 		}
 		return rd
 	}
-	tr.Submission = mapRun(subm)
-	tr.Checker = mapRun(chkr)
+	tr.Subm = mapRun(subm)
+	tr.Chkr = mapRun(chkr)
 	b.testResults = append(b.testResults, tr)
 }
 
@@ -136,9 +142,9 @@ func (b *Builder) Response() api.ExecResponse {
 	return api.ExecResponse{
 		EvalUuid:    b.evalUuid,
 		Status:      b.status,
-		Compilation: b.compileResult,
+		Compilation: b.compileRun,
 		TestResults: b.testResults,
-		ErrorMessage: func() *string {
+		ErrorMsg: func() *string {
 			if b.errorMessage == nil {
 				return nil
 			}
