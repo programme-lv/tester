@@ -7,13 +7,13 @@ type MsgType string
 
 // Streaming message type constants
 const (
-	StartJob      MsgType = "job_start"
-	StartCompile  MsgType = "compile_start"
-	FinishCompile MsgType = "compile_finish"
-	ReachTest     MsgType = "test_reach"
-	IgnoreTest    MsgType = "test_ignore"
-	FinishTest    MsgType = "test_finish"
-	FinishJob     MsgType = "job_finish"
+	StartJobMsg      MsgType = "job_start"
+	StartCompileMsg  MsgType = "compile_start"
+	FinishCompileMsg MsgType = "compile_finish"
+	ReachTestMsg     MsgType = "test_reach"
+	IgnoreTestMsg    MsgType = "test_ignore"
+	FinishTestMsg    MsgType = "test_finish"
+	FinishJobMsg     MsgType = "job_finish"
 )
 
 // Runtime data size constraints for streaming
@@ -47,48 +47,48 @@ type RuntimeData struct {
 	IsolateMsg    *string `json:"isolate_msg"`
 }
 
-// StartedEvaluation message sent when evaluation begins
-type StartedEvaluation struct {
+// StartJob message sent when evaluation begins
+type StartJob struct {
 	Header
 	SystemInfo  string `json:"system_info"`
 	StartedTime string `json:"started_time"`
 }
 
-// StartedCompilation message sent when compilation begins
-type StartedCompilation struct {
+// StartCompile message sent when compilation begins
+type StartCompile struct {
 	Header
 }
 
-// FinishedCompilation message sent when compilation completes
-type FinishedCompilation struct {
+// FinishCompile message sent when compilation completes
+type FinishCompile struct {
 	Header
 	RuntimeData *RuntimeData `json:"runtime_data"`
 }
 
-// ReachedTest message sent when a test is reached
-type ReachedTest struct {
+// ReachTest message sent when a test is reached
+type ReachTest struct {
 	Header
 	TestId int64   `json:"test_id"`
 	Input  *string `json:"input"`
 	Answer *string `json:"answer"`
 }
 
-// IgnoredTest message sent when a test is ignored
-type IgnoredTest struct {
+// IgnoreTest message sent when a test is ignored
+type IgnoreTest struct {
 	Header
 	TestId int64 `json:"test_id"`
 }
 
-// FinishedTest message sent when a test completes
-type FinishedTest struct {
+// FinishTest message sent when a test completes
+type FinishTest struct {
 	Header
 	TestId     int64        `json:"test_id"`
 	Submission *RuntimeData `json:"submission"`
 	Checker    *RuntimeData `json:"checker"`
 }
 
-// FinishedEvaluation message sent when evaluation completes
-type FinishedEvaluation struct {
+// FinishJob message sent when evaluation completes
+type FinishJob struct {
 	Header
 	ErrorMessage  *string `json:"error_message"`
 	CompileError  bool    `json:"compile_error"`
@@ -104,55 +104,55 @@ func NewHeader(evalUuid string, msgType MsgType) Header {
 }
 
 // Helper functions to create specific streaming message types
-func NewStartedEvaluation(evalUuid, systemInfo string) StartedEvaluation {
-	return StartedEvaluation{
-		Header:      NewHeader(evalUuid, StartJob),
+func NewStartJob(evalUuid, systemInfo string) StartJob {
+	return StartJob{
+		Header:      NewHeader(evalUuid, StartJobMsg),
 		SystemInfo:  systemInfo,
 		StartedTime: time.Now().Format(time.RFC3339),
 	}
 }
 
-func NewStartedCompilation(evalUuid string) StartedCompilation {
-	return StartedCompilation{
-		Header: NewHeader(evalUuid, StartCompile),
+func NewStartCompile(evalUuid string) StartCompile {
+	return StartCompile{
+		Header: NewHeader(evalUuid, StartCompileMsg),
 	}
 }
 
-func NewFinishedCompilation(evalUuid string, runtimeData *RuntimeData) FinishedCompilation {
-	return FinishedCompilation{
-		Header:      NewHeader(evalUuid, FinishCompile),
+func NewFinishCompile(evalUuid string, runtimeData *RuntimeData) FinishCompile {
+	return FinishCompile{
+		Header:      NewHeader(evalUuid, FinishCompileMsg),
 		RuntimeData: runtimeData,
 	}
 }
 
-func NewReachedTest(evalUuid string, testId int64, input, answer *string) ReachedTest {
-	return ReachedTest{
-		Header: NewHeader(evalUuid, ReachTest),
+func NewReachTest(evalUuid string, testId int64, input, answer *string) ReachTest {
+	return ReachTest{
+		Header: NewHeader(evalUuid, ReachTestMsg),
 		TestId: testId,
 		Input:  input,
 		Answer: answer,
 	}
 }
 
-func NewIgnoredTest(evalUuid string, testId int64) IgnoredTest {
-	return IgnoredTest{
-		Header: NewHeader(evalUuid, IgnoreTest),
+func NewIgnoreTest(evalUuid string, testId int64) IgnoreTest {
+	return IgnoreTest{
+		Header: NewHeader(evalUuid, IgnoreTestMsg),
 		TestId: testId,
 	}
 }
 
-func NewFinishedTest(evalUuid string, testId int64, submission, checker *RuntimeData) FinishedTest {
-	return FinishedTest{
-		Header:     NewHeader(evalUuid, FinishTest),
+func NewFinishTest(evalUuid string, testId int64, submission, checker *RuntimeData) FinishTest {
+	return FinishTest{
+		Header:     NewHeader(evalUuid, FinishTestMsg),
 		TestId:     testId,
 		Submission: submission,
 		Checker:    checker,
 	}
 }
 
-func NewFinishedEvaluation(evalUuid string, errorMessage *string, compileError, internalError bool) FinishedEvaluation {
-	return FinishedEvaluation{
-		Header:        NewHeader(evalUuid, FinishJob),
+func NewFinishJob(evalUuid string, errorMessage *string, compileError, internalError bool) FinishJob {
+	return FinishJob{
+		Header:        NewHeader(evalUuid, FinishJobMsg),
 		ErrorMessage:  errorMessage,
 		CompileError:  compileError,
 		InternalError: internalError,

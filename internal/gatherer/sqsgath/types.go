@@ -13,7 +13,7 @@ type sqsResQueueGatherer struct {
 }
 
 func (s *sqsResQueueGatherer) FinishCompile(data *internal.RuntimeData) {
-	msg := api.NewFinishedCompilation(
+	msg := api.NewFinishCompile(
 		s.evalUuid,
 		mapRunData(data, api.MaxRuntimeDataHeight*2, api.MaxRuntimeDataWidth*2),
 	)
@@ -21,15 +21,15 @@ func (s *sqsResQueueGatherer) FinishCompile(data *internal.RuntimeData) {
 }
 
 func (s *sqsResQueueGatherer) CompileError(msg string) {
-	s.send(api.NewFinishedEvaluation(s.evalUuid, &msg, true, false))
+	s.send(api.NewFinishJob(s.evalUuid, &msg, true, false))
 }
 
 func (s *sqsResQueueGatherer) InternalError(msg string) {
-	s.send(api.NewFinishedEvaluation(s.evalUuid, &msg, false, true))
+	s.send(api.NewFinishJob(s.evalUuid, &msg, false, true))
 }
 
 func (s *sqsResQueueGatherer) FinishNoError() {
-	s.send(api.NewFinishedEvaluation(s.evalUuid, nil, false, false))
+	s.send(api.NewFinishJob(s.evalUuid, nil, false, false))
 }
 
 func mapRunData(data *internal.RuntimeData, ioHeight int, ioWidth int) *api.RuntimeData {
@@ -65,7 +65,7 @@ func mapRunData(data *internal.RuntimeData, ioHeight int, ioWidth int) *api.Runt
 }
 
 func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
-	msg := api.NewFinishedTest(
+	msg := api.NewFinishTest(
 		s.evalUuid,
 		testId,
 		mapRunData(submission, api.MaxRuntimeDataHeight, api.MaxRuntimeDataWidth),
@@ -76,17 +76,17 @@ func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.Runt
 
 // IgnoreTest implements tester.EvalResGatherer.
 func (s *sqsResQueueGatherer) IgnoreTest(testId int64) {
-	s.send(api.NewIgnoredTest(s.evalUuid, testId))
+	s.send(api.NewIgnoreTest(s.evalUuid, testId))
 }
 
 // StartCompilation implements tester.EvalResGatherer.
 func (s *sqsResQueueGatherer) StartCompile() {
-	s.send(api.NewStartedCompilation(s.evalUuid))
+	s.send(api.NewStartCompile(s.evalUuid))
 }
 
 // StartEvaluation implements tester.EvalResGatherer.
 func (s *sqsResQueueGatherer) StartJob(systemInfo string) {
-	s.send(api.NewStartedEvaluation(s.evalUuid, systemInfo))
+	s.send(api.NewStartJob(s.evalUuid, systemInfo))
 }
 
 // ReachTest implements tester.EvalResGatherer.
@@ -103,5 +103,5 @@ func (s *sqsResQueueGatherer) ReachTest(testId int64, input []byte, answer []byt
 		answerStr := trimmedAnswer
 		answerStrPtr = &answerStr
 	}
-	s.send(api.NewReachedTest(s.evalUuid, testId, inputStrPtr, answerStrPtr))
+	s.send(api.NewReachTest(s.evalUuid, testId, inputStrPtr, answerStrPtr))
 }
