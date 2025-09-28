@@ -25,7 +25,7 @@ func (t *TerminalGatherer) StartCompile() {
 	fmt.Println("-- Compilation started --")
 }
 
-func (t *TerminalGatherer) FinishCompile(data *internal.RuntimeData) {
+func (t *TerminalGatherer) FinishCompile(data *internal.RunData) {
 	fmt.Println("-- Compilation finished --")
 	if data != nil {
 		fmt.Printf("exit=%d cpu=%dms wall=%dms mem=%dKiB\n", data.ExitCode, data.CpuMs, data.WallMs, data.MemKiB)
@@ -43,7 +43,7 @@ func (t *TerminalGatherer) IgnoreTest(testId int64) {
 	fmt.Printf("-> Test %d ignored\n", testId)
 }
 
-func (t *TerminalGatherer) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
+func (t *TerminalGatherer) FinishTest(testId int64, submission *internal.RunData, checker *internal.RunData) {
 	fmt.Printf("<- Test %d finished\n", testId)
 	if submission != nil {
 		fmt.Printf("  subm: exit=%d cpu=%dms wall=%dms mem=%dKiB\n", submission.ExitCode, submission.CpuMs, submission.WallMs, submission.MemKiB)

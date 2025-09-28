@@ -140,7 +140,7 @@ const srcCodeFname = "checker.cpp"
 const compileCmd = "g++ -std=c++17 -o checker checker.cpp -I . -I /usr/include"
 const compiledFname = "checker"
 
-func compile(code string, testlibHeaderStr string) (compiled []byte, runData *internal.RuntimeData, err error) {
+func compile(code string, testlibHeaderStr string) (compiled []byte, runData *internal.RunData, err error) {
 	isolateInstance := isolate.GetInstance()
 
 	log.Println("Creating isolate box...")

@@ -17,7 +17,7 @@ import (
 
 var errCompileFailed = errors.New("compile failed")
 
-func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
+func (t *Tester) ExecTests(gath internal.ResultGatherer, req api.ExecReq) error {
 	// migrated to structured logging
 	l := t.logger.With("uuid", req.Uuid[0:8]+"...")
 	l.Info("start job", "lang", req.Lang.LangName,
@@ -106,7 +106,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 // binary bytes. On normal compile failure, it reports the failure and returns
 // errCompileFailed; on internal errors it reports an internal error and returns
 // a wrapped error.
-func (t *Tester) compileSubmission(req api.ExecReq, gath ResultGatherer, l *slog.Logger) ([]byte, error) {
+func (t *Tester) compileSubmission(req api.ExecReq, gath internal.ResultGatherer, l *slog.Logger) ([]byte, error) {
 	if req.Lang.CompileCmd == nil {
 		return nil, nil
 	}
@@ -182,7 +182,7 @@ func (t *Tester) compileSubmission(req api.ExecReq, gath ResultGatherer, l *slog
 }
 
 func (t *Tester) runCheckerVariant(
-	gath ResultGatherer,
+	gath internal.ResultGatherer,
 	req api.ExecReq,
 	l *slog.Logger,
 	submFname string,
@@ -370,7 +370,7 @@ func (t *Tester) runCheckerVariant(
 }
 
 func (t *Tester) runInteractorVariant(
-	gath ResultGatherer,
+	gath internal.ResultGatherer,
 	req api.ExecReq,
 	l *slog.Logger,
 	submFname string,
@@ -550,7 +550,7 @@ func (t *Tester) runInteractorVariant(
 			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
-		submissionRuntimeData := &internal.RuntimeData{
+		submissionRuntimeData := &internal.RunData{
 			Stdin:         []byte(submStdinStr.String()),
 			Stdout:        []byte(submStdoutStr.String()),
 			Stderr:        []byte(submStderrStr.String()),
@@ -573,7 +573,7 @@ func (t *Tester) runInteractorVariant(
 			return errMsg
 		}
 
-		interactorRuntimeData := &internal.RuntimeData{
+		interactorRuntimeData := &internal.RunData{
 			Stdout:        []byte(submStdinStr.String()),
 			Stderr:        []byte(interactorStderrStr.String()),
 			ExitCode:      interactorMetrics.ExitCode,

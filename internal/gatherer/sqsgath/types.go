@@ -12,7 +12,7 @@ type sqsResQueueGatherer struct {
 	evalUuid  string
 }
 
-func (s *sqsResQueueGatherer) FinishCompile(data *internal.RuntimeData) {
+func (s *sqsResQueueGatherer) FinishCompile(data *internal.RunData) {
 	msg := api.NewFinishCompile(
 		s.evalUuid,
 		mapRunData(data, api.MaxRuntimeDataHeight*2, api.MaxRuntimeDataWidth*2),
@@ -32,7 +32,7 @@ func (s *sqsResQueueGatherer) FinishNoError() {
 	s.send(api.NewFinishJob(s.evalUuid, nil, false, false))
 }
 
-func mapRunData(data *internal.RuntimeData, ioHeight int, ioWidth int) *api.RuntimeData {
+func mapRunData(data *internal.RunData, ioHeight int, ioWidth int) *api.RuntimeData {
 	if data == nil {
 		return nil
 	}
@@ -64,7 +64,7 @@ func mapRunData(data *internal.RuntimeData, ioHeight int, ioWidth int) *api.Runt
 	}
 }
 
-func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.RuntimeData, checker *internal.RuntimeData) {
+func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.RunData, checker *internal.RunData) {
 	msg := api.NewFinishTest(
 		s.evalUuid,
 		testId,

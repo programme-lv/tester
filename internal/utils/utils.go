@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) {
+func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RunData, error) {
 	var eg errgroup.Group
 
 	log.Printf("Starting isolate command")
@@ -72,7 +72,7 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*internal.RuntimeData, error) 
 	}
 	log.Printf("All goroutines completed")
 
-	return &internal.RuntimeData{
+	return &internal.RunData{
 		Stdin:         input,
 		Stdout:        stdout,
 		Stderr:        stderr,

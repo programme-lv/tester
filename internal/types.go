@@ -1,6 +1,6 @@
 package internal
 
-type RuntimeData struct {
+type RunData struct {
 	Stdin    []byte
 	Stdout   []byte
 	Stderr   []byte
