@@ -6,21 +6,19 @@ package api
 type TestResult struct {
 	TestId int32 `json:"test_id"`
 
-	// Resource usage (only if execution succeeded)
-	CpuMillis     *int64 `json:"cpu_ms,omitempty"`
-	WallMillis    *int64 `json:"wall_ms,omitempty"`
-	MemoryKiBytes *int64 `json:"mem_kib,omitempty"`
+	CpuMillis  int64 `json:"cpu_ms,omitempty"`
+	WallMillis int64 `json:"wall_ms,omitempty"`
+	RamKiBytes int64 `json:"ram_kib,omitempty"`
 
-	// Exit information
-	ExitCode   *int64 `json:"exit_code,omitempty"`
+	ExitCode   int64  `json:"exit_code,omitempty"`
 	ExitSignal *int64 `json:"exit_signal,omitempty"`
 
-	// Error message if execution failed
-	ErrorMessage *string `json:"error_message,omitempty"`
+	// error message if execution failed
+	ErrorMsg *string `json:"error_msg,omitempty"`
 
-	// Output (truncated for simple response)
-	Stdout *string `json:"stdout,omitempty"`
-	Stderr *string `json:"stderr,omitempty"`
+	// output (likely truncated to save resources)
+	Stdout string `json:"stdout,omitempty"`
+	Stderr string `json:"stderr,omitempty"`
 }
 
 // CompileResult represents compilation outcome
@@ -29,9 +27,9 @@ type CompileResult struct {
 	Error   *string `json:"error,omitempty"`
 
 	// Resource usage during compilation
-	CpuMillis     *int64 `json:"cpu_ms,omitempty"`
-	WallMillis    *int64 `json:"wall_ms,omitempty"`
-	MemoryKiBytes *int64 `json:"mem_kib,omitempty"`
+	CpuMillis  *int64 `json:"cpu_ms,omitempty"`
+	WallMillis *int64 `json:"wall_ms,omitempty"`
+	RamKiBytes *int64 `json:"ram_kib,omitempty"`
 }
 
 type ExecStatus string

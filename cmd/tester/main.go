@@ -204,6 +204,43 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 			return cli.Exit(msg, 1)
 		}
 
+		// compare individual test results
+		if len(c.Expect.TestResults) != len(response.TestResults) {
+			msg := fmt.Sprintf("test len mismatch: expected %d, got %d", len(c.Expect.TestResults), len(response.TestResults))
+			color.New(color.FgRed).Fprintln(os.Stderr, "FAIL")
+			return cli.Exit(msg, 1)
+		}
+		// for i, e := range c.Expect.TestResults {
+		// 	res := response.TestResults[i]
+		// 	verdict := "?"
+
+		// 	if res.ExitCode != 0 || res.Stderr != "" || res.ExitSignal != nil {
+		// 		verdict = "RE"
+		// 	} else if res.CpuMillis > int64(c.Request.CpuMs) {
+		// 		verdict = "TLE"
+		// 	} else if res.RamKiBytes > int64(c.Request.RamKiB) {
+		// 		verdict = "MLE"
+		// 	}
+		// 	// TODO: checker verdict
+
+		// 	// else if u.Subm.Signal != nil {
+		// 	// } else if u.Subm.CpuMs > int64(eval.CpuLimMs) {
+		// 	// 	eval.Tests[u.TestID-1].Tle = true
+		// 	// } else if u.Subm.MemKiB > int64(eval.MemLimKiB) {
+		// 	// 	eval.Tests[u.TestID-1].Mle = true
+		// 	// } else if u.Checker != nil {
+		// 	// 	if u.Checker.ExitCode == 0 {
+		// 	// 		eval.Tests[u.TestID-1].Ac = true
+		// 	// 	} else {
+		// 	// 		eval.Tests[u.TestID-1].Wa = true
+		// 	// 	}
+		// 	// }
+		// 	// cpuMs := int(u.Subm.CpuMs)
+		// 	// eval.Tests[u.TestID-1].CpuMs = &cpuMs
+		// 	// memKiB := int(u.Subm.MemKiB)
+		// 	// eval.Tests[u.TestID-1].MemKiB = &memKiB
+		// }
+
 		// pretty print success
 		color.New(color.FgGreen).Fprintln(os.Stdout, "OK")
 	}

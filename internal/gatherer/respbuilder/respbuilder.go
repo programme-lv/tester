@@ -60,7 +60,7 @@ func (b *Builder) FinishCompile(data *internal.RunData) {
 		mem := int64(data.MemKiB)
 		b.compileResult.CpuMillis = &cpu
 		b.compileResult.WallMillis = &wall
-		b.compileResult.MemoryKiBytes = &mem
+		b.compileResult.RamKiBytes = &mem
 	}
 }
 
@@ -85,23 +85,18 @@ func (b *Builder) FinishTest(testId int64, subm *internal.RunData, chkr *interna
 		cpu := int64(src.CpuMs)
 		wall := int64(src.WallMs)
 		mem := int64(src.MemKiB)
-		tr.CpuMillis = &cpu
-		tr.WallMillis = &wall
-		tr.MemoryKiBytes = &mem
+		tr.CpuMillis = cpu
+		tr.WallMillis = wall
+		tr.RamKiBytes = mem
+		tr.ExitSignal = src.ExitSignal
 		if src.ExitSignal != nil {
 			sig := *src.ExitSignal
 			tr.ExitSignal = &sig
 		}
 		code := src.ExitCode
-		tr.ExitCode = &code
-		if len(src.Stdout) > 0 {
-			out := string(src.Stdout)
-			tr.Stdout = &out
-		}
-		if len(src.Stderr) > 0 {
-			err := string(src.Stderr)
-			tr.Stderr = &err
-		}
+		tr.ExitCode = code
+		tr.Stdout = string(src.Stdout)
+		tr.Stderr = string(src.Stderr)
 		if src.IsolateStatus != nil || src.IsolateMsg != nil {
 			// If isolate reported an error, surface it on ErrorMessage
 			if src.IsolateStatus != nil {
@@ -109,7 +104,7 @@ func (b *Builder) FinishTest(testId int64, subm *internal.RunData, chkr *interna
 				if src.IsolateMsg != nil {
 					msg += ": " + *src.IsolateMsg
 				}
-				tr.ErrorMessage = &msg
+				tr.ErrorMsg = &msg
 			}
 		}
 	}
