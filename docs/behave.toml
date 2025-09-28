@@ -1,3 +1,41 @@
+[[languages]]
+id = "cpp"
+lang_name = "C++"
+code_fname = "solution.cpp"
+compile_cmd = "g++ -O2 -o solution solution.cpp"
+compiled_fname = "solution"
+exec_cmd = "./solution"
+
+[[languages]]
+id = "cpp17"
+lang_name = "C++17"
+code_fname = "solution.cpp"
+compile_cmd = "g++ -std=c++17 -O2 -o solution solution.cpp"
+compiled_fname = "solution"
+exec_cmd = "./solution"
+
+[[languages]]
+id = "py313"
+lang_name = "Python 3.13"
+code_fname = "solution.py"
+exec_cmd = "python3.13 solution.py"
+
+[[languages]]
+id = "go125"
+lang_name = "Go 1.25"
+code_fname = "main.go"
+compile_cmd = "go build main.go"
+compiled_fname = "main"
+exec_cmd = "./main"
+
+[[languages]]
+id = "java25"
+lang_name = "Java SE 25"
+code_fname = "Main.java"
+compile_cmd = "javac --release 25 Main.java"
+compiled_fname = "Main.class"
+exec_cmd = "java -Xss64M -Xmx1024M -Xms8M -XX:NewRatio=2 -XX:TieredStopAtLevel=1 -XX:+UseSerialGC Main"
+
 [[scenarios]]
 description = """
 Simplest C++ hello world program. \
@@ -22,11 +60,7 @@ wall_ms = 200
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_name = "C++"
-code_fname = "solution.cpp"
-compile_cmd = "g++ -O2 -o solution solution.cpp"
-compiled_fname = "solution"
-exec_cmd = "./solution"
+lang_id = "cpp"
 
 [scenarios.expect]
 status = "success"
@@ -57,11 +91,7 @@ wall_ms = 200
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_name = "C++"
-code_fname = "solution.cpp"
-compile_cmd = "g++ -O2 -o solution solution.cpp"
-compiled_fname = "solution"
-exec_cmd = "./solution"
+lang_id = "cpp"
 
 [scenarios.expect]
 status = "success"
@@ -93,11 +123,7 @@ wall_ms = 500
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_name = "C++"
-code_fname = "solution.cpp"
-compile_cmd = "g++ -O2 -o solution solution.cpp"
-compiled_fname = "solution"
-exec_cmd = "./solution"
+lang_id = "cpp"
 
 [scenarios.expect]
 status = "success"
@@ -126,11 +152,7 @@ wall_ms = 200
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_name = "C++"
-code_fname = "solution.cpp"
-compile_cmd = "g++ -O2 -o solution solution.cpp"
-compiled_fname = "solution"
-exec_cmd = "./solution"
+lang_id = "cpp"
 
 [scenarios.expect]
 status = "success"
@@ -155,9 +177,7 @@ wall_ms = 500
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_name = "Python 3.13"
-code_fname = "solution.py"
-exec_cmd = "python3.13 solution.py"
+lang_id = "py313"
 
 [scenarios.expect]
 status = "success"
@@ -184,9 +204,7 @@ wall_ms = 500
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_name = "Python 3.13"
-code_fname = "solution.py"
-exec_cmd = "python3.13 solution.py"
+lang_id = "py313"
 
 [scenarios.expect]
 status = "success"
@@ -212,9 +230,7 @@ wall_ms = 500
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_name = "Python 3.13"
-code_fname = "solution.py"
-exec_cmd = "python3.13 solution.py"
+lang_id = "py313"
 
 [scenarios.expect]
 status = "success"
@@ -239,9 +255,7 @@ wall_ms = 200
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_name = "Python 3.13"
-code_fname = "solution.py"
-exec_cmd = "python3.13 solution.py"
+lang_id = "py313"
 
 [scenarios.expect]
 status = "success"
@@ -270,11 +284,7 @@ wall_ms = 200
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_name = "C++"
-code_fname = "solution.cpp"
-compile_cmd = "g++ -O2 -o solution solution.cpp"
-compiled_fname = "solution"
-exec_cmd = "./solution"
+lang_id = "cpp"
 
 [scenarios.expect]
 status = "compile_error"
@@ -309,11 +319,7 @@ wall_ms = 200
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_name = "C++"
-code_fname = "solution.cpp"
-compile_cmd = "g++ -O2 -o solution solution.cpp"
-compiled_fname = "solution"
-exec_cmd = "./solution"
+lang_id = "cpp"
 
 [scenarios.expect]
 status = "success"
@@ -356,13 +362,223 @@ wall_ms = 200
 ram_kib = 1024
 
 [scenarios.request.language]
-lang_name = "C++17"
-code_fname = "solution.cpp"
-compile_cmd = "g++ -std=c++17 -O2 -o solution solution.cpp"
-compiled_fname = "solution"
-exec_cmd = "./solution"
+lang_id = "cpp17"
 
 [scenarios.expect]
 status = "success"
 test_results = [{ verdict = "OK" }, { verdict = "WA" }, { verdict = "OK" }]
 
+
+[[scenarios]]
+description = """
+Java SE exact version probe: expect Runtime.version().feature() == 25. \
+"""
+
+[[scenarios.request]]
+code = '''
+public class Main {
+    public static void main(String[] args) {
+        System.out.println(Runtime.version().feature());
+    }
+}
+'''
+tests = [
+    { in = "", ans = "25" },
+]
+
+[scenarios.request.limits]
+cpu_ms = 2000
+wall_ms = 5000
+ram_kib = 1048576
+
+[scenarios.request.language]
+lang_id = "java25"
+
+[scenarios.expect]
+status = "success"
+test_results = [{ verdict = "OK" }]
+
+[[scenarios]]
+description = """
+Go 1.25 hello world program. \
+"""
+
+[[scenarios.request]]
+code = '''
+package main
+import "fmt"
+func main() {
+    fmt.Println("Hello, World!")
+}
+'''
+tests = [
+    { in = "", ans = "Hello, World!" },
+]
+
+[scenarios.request.limits]
+cpu_ms = 100
+wall_ms = 200
+ram_kib = 16384
+
+[scenarios.request.language]
+lang_id = "go125"
+
+[scenarios.expect]
+status = "success"
+test_results = [{ verdict = "OK" }]
+
+[[scenarios]]
+description = """
+Go 1.25 code with syntax errors that should fail to compile. \
+Tests compile error handling. \
+"""
+
+[[scenarios.request]]
+code = '''
+package main
+import "fmt"
+func main() {
+    fmt.Println("Hello, World!")
+'''
+
+[scenarios.request.limits]
+cpu_ms = 100
+wall_ms = 200
+ram_kib = 16384
+
+[scenarios.request.language]
+lang_id = "go125"
+
+[scenarios.expect]
+status = "compile_error"
+
+[[scenarios]]
+description = """
+Go 1.25 divide by zero causing runtime error. \
+Tests runtime error handling. \
+"""
+
+[[scenarios.request]]
+code = '''
+package main
+import (
+    "fmt"
+)
+func main() {
+    var a, b int
+    if _, err := fmt.Scan(&a, &b); err != nil {
+        return
+    }
+    // If b is 0, this panics at runtime
+    fmt.Println(a / b)
+}
+'''
+tests = [
+    { in = "10 0", ans = "" },
+    { in = "10 1", ans = "10" },
+]
+
+[scenarios.request.limits]
+cpu_ms = 100
+wall_ms = 200
+ram_kib = 16384
+
+[scenarios.request.language]
+lang_id = "go125"
+
+[scenarios.expect]
+status = "success"
+test_results = [{ verdict = "RE" }, { verdict = "OK" }]
+
+[[scenarios]]
+description = """
+Java SE 25 hello world program. \
+"""
+
+[[scenarios.request]]
+code = '''
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+    }
+}
+'''
+tests = [
+    { in = "", ans = "Hello, World!" },
+]
+
+[scenarios.request.limits]
+cpu_ms = 2000
+wall_ms = 5000
+ram_kib = 1048576
+
+[scenarios.request.language]
+lang_id = "java25"
+
+[scenarios.expect]
+status = "success"
+test_results = [{ verdict = "OK" }]
+
+[[scenarios]]
+description = """
+Java SE 25 code with syntax errors that should fail to compile. \
+Tests compile error handling. \
+"""
+
+[[scenarios.request]]
+code = '''
+public class Main {
+    public static void main(String[] args) {
+        int x = 10
+        System.out.println(x);
+    }
+}
+'''
+
+[scenarios.request.limits]
+cpu_ms = 2000
+wall_ms = 5000
+ram_kib = 1048576
+
+[scenarios.request.language]
+lang_id = "java25"
+
+[scenarios.expect]
+status = "compile_error"
+
+[[scenarios]]
+description = """
+Java SE 25 divide by zero causing runtime error. \
+Tests runtime error handling. \
+"""
+
+[[scenarios.request]]
+code = '''
+import java.util.*;
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        if (!sc.hasNextInt()) return;
+        int a = sc.nextInt();
+        if (!sc.hasNextInt()) return;
+        int b = sc.nextInt();
+        System.out.println(a / b);
+    }
+}
+'''
+tests = [
+    { in = "10 0", ans = "" },
+    { in = "10 1", ans = "10" },
+]
+
+[scenarios.request.limits]
+cpu_ms = 2000
+wall_ms = 5000
+ram_kib = 1048576
+
+[scenarios.request.language]
+lang_id = "java25"
+
+[scenarios.expect]
+status = "success"
+test_results = [{ verdict = "RE" }, { verdict = "OK" }]

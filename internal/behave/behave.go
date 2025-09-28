@@ -17,6 +17,8 @@ type SpecTest struct {
 
 // SpecLanguage describes language commands in the behaviour file
 type SpecLanguage struct {
+	// Either reference a predefined language by id, or provide fields inline.
+	LangID        string `toml:"lang_id"`
 	LangName      string `toml:"lang_name"`
 	CodeFname     string `toml:"code_fname"`
 	CompileCmd    string `toml:"compile_cmd"`
@@ -60,6 +62,15 @@ type specSuite struct {
 
 type specRoot struct {
 	Suites []specSuite `toml:"scenarios"`
+	// Optional registry of languages available for reference via lang_id
+	Languages []struct {
+		ID            string `toml:"id"`
+		LangName      string `toml:"lang_name"`
+		CodeFname     string `toml:"code_fname"`
+		CompileCmd    string `toml:"compile_cmd"`
+		CompiledFname string `toml:"compiled_fname"`
+		ExecCmd       string `toml:"exec_cmd"`
+	} `toml:"languages"`
 }
 
 // Case is a runnable scenario converted from TOML
@@ -80,6 +91,21 @@ func Parse(path string) ([]Case, error) {
 		return nil, fmt.Errorf("failed to parse TOML: %w", err)
 	}
 
+	// Build language registry if provided
+	langByID := make(map[string]SpecLanguage)
+	for _, l := range root.Languages {
+		if l.ID == "" {
+			continue
+		}
+		langByID[l.ID] = SpecLanguage{
+			LangName:      l.LangName,
+			CodeFname:     l.CodeFname,
+			CompileCmd:    l.CompileCmd,
+			CompiledFname: l.CompiledFname,
+			ExecCmd:       l.ExecCmd,
+		}
+	}
+
 	cases := make([]Case, 0, len(root.Suites))
 	for _, suite := range root.Suites {
 		if len(suite.RequestAOT) == 0 {
@@ -87,18 +113,51 @@ func Parse(path string) ([]Case, error) {
 		}
 		reqSpec := suite.RequestAOT[0]
 
-		// Map language
-		lang := api.PrLang{
-			LangName:  reqSpec.Language.LangName,
-			CodeFname: reqSpec.Language.CodeFname,
-			ExecCmd:   reqSpec.Language.ExecCmd,
+		// Resolve language by id and allow inline overrides
+		// 1) Start with base from registry if lang_id is set
+		// 2) Overlay inline fields when non-empty
+		var eff SpecLanguage
+		if reqSpec.Language.LangID != "" {
+			base, ok := langByID[reqSpec.Language.LangID]
+			if !ok {
+				return nil, fmt.Errorf("unknown language id: %s", reqSpec.Language.LangID)
+			}
+			eff = base
+		}
+		// Overlay/assign inline values when provided
+		if reqSpec.Language.LangName != "" {
+			eff.LangName = reqSpec.Language.LangName
+		}
+		if reqSpec.Language.CodeFname != "" {
+			eff.CodeFname = reqSpec.Language.CodeFname
 		}
 		if reqSpec.Language.CompileCmd != "" {
-			cc := reqSpec.Language.CompileCmd
-			lang.CompileCmd = &cc
+			eff.CompileCmd = reqSpec.Language.CompileCmd
 		}
 		if reqSpec.Language.CompiledFname != "" {
-			cf := reqSpec.Language.CompiledFname
+			eff.CompiledFname = reqSpec.Language.CompiledFname
+		}
+		if reqSpec.Language.ExecCmd != "" {
+			eff.ExecCmd = reqSpec.Language.ExecCmd
+		}
+
+		// Validate required fields after merge
+		if eff.LangName == "" || eff.CodeFname == "" || eff.ExecCmd == "" {
+			return nil, fmt.Errorf("language specification incomplete; require lang_name, code_fname, exec_cmd (lang_id=%q)", reqSpec.Language.LangID)
+		}
+
+		// Map to api.PrLang
+		lang := api.PrLang{
+			LangName:  eff.LangName,
+			CodeFname: eff.CodeFname,
+			ExecCmd:   eff.ExecCmd,
+		}
+		if eff.CompileCmd != "" {
+			cc := eff.CompileCmd
+			lang.CompileCmd = &cc
+		}
+		if eff.CompiledFname != "" {
+			cf := eff.CompiledFname
 			lang.CompiledFname = &cf
 		}
 
