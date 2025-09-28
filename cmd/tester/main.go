@@ -19,8 +19,8 @@ import (
 	"github.com/programme-lv/tester/api"
 	"github.com/programme-lv/tester/internal/behave"
 	"github.com/programme-lv/tester/internal/filecache"
+	"github.com/programme-lv/tester/internal/gatherer/respbuilder"
 	"github.com/programme-lv/tester/internal/gatherer/sqsgath"
-	"github.com/programme-lv/tester/internal/gatherer/termgath"
 	testerpkg "github.com/programme-lv/tester/internal/tester"
 	"github.com/programme-lv/tester/internal/testlib"
 	"github.com/programme-lv/tester/internal/xdg"
@@ -166,12 +166,16 @@ func cmdVerify(path string) error {
 		return err
 	}
 	t, _, _ := buildTester()
-	g := termgath.New()
 	for _, c := range cases {
 		fmt.Printf("\n=== Scenario: %s ===\n", c.Name)
-		if err := t.ExecTests(g, c.Request); err != nil {
+		// Use response builder gatherer to produce a full ExecResponse
+		rb := respbuilder.New(c.Request.Uuid)
+		if err := t.ExecTests(rb, c.Request); err != nil {
 			return err
 		}
+		// Print a compact JSON of the ExecResponse for now
+		b, _ := json.MarshalIndent(rb.Response(), "", "  ")
+		fmt.Println(string(b))
 	}
 	return nil
 }
