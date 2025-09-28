@@ -44,3 +44,75 @@ exec_cmd = "./solution"
 [scenarios.expect]
 status = "success"
 test_results = [{ verdict = "OK" }, { verdict = "WA" }, { verdict = "OK" }]
+
+[[scenarios]]
+description = """
+C++ code with syntax errors that should fail to compile. \
+Tests compile error handling. \
+"""
+
+[[scenarios.request]]
+code = '''
+#include <iostream>
+
+int main() {
+    int x = 10
+    std::cout << x << std::endl;
+    return 0;
+}
+'''
+
+[scenarios.request.limits]
+cpu_ms = 100
+wall_ms = 200
+ram_kib = 1024
+
+[scenarios.request.language]
+lang_name = "C++"
+code_fname = "solution.cpp"
+compile_cmd = "g++ -O2 -o solution solution.cpp"
+compiled_fname = "solution"
+exec_cmd = "./solution"
+
+[scenarios.expect]
+status = "compile_error"
+
+[[scenarios]]
+description = """
+C++ code that divides by zero causing runtime error. \
+Tests runtime error handling. \
+"""
+
+[[scenarios.request]]
+code = '''
+#include <iostream>
+
+int main() {
+    int a, b;
+    if (!(std::cin >> a >> b)) return 0;
+    
+    int result = a / b;
+    std::cout << result << std::endl;
+    return 0;
+}
+'''
+tests = [
+    { in = "10 0", ans = "" },
+    { in = "10 1", ans = "10" },
+]
+
+[scenarios.request.limits]
+cpu_ms = 100
+wall_ms = 200
+ram_kib = 1024
+
+[scenarios.request.language]
+lang_name = "C++"
+code_fname = "solution.cpp"
+compile_cmd = "g++ -O2 -o solution solution.cpp"
+compiled_fname = "solution"
+exec_cmd = "./solution"
+
+[scenarios.expect]
+status = "success"
+test_results = [{ verdict = "RE" }, { verdict = "OK" }]
