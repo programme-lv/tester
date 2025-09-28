@@ -76,38 +76,33 @@ func (b *Builder) IgnoreTest(testId int64) {
 // FinishTest implements ResultGatherer.
 func (b *Builder) FinishTest(testId int64, subm *internal.RunData, chkr *internal.RunData) {
 	tr := api.TestResult{TestId: int32(testId)}
-	// Prefer checker data when present; otherwise use submission
-	src := chkr
-	if src == nil {
-		src = subm
-	}
-	if src != nil {
-		cpu := int64(src.CpuMs)
-		wall := int64(src.WallMs)
-		mem := int64(src.MemKiB)
-		tr.CpuMillis = cpu
-		tr.WallMillis = wall
-		tr.RamKiBytes = mem
-		tr.ExitSignal = src.ExitSignal
+	// Map helper
+	mapRun := func(src *internal.RunData) *api.ExecRuntimeData {
+		if src == nil {
+			return nil
+		}
+		rd := &api.ExecRuntimeData{}
+		rd.CpuMillis = int64(src.CpuMs)
+		rd.WallMillis = int64(src.WallMs)
+		rd.RamKiBytes = int64(src.MemKiB)
+		rd.ExitCode = int64(src.ExitCode)
 		if src.ExitSignal != nil {
 			sig := *src.ExitSignal
-			tr.ExitSignal = &sig
+			rd.ExitSignal = &sig
 		}
-		code := src.ExitCode
-		tr.ExitCode = code
-		tr.Stdout = string(src.Stdout)
-		tr.Stderr = string(src.Stderr)
-		if src.IsolateStatus != nil || src.IsolateMsg != nil {
-			// If isolate reported an error, surface it on ErrorMessage
-			if src.IsolateStatus != nil {
-				msg := *src.IsolateStatus
-				if src.IsolateMsg != nil {
-					msg += ": " + *src.IsolateMsg
-				}
-				tr.ErrorMsg = &msg
+		rd.Stdout = string(src.Stdout)
+		rd.Stderr = string(src.Stderr)
+		if src.IsolateStatus != nil {
+			msg := *src.IsolateStatus
+			if src.IsolateMsg != nil {
+				msg += ": " + *src.IsolateMsg
 			}
+			rd.ErrorMsg = &msg
 		}
+		return rd
 	}
+	tr.Submission = mapRun(subm)
+	tr.Checker = mapRun(chkr)
 	b.testResults = append(b.testResults, tr)
 }
 

@@ -2,34 +2,41 @@ package api
 
 // Simple, non-streaming response types for execution results
 
+// ExecRuntimeData contains execution information for a process (simple response)
+type ExecRuntimeData struct {
+	CpuMillis  int64 `json:"cpu_ms"`
+	WallMillis int64 `json:"wall_ms"`
+	RamKiBytes int64 `json:"ram_kib"`
+
+	ExitCode   int64  `json:"exit_code"`
+	ExitSignal *int64 `json:"exit_signal"`
+
+	// Error message if execution failed
+	ErrorMsg *string `json:"error_msg"`
+
+	// Output (likely truncated to save resources)
+	Stdout string `json:"stdout"`
+	Stderr string `json:"stderr"`
+}
+
 // TestResult represents the result of a single test case
 type TestResult struct {
 	TestId int32 `json:"test_id"`
 
-	CpuMillis  int64 `json:"cpu_ms,omitempty"`
-	WallMillis int64 `json:"wall_ms,omitempty"`
-	RamKiBytes int64 `json:"ram_kib,omitempty"`
-
-	ExitCode   int64  `json:"exit_code,omitempty"`
-	ExitSignal *int64 `json:"exit_signal,omitempty"`
-
-	// error message if execution failed
-	ErrorMsg *string `json:"error_msg,omitempty"`
-
-	// output (likely truncated to save resources)
-	Stdout string `json:"stdout,omitempty"`
-	Stderr string `json:"stderr,omitempty"`
+	// Runtime data for submission and for checker/interactor
+	Submission *ExecRuntimeData `json:"submission"`
+	Checker    *ExecRuntimeData `json:"checker"`
 }
 
 // CompileResult represents compilation outcome
 type CompileResult struct {
 	Success bool    `json:"success"`
-	Error   *string `json:"error,omitempty"`
+	Error   *string `json:"error"`
 
 	// Resource usage during compilation
-	CpuMillis  *int64 `json:"cpu_ms,omitempty"`
-	WallMillis *int64 `json:"wall_ms,omitempty"`
-	RamKiBytes *int64 `json:"ram_kib,omitempty"`
+	CpuMillis  *int64 `json:"cpu_ms"`
+	WallMillis *int64 `json:"wall_ms"`
+	RamKiBytes *int64 `json:"ram_kib"`
 }
 
 type ExecStatus string
@@ -54,7 +61,7 @@ type ExecResponse struct {
 	TestResults []TestResult `json:"test_results"`
 
 	// Overall error message (for internal errors)
-	ErrorMessage *string `json:"error_message,omitempty"`
+	ErrorMessage *string `json:"error_message"`
 
 	// Execution metadata
 	StartTime   string `json:"start_time"`
@@ -62,5 +69,5 @@ type ExecResponse struct {
 	TotalTimeMs int64  `json:"total_time_ms"`
 
 	// System information
-	SystemInfo *string `json:"system_info,omitempty"`
+	SystemInfo *string `json:"system_info"`
 }
