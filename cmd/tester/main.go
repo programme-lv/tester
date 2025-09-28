@@ -236,7 +236,7 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 				} else {
 					reason = fmt.Sprintf("exit code=%d", res.Subm.ExitCode)
 				}
-			} else if res.Chkr.ExitCode != 0 {
+			} else if res.Chkr != nil && res.Chkr.ExitCode != 0 {
 				verdict = "WA"
 				reason = fmt.Sprintf("checker exit code: %d", res.Chkr.ExitCode)
 			} else {

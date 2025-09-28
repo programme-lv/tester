@@ -52,5 +52,5 @@ type ExecResponse struct {
 	TotalTimeMs int64  `json:"total_time_ms"`
 
 	// System information
-	SystemInfo *string `json:"system_info"`
+	SystemInfo string `json:"system_info"`
 }

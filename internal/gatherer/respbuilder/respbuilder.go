@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/programme-lv/tester/api"
-	"github.com/programme-lv/tester/internal"
 )
 
 // Builder gathers execution events and builds a complete api.ExecResponse.
@@ -43,24 +42,12 @@ func (b *Builder) StartJob(systemInfo string) {
 func (b *Builder) StartCompile() {}
 
 // FinishCompile implements ResultGatherer.
-func (b *Builder) FinishCompile(data *internal.RunData) {
+func (b *Builder) FinishCompile(data *api.RuntimeData) {
 	if data == nil {
 		b.compileRun = nil
 		return
 	}
-	rd := &api.RuntimeData{
-		CpuMillis:  int64(data.CpuMs),
-		WallMillis: int64(data.WallMs),
-		RamKiBytes: int64(data.MemKiB),
-		ExitCode:   int64(data.ExitCode),
-		Stdout:     string(data.Stdout),
-		Stderr:     string(data.Stderr),
-	}
-	if data.ExitSignal != nil {
-		sig := *data.ExitSignal
-		rd.ExitSignal = &sig
-	}
-	b.compileRun = rd
+	b.compileRun = data
 }
 
 // ReachTest implements ResultGatherer.
@@ -73,36 +60,10 @@ func (b *Builder) IgnoreTest(testId int64) {
 }
 
 // FinishTest implements ResultGatherer.
-func (b *Builder) FinishTest(testId int64, subm *internal.RunData, chkr *internal.RunData) {
+func (b *Builder) FinishTest(testId int64, subm *api.RuntimeData, chkr *api.RuntimeData) {
 	tr := api.TestResult{TestId: int32(testId)}
-	// Map helper
-	mapRun := func(src *internal.RunData) *api.RuntimeData {
-		if src == nil {
-			return nil
-		}
-		rd := &api.RuntimeData{}
-		rd.CpuMillis = int64(src.CpuMs)
-		rd.WallMillis = int64(src.WallMs)
-		rd.RamKiBytes = int64(src.MemKiB)
-		rd.ExitCode = int64(src.ExitCode)
-		if src.ExitSignal != nil {
-			sig := *src.ExitSignal
-			rd.ExitSignal = &sig
-		}
-		rd.Stdout = string(src.Stdout)
-		rd.Stderr = string(src.Stderr)
-		if src.IsolateStatus != nil {
-			msg := *src.IsolateStatus
-			if src.IsolateMsg != nil {
-				msg += ": " + *src.IsolateMsg
-			}
-			rd.IsolateStatus = &msg
-			rd.IsolateMsg = src.IsolateMsg
-		}
-		return rd
-	}
-	tr.Subm = mapRun(subm)
-	tr.Chkr = mapRun(chkr)
+	tr.Subm = subm
+	tr.Chkr = chkr
 	b.testResults = append(b.testResults, tr)
 }
 
@@ -138,22 +99,10 @@ func (b *Builder) Response() api.ExecResponse {
 		Status:      b.status,
 		Compilation: b.compileRun,
 		TestResults: b.testResults,
-		ErrorMsg: func() *string {
-			if b.errorMessage == nil {
-				return nil
-			}
-			v := *b.errorMessage
-			return &v
-		}(),
+		ErrorMsg:    b.errorMessage,
 		StartTime:   start,
 		FinishTime:  finish,
 		TotalTimeMs: total,
-		SystemInfo: func() *string {
-			if b.systemInfo == "" {
-				return nil
-			}
-			v := b.systemInfo
-			return &v
-		}(),
+		SystemInfo:  b.systemInfo,
 	}
 }

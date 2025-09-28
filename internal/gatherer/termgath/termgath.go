@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/programme-lv/tester/internal"
+	"github.com/programme-lv/tester/api"
 )
 
 type TerminalGatherer struct {
@@ -25,10 +25,10 @@ func (t *TerminalGatherer) StartCompile() {
 	fmt.Println("-- Compilation started --")
 }
 
-func (t *TerminalGatherer) FinishCompile(data *internal.RunData) {
+func (t *TerminalGatherer) FinishCompile(data *api.RuntimeData) {
 	fmt.Println("-- Compilation finished --")
 	if data != nil {
-		fmt.Printf("exit=%d cpu=%dms wall=%dms mem=%dKiB\n", data.ExitCode, data.CpuMs, data.WallMs, data.MemKiB)
+		fmt.Printf("exit=%d cpu=%dms wall=%dms mem=%dKiB\n", data.ExitCode, data.CpuMillis, data.WallMillis, data.RamKiBytes)
 		if len(data.Stderr) > 0 {
 			fmt.Printf("stderr:\n%s\n", string(data.Stderr))
 		}
@@ -43,13 +43,13 @@ func (t *TerminalGatherer) IgnoreTest(testId int64) {
 	fmt.Printf("-> Test %d ignored\n", testId)
 }
 
-func (t *TerminalGatherer) FinishTest(testId int64, submission *internal.RunData, checker *internal.RunData) {
+func (t *TerminalGatherer) FinishTest(testId int64, submission *api.RuntimeData, checker *api.RuntimeData) {
 	fmt.Printf("<- Test %d finished\n", testId)
 	if submission != nil {
-		fmt.Printf("  subm: exit=%d cpu=%dms wall=%dms mem=%dKiB\n", submission.ExitCode, submission.CpuMs, submission.WallMs, submission.MemKiB)
+		fmt.Printf("  subm: exit=%d cpu=%dms wall=%dms mem=%dKiB\n", submission.ExitCode, submission.CpuMillis, submission.WallMillis, submission.RamKiBytes)
 	}
 	if checker != nil {
-		fmt.Printf("  chkr: exit=%d cpu=%dms wall=%dms mem=%dKiB\n", checker.ExitCode, checker.CpuMs, checker.WallMs, checker.MemKiB)
+		fmt.Printf("  chkr: exit=%d cpu=%dms wall=%dms mem=%dKiB\n", checker.ExitCode, checker.CpuMillis, checker.WallMillis, checker.RamKiBytes)
 	}
 }
 

@@ -3,7 +3,6 @@ package sqsgath
 import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/programme-lv/tester/api"
-	"github.com/programme-lv/tester/internal"
 )
 
 type sqsResQueueGatherer struct {
@@ -12,10 +11,10 @@ type sqsResQueueGatherer struct {
 	evalUuid  string
 }
 
-func (s *sqsResQueueGatherer) FinishCompile(data *internal.RunData) {
+func (s *sqsResQueueGatherer) FinishCompile(data *api.RuntimeData) {
 	msg := api.NewFinishCompile(
 		s.evalUuid,
-		mapRunData(data, api.MaxRuntimeDataHeight*2, api.MaxRuntimeDataWidth*2),
+		trimRuntimeDataStrings(data, api.MaxRuntimeDataHeight, api.MaxRuntimeDataWidth),
 	)
 	s.send(msg)
 }
@@ -32,7 +31,7 @@ func (s *sqsResQueueGatherer) FinishNoError() {
 	s.send(api.NewFinishJob(s.evalUuid, nil, false, false))
 }
 
-func mapRunData(data *internal.RunData, ioHeight int, ioWidth int) *api.RuntimeData {
+func trimRuntimeDataStrings(data *api.RuntimeData, ioHeight int, ioWidth int) *api.RuntimeData {
 	if data == nil {
 		return nil
 	}
@@ -53,23 +52,24 @@ func mapRunData(data *internal.RunData, ioHeight int, ioWidth int) *api.RuntimeD
 		Stdout:        trimStrToRect(stdout, ioHeight, ioWidth),
 		Stderr:        trimStrToRect(stderr, ioHeight, ioWidth),
 		ExitCode:      data.ExitCode,
-		CpuMillis:     data.CpuMs,
-		WallMillis:    data.WallMs,
-		RamKiBytes:    data.MemKiB,
+		CpuMillis:     data.CpuMillis,
+		WallMillis:    data.WallMillis,
+		RamKiBytes:    data.RamKiBytes,
 		CtxSwV:        data.CtxSwV,
 		CtxSwF:        data.CtxSwF,
 		ExitSignal:    data.ExitSignal,
 		IsolateStatus: data.IsolateStatus,
 		IsolateMsg:    data.IsolateMsg,
+		CgOomKilled:   data.CgOomKilled,
 	}
 }
 
-func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *internal.RunData, checker *internal.RunData) {
+func (s *sqsResQueueGatherer) FinishTest(testId int64, submission *api.RuntimeData, checker *api.RuntimeData) {
 	msg := api.NewFinishTest(
 		s.evalUuid,
 		testId,
-		mapRunData(submission, api.MaxRuntimeDataHeight, api.MaxRuntimeDataWidth),
-		mapRunData(checker, api.MaxRuntimeDataHeight, api.MaxRuntimeDataWidth),
+		trimRuntimeDataStrings(submission, api.MaxRuntimeDataHeight, api.MaxRuntimeDataWidth),
+		trimRuntimeDataStrings(checker, api.MaxRuntimeDataHeight, api.MaxRuntimeDataWidth),
 	)
 	s.send(msg)
 }

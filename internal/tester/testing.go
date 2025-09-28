@@ -284,37 +284,31 @@ func (t *Tester) runCheckerVariant(
 			continue
 		}
 
-		if submData.ExitCode != 0 || submData.Stderr == nil || len(submData.Stderr) > 0 {
+		if submData.ExitCode != 0 || submData.Stderr == "" || len(submData.Stderr) > 0 {
 			l.Error("submission failed", "test_id", testID, "exit_code", submData.ExitCode)
 			gath.FinishTest(int64(testID), submData, nil)
 			continue
 		}
 
-		if submData.WallMs > 14000 {
-			l.Error("wall time exceeded", "test_id", testID, "wall_ms", submData.WallMs)
+		if submData.WallMillis > 14000 {
+			l.Error("wall time exceeded", "test_id", testID, "wall_ms", submData.WallMillis)
 			gath.FinishTest(int64(testID), submData, nil)
 			continue
 		}
 
-		if submData.CpuMs > int64(req.CpuMs) {
-			l.Error("cpu time exceeded", "test_id", testID, "cpu_ms", submData.CpuMs)
+		if submData.CpuMillis > int64(req.CpuMs) {
+			l.Error("cpu time exceeded", "test_id", testID, "cpu_ms", submData.CpuMillis)
 			gath.FinishTest(int64(testID), submData, nil)
 			continue
 		}
 
-		if submData.MemKiB > int64(req.RamKiB) {
-			l.Error("memory exceeded", "test_id", testID, "mem_kib", submData.MemKiB)
+		if submData.RamKiBytes > int64(req.RamKiB) {
+			l.Error("memory exceeded", "test_id", testID, "mem_kib", submData.RamKiBytes)
 			gath.FinishTest(int64(testID), submData, nil)
 			continue
 		}
 
 		output := submData.Stdout
-		if output == nil {
-			errMsg := fmt.Errorf("submission stdout is nil")
-			l.Error("submission stdout is nil")
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
 
 		l.Info("running checker", "test_id", testID)
 		checkerBox, err := isolate.NewBox()
@@ -338,7 +332,7 @@ func (t *Tester) runCheckerVariant(
 			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
-		if err := checkerBox.AddFile("output.txt", output); err != nil {
+		if err := checkerBox.AddFile("output.txt", []byte(output)); err != nil {
 			errMsg := fmt.Errorf("add output to isolate box: %w", err)
 			l.Error("add output to box", "error", err)
 			gath.InternalError(errMsg.Error())
@@ -554,19 +548,20 @@ func (t *Tester) runInteractorVariant(
 			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
-		submissionRuntimeData := &internal.RunData{
-			Stdin:         []byte(submStdinStr.String()),
-			Stdout:        []byte(submStdoutStr.String()),
-			Stderr:        []byte(submStderrStr.String()),
+		submissionRuntimeData := &api.RuntimeData{
+			Stdin:         submStdinStr.String(),
+			Stdout:        submStdoutStr.String(),
+			Stderr:        submStderrStr.String(),
 			ExitCode:      submMetrics.ExitCode,
-			CpuMs:         submMetrics.CpuMillis,
-			WallMs:        submMetrics.WallMillis,
-			MemKiB:        submMetrics.CgMemKb,
+			CpuMillis:     submMetrics.CpuMillis,
+			WallMillis:    submMetrics.WallMillis,
+			RamKiBytes:    submMetrics.CgMemKb,
 			CtxSwV:        submMetrics.CswVoluntary,
 			CtxSwF:        submMetrics.CswForced,
 			ExitSignal:    submMetrics.ExitSig,
 			IsolateStatus: submMetrics.Status,
 			IsolateMsg:    submMetrics.Message,
+			CgOomKilled:   submMetrics.CgOomKilled,
 		}
 
 		interactorMetrics, err := interactorProcess.Wait()
@@ -577,19 +572,20 @@ func (t *Tester) runInteractorVariant(
 			return errMsg
 		}
 
-		interactorRuntimeData := &internal.RunData{
-			Stdout:        []byte(submStdinStr.String()),
-			Stderr:        []byte(interactorStderrStr.String()),
+		interactorRuntimeData := &api.RuntimeData{
+			Stdin:         submStdinStr.String(),
+			Stdout:        submStdinStr.String(),
+			Stderr:        interactorStderrStr.String(),
 			ExitCode:      interactorMetrics.ExitCode,
-			CpuMs:         interactorMetrics.CpuMillis,
-			WallMs:        interactorMetrics.WallMillis,
-			MemKiB:        interactorMetrics.CgMemKb,
-			Stdin:         []byte(submStdinStr.String()),
+			CpuMillis:     interactorMetrics.CpuMillis,
+			WallMillis:    interactorMetrics.WallMillis,
+			RamKiBytes:    interactorMetrics.CgMemKb,
 			IsolateStatus: interactorMetrics.Status,
 			CtxSwV:        interactorMetrics.CswVoluntary,
 			CtxSwF:        interactorMetrics.CswForced,
 			ExitSignal:    interactorMetrics.ExitSig,
 			IsolateMsg:    interactorMetrics.Message,
+			CgOomKilled:   interactorMetrics.CgOomKilled,
 		}
 
 		l.Info("test finished", "test_id", testID)

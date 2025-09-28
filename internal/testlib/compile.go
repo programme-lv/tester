@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/programme-lv/tester/internal"
+	"github.com/programme-lv/tester/api"
 	"github.com/programme-lv/tester/internal/isolate"
 	"github.com/programme-lv/tester/internal/utils"
 	"github.com/programme-lv/tester/internal/xdg"
@@ -139,7 +139,7 @@ const srcCodeFname = "checker.cpp"
 const compileCmd = "g++ -std=c++17 -o checker checker.cpp -I . -I /usr/include"
 const compiledFname = "checker"
 
-func compile(code string, testlibHeaderStr string) (compiled []byte, runData *internal.RunData, err error) {
+func compile(code string, testlibHeaderStr string) (compiled []byte, runData *api.RuntimeData, err error) {
 	isolateInstance := isolate.GetInstance()
 	var box *isolate.Box
 	box, err = isolateInstance.NewBox()
