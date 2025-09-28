@@ -33,3 +33,10 @@ func NewTester(
 		logger:       slog.Default(),
 	}
 }
+
+// SetLogger allows overriding the internal structured logger used by the tester
+func (t *Tester) SetLogger(l *slog.Logger) {
+	if l != nil {
+		t.logger = l
+	}
+}

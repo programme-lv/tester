@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"os"
@@ -43,11 +44,14 @@ func main() {
 				Name:      "verify",
 				Usage:     "Run system tests",
 				ArgsUsage: "<behave.toml>",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "verbose", Aliases: []string{"v"}, Usage: "enable verbose logs"},
+				},
 				Action: func(ctx context.Context, c *cli.Command) error {
 					if c.NArg() < 1 {
 						return fmt.Errorf("path to behave.toml is required")
 					}
-					return cmdVerify(c.Args().First())
+					return cmdVerify(c.Args().First(), c.Bool("verbose"))
 				},
 			},
 			{
@@ -160,12 +164,18 @@ func cmdListenSQS() {
 	}
 }
 
-func cmdVerify(path string) error {
+func cmdVerify(path string, verbose bool) error {
 	cases, err := behave.Parse(path)
 	if err != nil {
 		return err
 	}
 	t, _, _ := buildTester()
+	if !verbose {
+		// use a no-op handler to suppress logs
+		t.SetLogger(slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError})))
+	} else {
+		// default pretty logger already set; nothing to do
+	}
 	for _, c := range cases {
 		fmt.Printf("\n=== Scenario: %s ===\n", c.Name)
 		// Use response builder gatherer to produce a full ExecResponse
@@ -173,9 +183,17 @@ func cmdVerify(path string) error {
 		if err := t.ExecTests(rb, c.Request); err != nil {
 			return err
 		}
+		response := rb.Response()
 		// Print a compact JSON of the ExecResponse for now
-		b, _ := json.MarshalIndent(rb.Response(), "", "  ")
+		b, _ := json.MarshalIndent(response, "", "  ")
 		fmt.Println(string(b))
+
+		// compare the response status
+		if c.Expect.Status != string(response.Status) {
+			msg := fmt.Sprintf("status mismatch: expected %s, got %s", c.Expect.Status, response.Status)
+			return cli.Exit(msg, 1)
+		}
+
 	}
 	return nil
 }

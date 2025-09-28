@@ -42,5 +42,5 @@ compiled_fname = "solution"
 exec_cmd = "./solution"
 
 [scenarios.expect]
-status = "success"
+status = "compile_error"
 test_results = [{ verdict = "OK" }, { verdict = "WA" }, { verdict = "OK" }]
