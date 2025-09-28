@@ -229,6 +229,9 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 		}
 		if runData.ExitCode != 0 {
 			msg := "programming language version check command failed"
+			msg += fmt.Sprintf("\n\texit code: %d", runData.ExitCode)
+			msg += fmt.Sprintf("\n\tstdout: %s", runData.Stdout)
+			msg += fmt.Sprintf("\n\tstderr: %s", runData.Stderr)
 			color.New(color.FgRed).Fprintln(os.Stderr, "FAIL")
 			return cli.Exit(msg, 1)
 		}
