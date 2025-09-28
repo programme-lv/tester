@@ -12,7 +12,7 @@ type sqsResQueueGatherer struct {
 	evalUuid  string
 }
 
-func (s *sqsResQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
+func (s *sqsResQueueGatherer) FinishCompile(data *internal.RuntimeData) {
 	msg := api.NewFinishedCompilation(
 		s.evalUuid,
 		mapRunData(data, api.MaxRuntimeDataHeight*2, api.MaxRuntimeDataWidth*2),
@@ -20,15 +20,15 @@ func (s *sqsResQueueGatherer) FinishCompilation(data *internal.RuntimeData) {
 	s.send(msg)
 }
 
-func (s *sqsResQueueGatherer) FinishEvalWithCompileError(msg string) {
+func (s *sqsResQueueGatherer) CompileError(msg string) {
 	s.send(api.NewFinishedEvaluation(s.evalUuid, &msg, true, false))
 }
 
-func (s *sqsResQueueGatherer) FinishEvalWithInternalError(msg string) {
+func (s *sqsResQueueGatherer) InternalError(msg string) {
 	s.send(api.NewFinishedEvaluation(s.evalUuid, &msg, false, true))
 }
 
-func (s *sqsResQueueGatherer) FinishEvalWithoutError() {
+func (s *sqsResQueueGatherer) FinishNoError() {
 	s.send(api.NewFinishedEvaluation(s.evalUuid, nil, false, false))
 }
 
@@ -80,12 +80,12 @@ func (s *sqsResQueueGatherer) IgnoreTest(testId int64) {
 }
 
 // StartCompilation implements tester.EvalResGatherer.
-func (s *sqsResQueueGatherer) StartCompilation() {
+func (s *sqsResQueueGatherer) StartCompile() {
 	s.send(api.NewStartedCompilation(s.evalUuid))
 }
 
 // StartEvaluation implements tester.EvalResGatherer.
-func (s *sqsResQueueGatherer) StartEvaluation(systemInfo string) {
+func (s *sqsResQueueGatherer) StartJob(systemInfo string) {
 	s.send(api.NewStartedEvaluation(s.evalUuid, systemInfo))
 }
 

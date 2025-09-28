@@ -13,7 +13,7 @@ type TerminalGatherer struct {
 
 func New() *TerminalGatherer { return &TerminalGatherer{StartedAt: time.Now()} }
 
-func (t *TerminalGatherer) StartEvaluation(systemInfo string) {
+func (t *TerminalGatherer) StartJob(systemInfo string) {
 	fmt.Println("== Evaluation started ==")
 	if systemInfo != "" {
 		fmt.Println("System info:")
@@ -21,11 +21,11 @@ func (t *TerminalGatherer) StartEvaluation(systemInfo string) {
 	}
 }
 
-func (t *TerminalGatherer) StartCompilation() {
+func (t *TerminalGatherer) StartCompile() {
 	fmt.Println("-- Compilation started --")
 }
 
-func (t *TerminalGatherer) FinishCompilation(data *internal.RuntimeData) {
+func (t *TerminalGatherer) FinishCompile(data *internal.RuntimeData) {
 	fmt.Println("-- Compilation finished --")
 	if data != nil {
 		fmt.Printf("exit=%d cpu=%dms wall=%dms mem=%dKiB\n", data.ExitCode, data.CpuMs, data.WallMs, data.MemKiB)
@@ -53,15 +53,15 @@ func (t *TerminalGatherer) FinishTest(testId int64, submission *internal.Runtime
 	}
 }
 
-func (t *TerminalGatherer) FinishEvalWithCompileError(msg string) {
+func (t *TerminalGatherer) CompileError(msg string) {
 	fmt.Printf("== Compilation error: %s ==\n", msg)
 }
 
-func (t *TerminalGatherer) FinishEvalWithInternalError(msg string) {
+func (t *TerminalGatherer) InternalError(msg string) {
 	fmt.Printf("== Internal error: %s ==\n", msg)
 }
 
-func (t *TerminalGatherer) FinishEvalWithoutError() {
+func (t *TerminalGatherer) FinishNoError() {
 	dur := time.Since(t.StartedAt).Round(time.Millisecond)
 	fmt.Printf("== Evaluation finished in %s ==\n", dur)
 }

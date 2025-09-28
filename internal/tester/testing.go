@@ -24,14 +24,14 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 		"code_len", len(req.Code), "tests", len(req.Tests),
 		"cpu_sec", req.CpuMs/1000, "ram_mib", req.RamKiB/1024,
 		"checker", req.Checker != nil, "interactor", req.Interactor != nil)
-	gath.StartEvaluation(t.systemInfo)
+	gath.StartJob(t.systemInfo)
 
 	err := t.scheduleAndStoreTests(req.Tests)
 	if err != nil {
 		msg := "schedule and store tests"
 		l.Error(msg, "error", err)
 		err = fmt.Errorf("%s: %w", msg, err)
-		gath.FinishEvalWithInternalError(err.Error())
+		gath.InternalError(err.Error())
 		return err
 	}
 
@@ -43,7 +43,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 			msg := "get testlib interactor"
 			l.Error(msg, "error", err)
 			wrapped := fmt.Errorf("%s: %w", msg, err)
-			gath.FinishEvalWithInternalError(wrapped.Error())
+			gath.InternalError(wrapped.Error())
 			return wrapped
 		}
 	} else {
@@ -60,7 +60,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 		if err != nil {
 			errMsg := fmt.Errorf("get testlib checker: %w", err)
 			l.Error("get testlib checker", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 	}
@@ -96,7 +96,7 @@ func (t *Tester) ExecTests(gath ResultGatherer, req api.ExecReq) error {
 	}
 
 	l.Info("evaluation completed")
-	gath.FinishEvalWithoutError()
+	gath.FinishNoError()
 
 	return nil
 }
@@ -112,13 +112,13 @@ func (t *Tester) compileSubmission(req api.ExecReq, gath ResultGatherer, l *slog
 	}
 
 	l.Info("starting compilation", "lang", req.Lang.LangName)
-	gath.StartCompilation()
+	gath.StartCompile()
 
 	compileBox, err := isolate.NewBox()
 	if err != nil {
 		errMsg := fmt.Errorf("create isolate box: %w", err)
 		l.Error("create isolate box", "error", err)
-		gath.FinishEvalWithInternalError(errMsg.Error())
+		gath.InternalError(errMsg.Error())
 		return nil, errMsg
 	}
 	defer compileBox.Close()
@@ -126,7 +126,7 @@ func (t *Tester) compileSubmission(req api.ExecReq, gath ResultGatherer, l *slog
 	if err := compileBox.AddFile(req.Lang.CodeFname, []byte(req.Code)); err != nil {
 		errMsg := fmt.Errorf("add submission to isolate box: %w", err)
 		l.Error("add submission to box", "error", err)
-		gath.FinishEvalWithInternalError(errMsg.Error())
+		gath.InternalError(errMsg.Error())
 		return nil, errMsg
 	}
 
@@ -134,7 +134,7 @@ func (t *Tester) compileSubmission(req api.ExecReq, gath ResultGatherer, l *slog
 	if err != nil {
 		errMsg := fmt.Errorf("run compilation: %w", err)
 		l.Error("run compilation", "error", err)
-		gath.FinishEvalWithInternalError(errMsg.Error())
+		gath.InternalError(errMsg.Error())
 		return nil, errMsg
 	}
 
@@ -142,10 +142,10 @@ func (t *Tester) compileSubmission(req api.ExecReq, gath ResultGatherer, l *slog
 	if err != nil {
 		errMsg := fmt.Errorf("collect compilation runtime data: %w", err)
 		l.Error("collect compilation runtime data", "error", err)
-		gath.FinishEvalWithInternalError(errMsg.Error())
+		gath.InternalError(errMsg.Error())
 		return nil, errMsg
 	}
-	gath.FinishCompilation(runData)
+	gath.FinishCompile(runData)
 
 	if runData.ExitCode != 0 {
 		var msg string
@@ -160,7 +160,7 @@ func (t *Tester) compileSubmission(req api.ExecReq, gath ResultGatherer, l *slog
 			msg = fmt.Sprintf("compilation failed with exit code: %d", runData.ExitCode)
 		}
 		l.Error("compilation", "exit_code", runData.ExitCode)
-		gath.FinishEvalWithCompileError(msg)
+		gath.CompileError(msg)
 		return nil, errCompileFailed
 	}
 
@@ -169,7 +169,7 @@ func (t *Tester) compileSubmission(req api.ExecReq, gath ResultGatherer, l *slog
 		if err != nil {
 			errMsg := fmt.Errorf("get compiled executable: %w", err)
 			l.Error("get compiled executable", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return nil, errMsg
 		}
 		return compiled, nil
@@ -177,7 +177,7 @@ func (t *Tester) compileSubmission(req api.ExecReq, gath ResultGatherer, l *slog
 
 	errMsg := fmt.Errorf("compiled executable not found")
 	l.Error("compiled executable not found")
-	gath.FinishEvalWithInternalError(errMsg.Error())
+	gath.InternalError(errMsg.Error())
 	return nil, errMsg
 }
 
@@ -197,7 +197,7 @@ func (t *Tester) runCheckerVariant(
 		if test.In.Sha256 == nil {
 			errMsg := fmt.Errorf("input sha256 is nil")
 			l.Error("input sha256 is nil")
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		shaIn := *test.In.Sha256
@@ -209,14 +209,14 @@ func (t *Tester) runCheckerVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("get test input: %w", err)
 			l.Error("get test input", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
 		if test.Ans.Sha256 == nil {
 			errMsg := fmt.Errorf("answer sha256 is nil")
 			l.Error("answer sha256 is nil")
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		shaAns := *test.Ans.Sha256
@@ -228,7 +228,7 @@ func (t *Tester) runCheckerVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("get test answer: %w", err)
 			l.Error("get test answer", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -238,7 +238,7 @@ func (t *Tester) runCheckerVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("create isolate box: %w", err)
 			l.Error("create isolate box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		defer submBox.Close()
@@ -246,7 +246,7 @@ func (t *Tester) runCheckerVariant(
 		if err := submBox.AddFile(submFname, submContent); err != nil {
 			errMsg := fmt.Errorf("add submission to isolate box: %w", err)
 			l.Error("add submission to box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -262,7 +262,7 @@ func (t *Tester) runCheckerVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("run submission: %w", err)
 			l.Error("run submission", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -270,7 +270,7 @@ func (t *Tester) runCheckerVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("run submission: %w", err)
 			l.Error("collect submission runtime", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -308,7 +308,7 @@ func (t *Tester) runCheckerVariant(
 		if output == nil {
 			errMsg := fmt.Errorf("submission stdout is nil")
 			l.Error("submission stdout is nil")
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -317,7 +317,7 @@ func (t *Tester) runCheckerVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("create isolate box: %w", err)
 			l.Error("create isolate box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		defer checkerBox.Close()
@@ -325,25 +325,25 @@ func (t *Tester) runCheckerVariant(
 		if err := checkerBox.AddFile("checker", tlibChecker); err != nil {
 			errMsg := fmt.Errorf("add checker to isolate box: %w", err)
 			l.Error("add checker to box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		if err := checkerBox.AddFile("input.txt", input); err != nil {
 			errMsg := fmt.Errorf("add input to isolate box: %w", err)
 			l.Error("add input to box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		if err := checkerBox.AddFile("output.txt", output); err != nil {
 			errMsg := fmt.Errorf("add output to isolate box: %w", err)
 			l.Error("add output to box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		if err := checkerBox.AddFile("answer.txt", answer); err != nil {
 			errMsg := fmt.Errorf("add answer to isolate box: %w", err)
 			l.Error("add answer to box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -351,7 +351,7 @@ func (t *Tester) runCheckerVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("run checker: %w", err)
 			l.Error("run checker", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -359,7 +359,7 @@ func (t *Tester) runCheckerVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("collect checker runtime data: %w", err)
 			l.Error("collect checker runtime", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -387,7 +387,7 @@ func (t *Tester) runInteractorVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("get test input: %w", err)
 			l.Error("get test input", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -396,7 +396,7 @@ func (t *Tester) runInteractorVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("get test answer: %w", err)
 			l.Error("get test answer", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -407,7 +407,7 @@ func (t *Tester) runInteractorVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("create isolate box for submission: %w", err)
 			l.Error("create isolate box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		defer submBox.Close()
@@ -415,7 +415,7 @@ func (t *Tester) runInteractorVariant(
 		if err := submBox.AddFile(submFname, submContent); err != nil {
 			errMsg := fmt.Errorf("add submission to isolate box: %w", err)
 			l.Error("add submission to box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -424,7 +424,7 @@ func (t *Tester) runInteractorVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("create isolate box for interactor: %w", err)
 			l.Error("create interactor box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		defer interactorBox.Close()
@@ -432,19 +432,19 @@ func (t *Tester) runInteractorVariant(
 		if err := interactorBox.AddFile("interactor", tlibInteractor); err != nil {
 			errMsg := fmt.Errorf("add interactor to isolate box: %w", err)
 			l.Error("add interactor to box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		if err := interactorBox.AddFile("input.txt", input); err != nil {
 			errMsg := fmt.Errorf("add input to isolate box: %w", err)
 			l.Error("add input to box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		if err := interactorBox.AddFile("answer.txt", answer); err != nil {
 			errMsg := fmt.Errorf("add answer to isolate box: %w", err)
 			l.Error("add answer to box", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -452,7 +452,7 @@ func (t *Tester) runInteractorVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("run interactor: %w", err)
 			l.Error("run interactor", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -468,20 +468,20 @@ func (t *Tester) runInteractorVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("run submission: %w", err)
 			l.Error("run submission", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
 		if err := interactorProcess.Start(); err != nil {
 			errMsg := fmt.Errorf("start interactor: %w", err)
 			l.Error("start interactor", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		if err := submProcess.Start(); err != nil {
 			errMsg := fmt.Errorf("start submission: %w", err)
 			l.Error("start submission", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -539,7 +539,7 @@ func (t *Tester) runInteractorVariant(
 		if err := eg.Wait(); err != nil {
 			errMsg := fmt.Errorf("wait for interactor and submission: %w", err)
 			l.Error("wait for processes", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
@@ -547,7 +547,7 @@ func (t *Tester) runInteractorVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("wait for submission: %w", err)
 			l.Error("wait for submission", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 		submissionRuntimeData := &internal.RuntimeData{
@@ -569,7 +569,7 @@ func (t *Tester) runInteractorVariant(
 		if err != nil {
 			errMsg := fmt.Errorf("wait for interactor: %w", err)
 			l.Error("wait for interactor", "error", err)
-			gath.FinishEvalWithInternalError(errMsg.Error())
+			gath.InternalError(errMsg.Error())
 			return errMsg
 		}
 
