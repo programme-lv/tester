@@ -53,7 +53,12 @@ func main() {
 				},
 				Action: func(ctx context.Context, c *cli.Command) error {
 					if c.NArg() < 1 {
-						return cli.Exit("path to behave.toml is required; see --help", 1)
+						// Fallback to default behave.toml if present
+						fallback := "/usr/local/etc/tester/behave.toml"
+						if _, err := os.Stat(fallback); err == nil {
+							return cmdVerify(fallback, c.Bool("verbose"), c.Bool("no-color"))
+						}
+						return cli.Exit("path to behave.toml is required; default not found; see --help", 1)
 					}
 					return cmdVerify(c.Args().First(), c.Bool("verbose"), c.Bool("no-color"))
 				},

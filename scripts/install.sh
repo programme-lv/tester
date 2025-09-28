@@ -37,6 +37,20 @@ for file in "${CONFIG_FILES[@]}"; do
         echo "$file already exists in $TESTER_ETC_DIR/$file"
     fi
 done
+
+# Copy behave.toml from repository docs if present (and not already installed)
+BEHAVE_SRC="docs/behave.toml"
+BEHAVE_DEST="$TESTER_ETC_DIR/behave.toml"
+if [ -f "$BEHAVE_SRC" ]; then
+    if [ ! -f "$BEHAVE_DEST" ]; then
+        sudo cp "$BEHAVE_SRC" "$BEHAVE_DEST"
+        echo "Copied behave.toml to $BEHAVE_DEST"
+    else
+        echo "behave.toml already exists in $BEHAVE_DEST"
+    fi
+else
+    echo "docs/behave.toml not found; skipping"
+fi
 echo ""
 
 #########################
