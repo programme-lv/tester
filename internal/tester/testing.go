@@ -284,7 +284,7 @@ func (t *Tester) runCheckerVariant(
 			continue
 		}
 
-		if submData.ExitCode != 0 || submData.Stderr == "" || len(submData.Stderr) > 0 {
+		if submData.ExitCode != 0 || len(submData.Stderr) > 0 {
 			l.Error("submission failed", "test_id", testID, "exit_code", submData.ExitCode)
 			gath.FinishTest(int64(testID), submData, nil)
 			continue

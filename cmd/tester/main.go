@@ -9,7 +9,6 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -244,7 +243,10 @@ func cmdVerify(path string, verbose bool, noColor bool) error {
 			}
 
 			if verdict != e.Verdict {
-				msg := fmt.Sprintf("test %d verdict mismatch: expected %s, got %s (reason: %s)", i+1, e.Verdict, verdict, strings.ReplaceAll(reason, "\n", ""))
+				msg := fmt.Sprintf("test %d verdict mismatch: expected %s, got %s", i+1, e.Verdict, verdict)
+				if reason != "" {
+					msg += " (reason: " + reason + ")"
+				}
 				color.New(color.FgRed).Fprintln(os.Stderr, "FAIL")
 				return cli.Exit(msg, 1)
 			}

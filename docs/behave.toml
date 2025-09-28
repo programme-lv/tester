@@ -138,7 +138,7 @@ test_results = [{ verdict = "RE" }]
 
 [[scenarios]]
 description = """
-Python 3.12 hello world program. \
+Python 3.13 hello world program. \
 """
 
 [[scenarios.request]]
@@ -155,9 +155,9 @@ wall_ms = 500
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_name = "Python 3.12"
+lang_name = "Python 3.13"
 code_fname = "solution.py"
-exec_cmd = "python3.12 solution.py"
+exec_cmd = "python3.13 solution.py"
 
 [scenarios.expect]
 status = "success"
@@ -165,7 +165,7 @@ test_results = [{ verdict = "OK" }]
 
 [[scenarios]]
 description = """
-Python 3.12 division by zero (runtime error). \
+Python 3.13 division by zero (runtime error). \
 """
 
 [[scenarios.request]]
@@ -184,9 +184,9 @@ wall_ms = 500
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_name = "Python 3.12"
+lang_name = "Python 3.13"
 code_fname = "solution.py"
-exec_cmd = "python3.12 solution.py"
+exec_cmd = "python3.13 solution.py"
 
 [scenarios.expect]
 status = "success"
@@ -194,7 +194,7 @@ test_results = [{ verdict = "RE" }]
 
 [[scenarios]]
 description = """
-Python 3.12 tight loop to exceed CPU time limit (TLE). \
+Python 3.13 tight loop to exceed CPU time limit (TLE). \
 """
 
 [[scenarios.request]]
@@ -212,9 +212,9 @@ wall_ms = 500
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_name = "Python 3.12"
+lang_name = "Python 3.13"
 code_fname = "solution.py"
-exec_cmd = "python3.12 solution.py"
+exec_cmd = "python3.13 solution.py"
 
 [scenarios.expect]
 status = "success"
@@ -222,7 +222,7 @@ test_results = [{ verdict = "TLE" }]
 
 [[scenarios]]
 description = """
-Python 3.12 wrong answer vs expected (WA). \
+Python 3.13 wrong answer vs expected (WA). \
 """
 
 [[scenarios.request]]
@@ -239,9 +239,9 @@ wall_ms = 200
 ram_kib = 16384
 
 [scenarios.request.language]
-lang_name = "Python 3.12"
+lang_name = "Python 3.13"
 code_fname = "solution.py"
-exec_cmd = "python3.12 solution.py"
+exec_cmd = "python3.13 solution.py"
 
 [scenarios.expect]
 status = "success"
@@ -318,3 +318,51 @@ exec_cmd = "./solution"
 [scenarios.expect]
 status = "success"
 test_results = [{ verdict = "RE" }, { verdict = "OK" }]
+
+[[scenarios]]
+description = """
+C++17 snippet that won't compile with C++14 or earlier. \
+Tests C++17 language support. \
+"""
+
+[[scenarios.request]]
+code = '''
+#include <iostream>
+#include <utility>
+#include <type_traits>
+
+template <typename... Ts>
+auto sum(Ts... ts) { return (ts + ...); }
+
+int main() {
+    int a, b;
+    if (!(std::cin >> a >> b)) return 0;
+
+    auto [x, y] = std::pair{a, b};
+    if constexpr (std::is_integral_v<decltype(x)>) {
+        std::cout << sum(x, y) << '\n';
+    }
+}
+'''
+tests = [
+    { in = "10 20", ans = "30" },
+    { in = "10 20", ans = "31" },
+    { in = "69 420", ans = "489" },
+]
+
+[scenarios.request.limits]
+cpu_ms = 100
+wall_ms = 200
+ram_kib = 1024
+
+[scenarios.request.language]
+lang_name = "C++17"
+code_fname = "solution.cpp"
+compile_cmd = "g++ -std=c++17 -O2 -o solution solution.cpp"
+compiled_fname = "solution"
+exec_cmd = "./solution"
+
+[scenarios.expect]
+status = "success"
+test_results = [{ verdict = "OK" }, { verdict = "WA" }, { verdict = "OK" }]
+
