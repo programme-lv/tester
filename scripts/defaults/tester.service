@@ -7,7 +7,7 @@ StartLimitBurst=5
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/bin/nice -19 /usr/local/bin/tester
+ExecStart=/usr/bin/nice -19 /usr/local/bin/tester listen sqs
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

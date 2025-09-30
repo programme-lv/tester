@@ -55,4 +55,12 @@ isolate --cg --init
 
 You may have to run `sudo systemctl restart isolate.service` after installing.
 
-Giving too little memory will result in a signal 11 for python.  
+Giving too little memory will result in a signal 11 for python. 
+
+Deploying tester to server:
+```bash
+ssh pelekais
+systemctl stop tester
+cd tester && ./scripts/install.sh
+systemctl restart tester
+```
