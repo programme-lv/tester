@@ -18,9 +18,11 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/klauspost/compress/zstd"
 	"github.com/lmittmann/tint"
+	"github.com/nats-io/nats.go"
 	"github.com/programme-lv/tester/api"
 	"github.com/programme-lv/tester/internal/behave"
 	"github.com/programme-lv/tester/internal/filecache"
+	"github.com/programme-lv/tester/internal/gatherer/natsgath"
 	"github.com/programme-lv/tester/internal/gatherer/respbuilder"
 	"github.com/programme-lv/tester/internal/gatherer/sqsgath"
 	"github.com/programme-lv/tester/internal/isolate"
@@ -72,6 +74,19 @@ func main() {
 						Usage: "Listen to AWS SQS queues",
 						Action: func(ctx context.Context, c *cli.Command) error {
 							cmdListenSQS()
+							return nil
+						},
+					},
+					{
+						Name:  "nats",
+						Usage: "Listen to NATS queue",
+						Flags: []cli.Flag{
+							&cli.StringFlag{Name: "url", Value: nats.DefaultURL, Usage: "NATS server URL"},
+							&cli.StringFlag{Name: "subject", Value: "tester.jobs", Usage: "Subject to subscribe to"},
+							&cli.StringFlag{Name: "queue", Value: "workers", Usage: "Queue group name"},
+						},
+						Action: func(ctx context.Context, c *cli.Command) error {
+							cmdListenNATS(c.String("url"), c.String("subject"), c.String("queue"))
 							return nil
 						},
 					},
@@ -172,6 +187,82 @@ func cmdListenSQS() {
 			}
 		}
 	}
+}
+
+func cmdListenNATS(natsURL, subject, queue string) {
+	nc, err := nats.Connect(natsURL)
+	if err != nil {
+		log.Fatalf("failed to connect to NATS: %v", err)
+	}
+	defer nc.Drain()
+
+	t, _, _ := buildTester()
+
+	_, err = nc.QueueSubscribe(subject, queue, func(m *nats.Msg) {
+		if m.Reply == "" {
+			log.Println("received message without reply subject; skipping")
+			return
+		}
+
+		// Decode base64
+		compressed, err := base64.StdEncoding.DecodeString(string(m.Data))
+		if err != nil {
+			log.Printf("failed to decode base64 message: %v", err)
+			sendNATSError(nc, m.Reply, "unknown", "bad base64: "+err.Error())
+			return
+		}
+
+		// Decompress zstd
+		decoder, err := zstd.NewReader(nil)
+		if err != nil {
+			log.Printf("failed to create zstd decoder: %v", err)
+			sendNATSError(nc, m.Reply, "unknown", "zstd decoder failed: "+err.Error())
+			return
+		}
+
+		jsonReq, err := decoder.DecodeAll(compressed, nil)
+		if err != nil {
+			log.Printf("failed to decode zstd message: %v", err)
+			sendNATSError(nc, m.Reply, "unknown", "zstd decode failed: "+err.Error())
+			decoder.Close()
+			return
+		}
+		decoder.Close()
+
+		// Unmarshal JSON
+		var request api.ExecReq
+		if err := json.Unmarshal(jsonReq, &request); err != nil {
+			log.Printf("failed to unmarshal message: %v", err)
+			sendNATSError(nc, m.Reply, "unknown", "bad json: "+err.Error())
+			return
+		}
+
+		log.Printf("received request with uuid: %s", request.Uuid)
+		if request.Checker != nil {
+			log.Printf("checker: %s", *request.Checker)
+		}
+
+		gatherer := natsgath.New(nc, request.Uuid, m.Reply)
+		if err := t.ExecTests(gatherer, request); err != nil {
+			log.Printf("error executing tests: %v", err)
+		}
+	})
+	if err != nil {
+		log.Fatalf("failed to subscribe: %v", err)
+	}
+
+	if err := nc.FlushTimeout(2 * time.Second); err != nil {
+		log.Fatalf("failed to flush NATS connection: %v", err)
+	}
+
+	log.Printf("worker subscribed subject=%q queue=%q", subject, queue)
+	select {}
+}
+
+func sendNATSError(nc *nats.Conn, inbox, evalUuid, msg string) {
+	errMsg := api.NewFinishJob(evalUuid, &msg, false, true)
+	b, _ := json.Marshal(errMsg)
+	_ = nc.Publish(inbox, b)
 }
 
 func cmdVerify(path string, verbose bool, noColor bool) error {

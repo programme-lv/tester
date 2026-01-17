@@ -60,7 +60,12 @@ Giving too little memory will result in a signal 11 for python.
 Deploying tester to server:
 ```bash
 ssh pelekais
+```
+
+```bash
+cd tester
+git pull
 systemctl stop tester
-cd tester && ./scripts/install.sh
+./scripts/install.sh
 systemctl restart tester
 ```
