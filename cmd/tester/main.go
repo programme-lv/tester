@@ -34,6 +34,14 @@ import (
 )
 
 func main() {
+	// Load .env file early so env vars are available for flag defaults
+	if err := godotenv.Load(); err != nil {
+		// Only log if it's not a "file not found" error
+		if !os.IsNotExist(err) {
+			log.Printf("error loading .env file: %v", err)
+		}
+	}
+
 	w := os.Stderr
 	slog.SetDefault(slog.New(
 		tint.NewHandler(w, &tint.Options{
@@ -429,11 +437,6 @@ func getNATSURL() string {
 }
 
 func buildTester() (*testerpkg.Tester, string, string) {
-	// Try to load .env file if it exists, but don't fail if it doesn't
-	if err := godotenv.Load(); err != nil {
-		log.Printf("No .env file found or error loading .env file: %v (this is optional)", err)
-	}
-
 	// Initialize XDG directories
 	xdgDirs := xdg.NewXDGDirs()
 
