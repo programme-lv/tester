@@ -81,7 +81,7 @@ func main() {
 						Name:  "nats",
 						Usage: "Listen to NATS queue",
 						Flags: []cli.Flag{
-							&cli.StringFlag{Name: "url", Value: nats.DefaultURL, Usage: "NATS server URL"},
+							&cli.StringFlag{Name: "url", Value: getNATSURL(), Usage: "NATS server URL (env: NATS_URL)"},
 							&cli.StringFlag{Name: "subject", Value: "tester.jobs", Usage: "Subject to subscribe to"},
 							&cli.StringFlag{Name: "queue", Value: "workers", Usage: "Queue group name"},
 						},
@@ -419,6 +419,13 @@ func mustEnv(key string) string {
 		log.Fatalf("%s environment variable is not set", key)
 	}
 	return v
+}
+
+func getNATSURL() string {
+	if url := os.Getenv("NATS_URL"); url != "" {
+		return url
+	}
+	return nats.DefaultURL
 }
 
 func buildTester() (*testerpkg.Tester, string, string) {
