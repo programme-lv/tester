@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"net/url"
 	"os"
 	"time"
 
@@ -198,6 +199,7 @@ func cmdListenSQS() {
 }
 
 func cmdListenNATS(natsURL, subject, queue string) {
+	log.Printf("connecting to NATS at %s", redactURL(natsURL))
 	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		log.Fatalf("failed to connect to NATS: %v", err)
@@ -434,6 +436,19 @@ func getNATSURL() string {
 		return url
 	}
 	return nats.DefaultURL
+}
+
+func redactURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL // return as-is if unparseable
+	}
+	if u.User != nil {
+		if _, hasPass := u.User.Password(); hasPass {
+			u.User = url.UserPassword(u.User.Username(), "REDACTED")
+		}
+	}
+	return u.String()
 }
 
 func buildTester() (*testerpkg.Tester, string, string) {
