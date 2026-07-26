@@ -200,7 +200,16 @@ func cmdListenSQS() {
 
 func cmdListenNATS(natsURL, subject, queue string) {
 	log.Printf("connecting to NATS at %s", redactURL(natsURL))
-	nc, err := nats.Connect(natsURL)
+	nc, err := nats.Connect(
+		natsURL,
+		nats.MaxReconnects(-1),
+		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
+			log.Printf("disconnected from NATS: %v; reconnecting", err)
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			log.Printf("reconnected to NATS at %s", redactURL(nc.ConnectedUrl()))
+		}),
+	)
 	if err != nil {
 		log.Fatalf("failed to connect to NATS: %v", err)
 	}
