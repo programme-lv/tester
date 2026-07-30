@@ -27,6 +27,7 @@ import (
 	"github.com/programme-lv/tester/internal/gatherer/respbuilder"
 	"github.com/programme-lv/tester/internal/gatherer/sqsgath"
 	"github.com/programme-lv/tester/internal/isolate"
+	"github.com/programme-lv/tester/internal/natsfile"
 	testerpkg "github.com/programme-lv/tester/internal/tester"
 	"github.com/programme-lv/tester/internal/testlib"
 	"github.com/programme-lv/tester/internal/utils"
@@ -262,8 +263,16 @@ func cmdListenNATS(natsURL, subject, queue string) {
 		}
 
 		gatherer := natsgath.New(nc, request.Uuid, m.Reply)
-		if err := t.ExecTests(gatherer, request); err != nil {
-			log.Printf("error executing tests: %v", err)
+		fileSubject := m.Header.Get(natsfile.SubjectHeader)
+		var execErr error
+		if fileSubject == "" {
+			execErr = t.ExecTests(gatherer, request)
+		} else {
+			fetcher := natsfile.New(nc, t.FileStore(), fileSubject)
+			execErr = t.ExecTestsWithFileFetcher(gatherer, request, fetcher)
+		}
+		if execErr != nil {
+			log.Printf("error executing tests: %v", execErr)
 		}
 	})
 	if err != nil {

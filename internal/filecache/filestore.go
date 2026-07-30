@@ -10,19 +10,23 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/google/uuid"
 	"github.com/klauspost/compress/zstd"
 	"github.com/puzpuzpuz/xsync/v3"
 )
 
+const (
+	maxTransferBytes = 50 << 20
+	httpTimeout      = 30 * time.Second
+)
+
 type FileStore struct {
-	fileDir string             // file directory
-	tmpDir  string             // temporary directory
+	fileDir string // file directory
+	tmpDir  string // temporary directory
+	client  *http.Client
 	await   mapset.Set[string] // awaited keys (prioritized)
 	cond    *sync.Cond         // change announcements
 	queue   chan string        // queue of scheduled keys
@@ -46,6 +50,7 @@ func New(fileDir string, tmpDir string) *FileStore {
 	fs := &FileStore{
 		fileDir: fileDir,
 		tmpDir:  tmpDir,
+		client:  &http.Client{Timeout: httpTimeout},
 		await:   mapset.NewSet[string](),
 		urls:    xsync.NewMapOf[string, chan *url.URL](),
 		queue:   make(chan string, 1024),
@@ -100,6 +105,7 @@ func (fs *FileStore) Store(data []byte) (string, error) {
 		errMsg := "failed to write data to file %s: %w"
 		return "", fmt.Errorf(errMsg, filePath, err)
 	}
+	fs.announceStored(sha256Key)
 
 	return sha256Key, nil
 }
@@ -179,7 +185,7 @@ func (fs *FileStore) download(key string) error {
 		if fs.Exists(key) {
 			break
 		}
-		err := download(url.String(), fs.tmpDir, fs.path(key), key)
+		err := fs.downloadURL(url.String(), key)
 		if err != nil {
 			errMsg := "failed to download file %s from %s: %w"
 			fs.cond.Broadcast()
@@ -211,150 +217,134 @@ func (fs *FileStore) Exists(key string) bool {
 	return err == nil
 }
 
-// Downloads a file from the given URL which is likely to be an S3 presigned URL.
-// If the file is compressed with zstd, as indicated by the Content-Type or ext,
-// it will be decompressed before saving. URL scheme must be HTTPS.
-// Adds integrity check using a provided SHA256 hash.
-func download(downlURL string, tmpDir string, saveToPath string, expectedSha256 string) error {
-	u, err := url.Parse(downlURL)
-	if err != nil {
-		errMsg := "failed to parse URL %s: %w"
-		return fmt.Errorf(errMsg, downlURL, err)
+func (fs *FileStore) StoreZstd(key string, src io.Reader, maxCompressed, maxDecompressed int64) error {
+	if err := fs.storeEncoded(key, src, true, maxCompressed, maxDecompressed); err != nil {
+		return err
 	}
-
-	if u.Scheme != "https" {
-		errMsg := "invalid URL scheme: %s"
-		return fmt.Errorf(errMsg, u.Scheme)
-	}
-
-	// Validate the expected SHA256 hash
-	if err := validateHexSha256(expectedSha256); err != nil {
-		errMsg := "invalid expected SHA256 hash %s: %w"
-		return fmt.Errorf(errMsg, expectedSha256, err)
-	}
-
-	tmpFile, err := os.Create(filepath.Join(tmpDir, uuid.New().String()))
-	if err != nil {
-		errMsg := "failed to create temp file: %w"
-		return fmt.Errorf(errMsg, err)
-	}
-	defer func() {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name()) // Clean up temp file in case of failure
-	}()
-
-	log.Printf("Downloading file from %s to temporary path %s", downlURL, tmpFile.Name())
-	resp, err := http.Get(downlURL)
-	if err != nil {
-		errMsg := "failed to download file from %s: %w"
-		return fmt.Errorf(errMsg, downlURL, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		errMsg := "unexpected status code %d while downloading file from %s"
-		return fmt.Errorf(errMsg, resp.StatusCode, downlURL)
-	}
-
-	if (resp.Header.Get("Content-Type") == "application/zstd") ||
-		filepath.Ext(u.Path) == ".zst" {
-
-		d, err := zstd.NewReader(resp.Body)
-		if err != nil {
-			errMsg := "failed to create zstd reader: %w"
-			return fmt.Errorf(errMsg, err)
-		}
-		defer d.Close()
-
-		_, err = io.Copy(tmpFile, d)
-		if err != nil {
-			errMsg := "failed to write decompressed file to %s: %w"
-			return fmt.Errorf(errMsg, tmpFile.Name(), err)
-		}
-
-	} else {
-
-		_, err = io.Copy(tmpFile, resp.Body)
-		if err != nil {
-			errMsg := "failed to write file to %s: %w"
-			return fmt.Errorf(errMsg, tmpFile.Name(), err)
-		}
-
-	}
-
-	// Ensure all writes to the temp file are flushed
-	if err := tmpFile.Sync(); err != nil {
-		errMsg := "failed to sync temp file %s: %w"
-		return fmt.Errorf(errMsg, tmpFile.Name(), err)
-	}
-
-	// Compute SHA256 of the downloaded file
-	if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
-		errMsg := "failed to seek to start of temp file %s: %w"
-		return fmt.Errorf(errMsg, tmpFile.Name(), err)
-	}
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, tmpFile); err != nil {
-		errMsg := "failed to compute SHA256 of temp file %s: %w"
-		return fmt.Errorf(errMsg, tmpFile.Name(), err)
-	}
-	computedHash := hex.EncodeToString(hasher.Sum(nil))
-	if computedHash != expectedSha256 {
-		errMsg := "SHA256 mismatch for file %s: expected %s, got %s"
-		return fmt.Errorf(errMsg, saveToPath, expectedSha256, computedHash)
-	}
-
-	// Rename the temporary file to the target path atomically
-	if err := os.Rename(tmpFile.Name(), saveToPath); err != nil {
-		if !strings.Contains(err.Error(), "cross-device") &&
-			!strings.Contains(err.Error(), "EXDEV") {
-			errMsg := "failed to rename temp file %s to %s: %w"
-			return fmt.Errorf(errMsg, tmpFile.Name(), saveToPath, err)
-		} else {
-			err := copyFile(tmpFile.Name(), saveToPath)
-			if err != nil {
-				errMsg := "failed to copy temp file %s to %s: %w"
-				return fmt.Errorf(errMsg, tmpFile.Name(), saveToPath, err)
-			}
-		}
-	}
-
-	log.Printf("Successfully downloaded and moved file to %s", saveToPath)
+	fs.announceStored(key)
 	return nil
 }
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
+
+func (fs *FileStore) storePlain(key string, src io.Reader, maxCompressed, maxDecompressed int64) error {
+	return fs.storeEncoded(key, src, false, maxCompressed, maxDecompressed)
+}
+
+func (fs *FileStore) storeEncoded(
+	key string,
+	src io.Reader,
+	compressed bool,
+	maxCompressed, maxDecompressed int64,
+) error {
+	if err := validateHexSha256(key); err != nil {
+		return fmt.Errorf("invalid file key %s: %w", key, err)
+	}
+	limited := &io.LimitedReader{R: src, N: maxCompressed + 1}
+	var content io.Reader = limited
+	if compressed {
+		decoder, err := zstd.NewReader(limited)
+		if err != nil {
+			return fmt.Errorf("create zstd reader: %w", err)
+		}
+		defer decoder.Close()
+		content = decoder
+	}
+	validateCompressed := func() error {
+		if _, err := io.Copy(io.Discard, limited); err != nil {
+			return fmt.Errorf("read compressed file: %w", err)
+		}
+		if maxCompressed+1-limited.N > maxCompressed {
+			return fmt.Errorf("compressed file exceeds %d bytes", maxCompressed)
+		}
+		return nil
+	}
+	return fs.storeVerified(key, content, maxDecompressed, validateCompressed)
+}
+
+func (fs *FileStore) storeVerified(
+	key string,
+	src io.Reader,
+	maxBytes int64,
+	validate func() error,
+) error {
+	tmp, err := os.CreateTemp(fs.fileDir, ".incoming-*")
 	if err != nil {
-		return err
+		return fmt.Errorf("create cache temp file: %w", err)
 	}
-	defer in.Close()
+	defer func() {
+		_ = tmp.Close()
+		_ = os.Remove(tmp.Name())
+	}()
+	if err := tmp.Chmod(0o644); err != nil {
+		return fmt.Errorf("set cache temp permissions: %w", err)
+	}
 
-	st, err := in.Stat()
+	hash := sha256.New()
+	n, err := io.Copy(io.MultiWriter(tmp, hash), io.LimitReader(src, maxBytes+1))
 	if err != nil {
+		return fmt.Errorf("write cache temp file: %w", err)
+	}
+	if n > maxBytes {
+		return fmt.Errorf("decompressed file exceeds %d bytes", maxBytes)
+	}
+	if hex.EncodeToString(hash.Sum(nil)) != key {
+		return fmt.Errorf("SHA256 mismatch for file %s", key)
+	}
+	if err := validate(); err != nil {
 		return err
 	}
+	return fs.commitTemp(tmp, key)
+}
 
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
+func (fs *FileStore) commitTemp(tmp *os.File, key string) error {
+	if err := tmp.Sync(); err != nil {
+		return fmt.Errorf("sync cache temp file: %w", err)
 	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close cache temp file: %w", err)
+	}
+	if err := os.Rename(tmp.Name(), fs.path(key)); err != nil {
+		return fmt.Errorf("rename cache temp file: %w", err)
+	}
+	return nil
+}
 
-	// Create with same perms (just the mode bits)
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, st.Mode().Perm())
+func (fs *FileStore) downloadURL(downlURL, expectedSHA256 string) error {
+	return fs.downloadURLWithLimits(downlURL, expectedSHA256, maxTransferBytes, maxTransferBytes)
+}
+
+func (fs *FileStore) downloadURLWithLimits(
+	downlURL, expectedSHA256 string,
+	maxCompressed, maxDecompressed int64,
+) error {
+	u, err := url.Parse(downlURL)
 	if err != nil {
-		return err
+		return fmt.Errorf("parse URL %s: %w", downlURL, err)
 	}
-	defer func() { _ = out.Close() }()
+	if u.Scheme != "https" {
+		return fmt.Errorf("invalid URL scheme: %s", u.Scheme)
+	}
+	if err := validateHexSha256(expectedSHA256); err != nil {
+		return fmt.Errorf("invalid expected SHA256 hash %s: %w", expectedSHA256, err)
+	}
+	resp, err := fs.client.Get(downlURL)
+	if err != nil {
+		return fmt.Errorf("download file from %s: %w", downlURL, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code %d from %s", resp.StatusCode, downlURL)
+	}
+	if resp.Header.Get("Content-Type") == "application/zstd" || filepath.Ext(u.Path) == ".zst" {
+		return fs.storeEncoded(expectedSHA256, resp.Body, true, maxCompressed, maxDecompressed)
+	}
+	return fs.storePlain(expectedSHA256, resp.Body, maxCompressed, maxDecompressed)
+}
 
-	if _, err := io.Copy(out, in); err != nil {
-		return err
-	}
-	// Ensure data hits disk if needed:
-	if err := out.Sync(); err != nil {
-		return err
-	}
-
-	// Optionally preserve modtime:
-	return os.Chtimes(dst, time.Now(), st.ModTime())
+func (fs *FileStore) announceStored(key string) {
+	fs.cond.L.Lock()
+	defer fs.cond.L.Unlock()
+	fs.await.Remove(key)
+	fs.cond.Broadcast()
 }
 
 func validateHexSha256(key string) error {

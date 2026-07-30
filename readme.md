@@ -2,11 +2,13 @@ A code execution worker for https://programme.lv to safely run user submitted co
 
 Based on great work on untrusted program sandboxing at https://github.com/ioi/isolate .
 
-Tester polls an AWS SQS queue for new jobs. Jobs are specified in JSON format.
+Tester receives jobs through Core NATS or the legacy AWS SQS listener.
+Jobs are specified in JSON format.
+The NATS listener can retrieve cache-missing test files through the submitting backend; see [docs/nats-test-files.md](docs/nats-test-files.md).
 
 Prerequisites:
 - `isolate` sandbox utility (can run `isolate --cg --init` successfully)
-- AWS credentials for SQS
+- A NATS server, or AWS credentials when using the SQS listener
 
 To install tester daemon, run `./scripts/install.sh`.
 Script will output further instructions to configure and run the service.
@@ -24,7 +26,9 @@ tester verify ./behaviour.toml
 tester listen sqs
 ```
 
-I should define the response format too...
+```bash
+tester listen nats
+```
 
 Okay, I came here to implement partial scoring on tasks.
 

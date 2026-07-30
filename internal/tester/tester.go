@@ -40,3 +40,7 @@ func (t *Tester) SetLogger(l *slog.Logger) {
 		t.logger = l
 	}
 }
+
+func (t *Tester) FileStore() *filecache.FileStore {
+	return t.filestore
+}
