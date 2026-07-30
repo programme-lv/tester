@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/klauspost/compress/zstd"
 )
@@ -78,6 +80,69 @@ func TestDownloadURLFailureCleansTemp(t *testing.T) {
 			assertEmpty(t, dir)
 		})
 	}
+}
+
+func TestStoreZstdWakesAwaiter(t *testing.T) {
+	data := []byte("shared test file")
+	key := hash(data)
+	store := New(t.TempDir(), t.TempDir())
+	if err := store.Schedule(key, "https://example.invalid/file.zst"); err != nil {
+		t.Fatal(err)
+	}
+
+	awaited := make(chan error, 1)
+	go func() {
+		_, err := store.Await(key)
+		awaited <- err
+	}()
+	waitForAwaiter(t, store, key)
+
+	if err := store.StoreZstd(key, bytes.NewReader(compress(t, data)), 1<<20, 1<<20); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-awaited:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("awaiter was not notified")
+	}
+}
+
+func TestDownloadURLIgnoresDeclaredLength(t *testing.T) {
+	data := []byte("valid short body")
+	store := New(t.TempDir(), t.TempDir())
+	store.client.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			Header:        make(http.Header),
+			Body:          io.NopCloser(bytes.NewReader(data)),
+			ContentLength: int64(len(data) + 1000),
+			Request:       req,
+		}, nil
+	})
+
+	if err := store.downloadURLWithLimits("https://example.test/file", hash(data), int64(len(data)), 1<<20); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func waitForAwaiter(t *testing.T, store *FileStore, key string) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for !store.await.Contains(key) {
+		if time.Now().After(deadline) {
+			t.Fatal("file was not awaited")
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func testStore(t *testing.T, path, contentType string, body []byte) (*FileStore, string, string) {

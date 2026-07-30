@@ -105,6 +105,7 @@ func (fs *FileStore) Store(data []byte) (string, error) {
 		errMsg := "failed to write data to file %s: %w"
 		return "", fmt.Errorf(errMsg, filePath, err)
 	}
+	fs.announceStored(sha256Key)
 
 	return sha256Key, nil
 }
@@ -217,7 +218,11 @@ func (fs *FileStore) Exists(key string) bool {
 }
 
 func (fs *FileStore) StoreZstd(key string, src io.Reader, maxCompressed, maxDecompressed int64) error {
-	return fs.storeEncoded(key, src, true, maxCompressed, maxDecompressed)
+	if err := fs.storeEncoded(key, src, true, maxCompressed, maxDecompressed); err != nil {
+		return err
+	}
+	fs.announceStored(key)
+	return nil
 }
 
 func (fs *FileStore) storePlain(key string, src io.Reader, maxCompressed, maxDecompressed int64) error {
@@ -329,13 +334,17 @@ func (fs *FileStore) downloadURLWithLimits(
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code %d from %s", resp.StatusCode, downlURL)
 	}
-	if resp.ContentLength > maxCompressed {
-		return fmt.Errorf("compressed file exceeds %d bytes", maxCompressed)
-	}
 	if resp.Header.Get("Content-Type") == "application/zstd" || filepath.Ext(u.Path) == ".zst" {
-		return fs.StoreZstd(expectedSHA256, resp.Body, maxCompressed, maxDecompressed)
+		return fs.storeEncoded(expectedSHA256, resp.Body, true, maxCompressed, maxDecompressed)
 	}
 	return fs.storePlain(expectedSHA256, resp.Body, maxCompressed, maxDecompressed)
+}
+
+func (fs *FileStore) announceStored(key string) {
+	fs.cond.L.Lock()
+	defer fs.cond.L.Unlock()
+	fs.await.Remove(key)
+	fs.cond.Broadcast()
 }
 
 func validateHexSha256(key string) error {
