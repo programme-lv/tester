@@ -38,6 +38,7 @@ func (t *Tester) execTests(gath internal.ResultGatherer, req api.ExecReq, fetche
 	l := t.logger.With("uuid", req.Uuid[0:8]+"...")
 	l.Info("start job", "lang", req.Lang.LangName,
 		"code_len", len(req.Code), "tests", len(req.Tests),
+		"groups", len(req.Groups),
 		"cpu_sec", req.CpuMs/1000, "ram_mib", req.RamKiB/1024,
 		"checker", req.Checker != nil, "interactor", req.Interactor != nil)
 	gath.StartJob(t.systemInfo)
@@ -210,8 +211,14 @@ func (t *Tester) runCheckerVariant(
 	tlibChecker []byte,
 ) error {
 	l.Info("running checker variant")
+	skipper := newGroupSkip(req.Groups)
 	for i, test := range req.Tests {
 		testID := i + 1
+		if skipper.shouldIgnore(testID) {
+			l.Info("ignore test", "test_id", testID)
+			gath.IgnoreTest(int64(testID))
+			continue
+		}
 		l.Info("start test", "test_id", testID)
 
 		if test.In.Sha256 == nil {
@@ -296,31 +303,31 @@ func (t *Tester) runCheckerVariant(
 
 		if submData.ExitSignal != nil {
 			l.Error("submission failed with signal", "test_id", testID, "signal", *submData.ExitSignal)
-			gath.FinishTest(int64(testID), submData, nil)
+			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
 			continue
 		}
 
 		if submData.ExitCode != 0 || len(submData.Stderr) > 0 {
 			l.Error("submission failed", "test_id", testID, "exit_code", submData.ExitCode)
-			gath.FinishTest(int64(testID), submData, nil)
+			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
 			continue
 		}
 
-		if submData.WallMillis > 14000 {
+		if submData.WallMillis > wallLimitMs {
 			l.Error("wall time exceeded", "test_id", testID, "wall_ms", submData.WallMillis)
-			gath.FinishTest(int64(testID), submData, nil)
+			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
 			continue
 		}
 
 		if submData.CpuMillis > int64(req.CpuMs) {
 			l.Error("cpu time exceeded", "test_id", testID, "cpu_ms", submData.CpuMillis)
-			gath.FinishTest(int64(testID), submData, nil)
+			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
 			continue
 		}
 
 		if submData.RamKiBytes > int64(req.RamKiB) {
 			l.Error("memory exceeded", "test_id", testID, "mem_kib", submData.RamKiBytes)
-			gath.FinishTest(int64(testID), submData, nil)
+			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
 			continue
 		}
 
@@ -378,7 +385,7 @@ func (t *Tester) runCheckerVariant(
 		}
 
 		l.Info("test finished", "test_id", testID)
-		gath.FinishTest(int64(testID), submData, checkerRuntimeData)
+		finishTrackedTest(gath, skipper, testID, submData, checkerRuntimeData, req.CpuMs, req.RamKiB)
 	}
 	return nil
 }
@@ -392,8 +399,14 @@ func (t *Tester) runInteractorVariant(
 	tlibInteractor []byte,
 ) error {
 	l.Info("running interactor variant")
+	skipper := newGroupSkip(req.Groups)
 	for i, test := range req.Tests {
 		testID := i + 1
+		if skipper.shouldIgnore(testID) {
+			l.Info("ignore test", "test_id", testID)
+			gath.IgnoreTest(int64(testID))
+			continue
+		}
 		l.Info("start test", "test_id", testID)
 
 		l.Info("awaiting input", "sha", *test.In.Sha256)
@@ -605,9 +618,22 @@ func (t *Tester) runInteractorVariant(
 		}
 
 		l.Info("test finished", "test_id", testID)
-		gath.FinishTest(int64(testID), submissionRuntimeData, interactorRuntimeData)
+		finishTrackedTest(gath, skipper, testID, submissionRuntimeData, interactorRuntimeData, req.CpuMs, req.RamKiB)
 	}
 	return nil
+}
+
+func finishTrackedTest(
+	gath internal.ResultGatherer,
+	skipper *groupSkip,
+	testID int,
+	subm, chkr *api.RuntimeData,
+	cpuMs, ramKiB int32,
+) {
+	gath.FinishTest(int64(testID), subm, chkr)
+	if testFailed(subm, chkr, cpuMs, ramKiB) {
+		skipper.markFailed(testID)
+	}
 }
 
 func (t *Tester) scheduleAndStoreTests(evalUUID string, tests []api.Test, fetcher FileFetcher) error {

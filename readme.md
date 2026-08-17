@@ -3,7 +3,12 @@ A code execution worker for https://programme.lv to safely run user submitted co
 Based on great work on untrusted program sandboxing at https://github.com/ioi/isolate .
 
 Tester receives jobs through Core NATS or the legacy AWS SQS listener.
-Jobs are specified in JSON format.
+Jobs are specified in JSON format (`api.ExecReq`).
+Optional `groups` is a list of scoring units, each a list of 1-based test IDs.
+If a test fails (WA/TLE/MLE/RE), later tests whose every group already has a failure are skipped and reported as `test_ignore` instead of being executed.
+Omitted or empty `groups` runs every test.
+The tester does not assign scores.
+
 The NATS listener can retrieve cache-missing test files through the submitting backend; see [docs/nats-test-files.md](docs/nats-test-files.md).
 
 Prerequisites:
@@ -29,9 +34,6 @@ tester listen sqs
 ```bash
 tester listen nats
 ```
-
-Okay, I came here to implement partial scoring on tasks.
-
 
 Alongside, the language compile and run command, we should always send a hello world
 or version check command to the tester otherwise it finishes with a signal that process was killed

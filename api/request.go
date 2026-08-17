@@ -13,6 +13,11 @@ type ExecReq struct {
 
 	Tests []Test `json:"tests"`
 
+	// Groups are scoring units as 1-based test IDs.
+	// After a test fails, later tests whose every group already has a
+	// failure are ignored. Empty or omitted: run every test.
+	Groups [][]int `json:"groups,omitempty"`
+
 	Checker    *string `json:"checker"`
 	Interactor *string `json:"interactor"`
 
