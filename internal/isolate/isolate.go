@@ -26,6 +26,10 @@ func GetInstance() *Isolate {
 }
 
 func (i *Isolate) NewBox() (*Box, error) {
+	if DirectMode() {
+		return newDirectBox()
+	}
+
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
 

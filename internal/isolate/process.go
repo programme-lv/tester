@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sync/atomic"
+	"time"
 )
 
 type Cmd struct {
@@ -15,6 +17,10 @@ type Cmd struct {
 	started      bool
 	metaFilePath string
 	Constraints  Constraints
+
+	direct    bool
+	startedAt time.Time
+	timedOut  atomic.Bool
 }
 
 func (process *Cmd) String() string {
@@ -48,6 +54,7 @@ func (process *Cmd) Start() error {
 		panic("process should not be started twice")
 	}
 	process.started = true
+	process.startedAt = time.Now()
 
 	var err error
 	process.stdin, err = process.cmd.StdinPipe()
@@ -70,6 +77,10 @@ func (process *Cmd) Start() error {
 func (process *Cmd) Wait() (*Metrics, error) {
 	if !process.started {
 		panic("process should be started before waiting")
+	}
+
+	if process.direct {
+		return process.waitDirect()
 	}
 
 	err := process.cmd.Wait()

@@ -56,6 +56,22 @@ To run system verification of supported languages and sample program expected re
 tester verify ./behaviour.toml
 ```
 
+On machines without isolate (development hosts, CI), pass `--no-isolate`:
+
+```bash
+tester verify ./docs/behave.toml --no-isolate
+```
+
+Commands then run directly on the host with best-effort limits: CPU through
+`ulimit -t`, wall time by killing the process group, and address space through
+`ulimit -v` (raised to at least 256 MiB, since RLIMIT_AS breaks dynamic
+loaders where isolate's cgroup limit would not). Memory usage is not reported,
+so isolate's cgroup `MLE` verdicts cannot be verified in this mode. It is not
+a sandbox: never run untrusted submissions with `--no-isolate`.
+
+When `/usr/local/etc/tester` is not writable, `TESTER_CONFIG_DIR` points at an
+alternative directory holding `testlib.h` and `system.txt`.
+
 ```bash
 tester listen sqs
 ```

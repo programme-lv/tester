@@ -614,7 +614,7 @@ int main(int argc, char *argv[]) {
     for (int q = 1; q <= 10; q++) {
         int guess = ouf.readInt(1, 100, "guess");
         if (guess == hidden) quitf(_ok, "guessed in %d queries", q);
-        std::cout << (guess < hidden ? "smaller" : "greater") << std::endl;
+        std::cout << (guess < hidden ? "greater" : "smaller") << std::endl;
     }
     quitf(_wa, "too many queries");
 }
