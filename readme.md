@@ -11,6 +11,33 @@ The tester does not assign scores.
 
 The NATS listener can retrieve cache-missing test files through the submitting backend; see [docs/nats-test-files.md](docs/nats-test-files.md).
 
+## Interactive tasks
+
+Interactive requests set `interactor` to a testlib interactor source. Input
+and answer files are mandatory for every test; an answer file may be empty,
+and the interactor always receives the answer path as its third argument
+(`./interactor input.txt output.txt answer.txt`).
+
+The tester runs the solution and the interactor in separate isolate boxes
+and connects solution stdout to interactor stdin and the other way around.
+Verdicts follow the testlib exit-code convention:
+
+- exit 0: the interactor accepted the solution;
+- exit 1 (WA), 2 (PE), 8 (unexpected EOF), or death by SIGPIPE or SIGXFSZ:
+  the solution is rejected;
+- exit 3 (fail), any other exit code, other signals, and resource-limit
+  kills: judge failure, reported as `internal_error` for the whole job.
+
+Acceptance also requires the solution to exit successfully within its
+limits. A timeout rejects the test while the solution itself is still
+running and is a judge failure once the solution has finished cleanly.
+Stderr from the solution and the interactor is diagnostic only and never
+affects the verdict.
+
+Limits: the solution runs with `cpu_ms` (+0.5 s CPU extra), `ram_kib`, and
+a 20 s wall-clock limit. The interactor has fixed limits: 10 s CPU (+0.5 s),
+1 GiB memory, and the same 20 s wall clock.
+
 Prerequisites:
 - `isolate` sandbox utility (can run `isolate --cg --init` successfully)
 - A NATS server, or AWS credentials when using the SQS listener

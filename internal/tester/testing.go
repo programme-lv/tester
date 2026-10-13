@@ -17,6 +17,30 @@ import (
 
 var errCompileFailed = errors.New("compile failed")
 
+// interactorConstraints are the fixed isolate limits for the jury
+// interactor. They are separate from the solution's limits and are the same
+// for every task.
+var interactorConstraints = isolate.Constraints{
+	CpuTimeLimInSec:      10,
+	ExtraCpuTimeLimInSec: 0.5,
+	WallTimeLimInSec:     float64(wallLimitMs) / 1000,
+	MemoryLimitInKB:      1024 * 1024,
+	MaxProcesses:         256,
+	MaxOpenFiles:         256,
+}
+
+// solutionConstraints are the isolate limits for one solution run.
+func solutionConstraints(req api.ExecReq) *isolate.Constraints {
+	return &isolate.Constraints{
+		CpuTimeLimInSec:      float64(req.CpuMs) / 1000,
+		ExtraCpuTimeLimInSec: 0.5,
+		WallTimeLimInSec:     float64(wallLimitMs) / 1000,
+		MemoryLimitInKB:      int64(req.RamKiB),
+		MaxProcesses:         256,
+		MaxOpenFiles:         256,
+	}
+}
+
 type FileFetcher interface {
 	Fetch(evalUUID, sha256 string) error
 }
@@ -220,173 +244,184 @@ func (t *Tester) runCheckerVariant(
 			continue
 		}
 		l.Info("start test", "test_id", testID)
-
-		if test.In.Sha256 == nil {
-			errMsg := fmt.Errorf("input sha256 is nil")
-			l.Error("input sha256 is nil")
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		shaIn := *test.In.Sha256
-		if len(shaIn) > 8 {
-			shaIn = shaIn[:8]
-		}
-		l.Info("awaiting input", "sha", shaIn)
-		input, err := t.filestore.Await(*test.In.Sha256)
+		err := t.runCheckerTest(gath, req, l, skipper, testID, test, submFname, submContent, tlibChecker)
 		if err != nil {
-			errMsg := fmt.Errorf("get test input: %w", err)
-			l.Error("get test input", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
+			return err
 		}
-
-		if test.Ans.Sha256 == nil {
-			errMsg := fmt.Errorf("answer sha256 is nil")
-			l.Error("answer sha256 is nil")
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		shaAns := *test.Ans.Sha256
-		if len(shaAns) > 8 {
-			shaAns = shaAns[:8]
-		}
-		l.Info("awaiting answer", "sha", shaAns)
-		answer, err := t.filestore.Await(*test.Ans.Sha256)
-		if err != nil {
-			errMsg := fmt.Errorf("get test answer: %w", err)
-			l.Error("get test answer", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		gath.ReachTest(int64(testID), input, answer)
-
-		submBox, err := isolate.NewBox()
-		if err != nil {
-			errMsg := fmt.Errorf("create isolate box: %w", err)
-			l.Error("create isolate box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		defer submBox.Close()
-
-		if err := submBox.AddFile(submFname, submContent); err != nil {
-			errMsg := fmt.Errorf("add submission to isolate box: %w", err)
-			l.Error("add submission to box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		submCmd, err := submBox.Command(req.Lang.ExecCmd,
-			&isolate.Constraints{
-				CpuTimeLimInSec:      float64(req.CpuMs) / 1000,
-				ExtraCpuTimeLimInSec: 0.5,
-				WallTimeLimInSec:     20.0,
-				MemoryLimitInKB:      int64(req.RamKiB),
-				MaxProcesses:         256,
-				MaxOpenFiles:         256,
-			})
-		if err != nil {
-			errMsg := fmt.Errorf("run submission: %w", err)
-			l.Error("run submission", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		submData, err := utils.RunIsolateCmd(submCmd, input)
-		if err != nil {
-			errMsg := fmt.Errorf("run submission: %w", err)
-			l.Error("collect submission runtime", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		if submData.ExitSignal != nil {
-			l.Error("submission failed with signal", "test_id", testID, "signal", *submData.ExitSignal)
-			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
-			continue
-		}
-
-		if submData.ExitCode != 0 || len(submData.Stderr) > 0 {
-			l.Error("submission failed", "test_id", testID, "exit_code", submData.ExitCode)
-			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
-			continue
-		}
-
-		if submData.WallMillis > wallLimitMs {
-			l.Error("wall time exceeded", "test_id", testID, "wall_ms", submData.WallMillis)
-			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
-			continue
-		}
-
-		if submData.CpuMillis > int64(req.CpuMs) {
-			l.Error("cpu time exceeded", "test_id", testID, "cpu_ms", submData.CpuMillis)
-			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
-			continue
-		}
-
-		if submData.RamKiBytes > int64(req.RamKiB) {
-			l.Error("memory exceeded", "test_id", testID, "mem_kib", submData.RamKiBytes)
-			finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
-			continue
-		}
-
-		output := submData.Stdout
-
-		l.Info("running checker", "test_id", testID)
-		checkerBox, err := isolate.NewBox()
-		if err != nil {
-			errMsg := fmt.Errorf("create isolate box: %w", err)
-			l.Error("create isolate box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		defer checkerBox.Close()
-
-		if err := checkerBox.AddFile("checker", tlibChecker); err != nil {
-			errMsg := fmt.Errorf("add checker to isolate box: %w", err)
-			l.Error("add checker to box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		if err := checkerBox.AddFile("input.txt", input); err != nil {
-			errMsg := fmt.Errorf("add input to isolate box: %w", err)
-			l.Error("add input to box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		if err := checkerBox.AddFile("output.txt", []byte(output)); err != nil {
-			errMsg := fmt.Errorf("add output to isolate box: %w", err)
-			l.Error("add output to box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		if err := checkerBox.AddFile("answer.txt", answer); err != nil {
-			errMsg := fmt.Errorf("add answer to isolate box: %w", err)
-			l.Error("add answer to box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		checkerProcess, err := checkerBox.Command("./checker input.txt output.txt answer.txt", nil)
-		if err != nil {
-			errMsg := fmt.Errorf("run checker: %w", err)
-			l.Error("run checker", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		checkerRuntimeData, err := utils.RunIsolateCmd(checkerProcess, nil)
-		if err != nil {
-			errMsg := fmt.Errorf("collect checker runtime data: %w", err)
-			l.Error("collect checker runtime", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		l.Info("test finished", "test_id", testID)
-		finishTrackedTest(gath, skipper, testID, submData, checkerRuntimeData, req.CpuMs, req.RamKiB)
 	}
+	return nil
+}
+
+// runCheckerTest runs one checker-based test and reports its result. A
+// per-test scope closes the isolate boxes as soon as the test is over.
+func (t *Tester) runCheckerTest(
+	gath internal.ResultGatherer,
+	req api.ExecReq,
+	l *slog.Logger,
+	skipper *groupSkip,
+	testID int,
+	test api.Test,
+	submFname string,
+	submContent []byte,
+	tlibChecker []byte,
+) error {
+	if test.In.Sha256 == nil {
+		errMsg := fmt.Errorf("input sha256 is nil")
+		l.Error("input sha256 is nil")
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	shaIn := *test.In.Sha256
+	if len(shaIn) > 8 {
+		shaIn = shaIn[:8]
+	}
+	l.Info("awaiting input", "sha", shaIn)
+	input, err := t.filestore.Await(*test.In.Sha256)
+	if err != nil {
+		errMsg := fmt.Errorf("get test input: %w", err)
+		l.Error("get test input", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	if test.Ans.Sha256 == nil {
+		errMsg := fmt.Errorf("answer sha256 is nil")
+		l.Error("answer sha256 is nil")
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	shaAns := *test.Ans.Sha256
+	if len(shaAns) > 8 {
+		shaAns = shaAns[:8]
+	}
+	l.Info("awaiting answer", "sha", shaAns)
+	answer, err := t.filestore.Await(*test.Ans.Sha256)
+	if err != nil {
+		errMsg := fmt.Errorf("get test answer: %w", err)
+		l.Error("get test answer", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	gath.ReachTest(int64(testID), input, answer)
+
+	submBox, err := isolate.NewBox()
+	if err != nil {
+		errMsg := fmt.Errorf("create isolate box: %w", err)
+		l.Error("create isolate box", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	defer submBox.Close()
+
+	if err := submBox.AddFile(submFname, submContent); err != nil {
+		errMsg := fmt.Errorf("add submission to isolate box: %w", err)
+		l.Error("add submission to box", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	submCmd, err := submBox.Command(req.Lang.ExecCmd, solutionConstraints(req))
+	if err != nil {
+		errMsg := fmt.Errorf("run submission: %w", err)
+		l.Error("run submission", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	submData, err := utils.RunIsolateCmd(submCmd, input)
+	if err != nil {
+		errMsg := fmt.Errorf("run submission: %w", err)
+		l.Error("collect submission runtime", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	if submData.ExitSignal != nil {
+		l.Error("submission failed with signal", "test_id", testID, "signal", *submData.ExitSignal)
+		finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
+		return nil
+	}
+
+	if submData.ExitCode != 0 || len(submData.Stderr) > 0 {
+		l.Error("submission failed", "test_id", testID, "exit_code", submData.ExitCode)
+		finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
+		return nil
+	}
+
+	if submData.WallMillis > wallLimitMs {
+		l.Error("wall time exceeded", "test_id", testID, "wall_ms", submData.WallMillis)
+		finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
+		return nil
+	}
+
+	if submData.CpuMillis > int64(req.CpuMs) {
+		l.Error("cpu time exceeded", "test_id", testID, "cpu_ms", submData.CpuMillis)
+		finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
+		return nil
+	}
+
+	if submData.RamKiBytes > int64(req.RamKiB) {
+		l.Error("memory exceeded", "test_id", testID, "mem_kib", submData.RamKiBytes)
+		finishTrackedTest(gath, skipper, testID, submData, nil, req.CpuMs, req.RamKiB)
+		return nil
+	}
+
+	output := submData.Stdout
+
+	l.Info("running checker", "test_id", testID)
+	checkerBox, err := isolate.NewBox()
+	if err != nil {
+		errMsg := fmt.Errorf("create isolate box: %w", err)
+		l.Error("create isolate box", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	defer checkerBox.Close()
+
+	if err := checkerBox.AddFile("checker", tlibChecker); err != nil {
+		errMsg := fmt.Errorf("add checker to isolate box: %w", err)
+		l.Error("add checker to box", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	if err := checkerBox.AddFile("input.txt", input); err != nil {
+		errMsg := fmt.Errorf("add input to isolate box: %w", err)
+		l.Error("add input to box", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	if err := checkerBox.AddFile("output.txt", []byte(output)); err != nil {
+		errMsg := fmt.Errorf("add output to isolate box: %w", err)
+		l.Error("add output to box", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	if err := checkerBox.AddFile("answer.txt", answer); err != nil {
+		errMsg := fmt.Errorf("add answer to isolate box: %w", err)
+		l.Error("add answer to box", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	checkerProcess, err := checkerBox.Command("./checker input.txt output.txt answer.txt", nil)
+	if err != nil {
+		errMsg := fmt.Errorf("run checker: %w", err)
+		l.Error("run checker", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	checkerRuntimeData, err := utils.RunIsolateCmd(checkerProcess, nil)
+	if err != nil {
+		errMsg := fmt.Errorf("collect checker runtime data: %w", err)
+		l.Error("collect checker runtime", "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	l.Info("test finished", "test_id", testID)
+	finishTrackedTest(gath, skipper, testID, submData, checkerRuntimeData, req.CpuMs, req.RamKiB)
 	return nil
 }
 
@@ -408,219 +443,242 @@ func (t *Tester) runInteractorVariant(
 			continue
 		}
 		l.Info("start test", "test_id", testID)
-
-		l.Info("awaiting input", "sha", *test.In.Sha256)
-		input, err := t.filestore.Await(*test.In.Sha256)
+		err := t.runInteractTest(gath, req, l, skipper, testID, test, submFname, submContent, tlibInteractor)
 		if err != nil {
-			errMsg := fmt.Errorf("get test input: %w", err)
-			l.Error("get test input", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
+			return err
 		}
-
-		l.Info("awaiting answer", "sha", *test.Ans.Sha256)
-		answer, err := t.filestore.Await(*test.Ans.Sha256)
-		if err != nil {
-			errMsg := fmt.Errorf("get test answer: %w", err)
-			l.Error("get test answer", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		gath.ReachTest(int64(testID), input, answer)
-
-		l.Info("setting up isolate for submission")
-		submBox, err := isolate.NewBox()
-		if err != nil {
-			errMsg := fmt.Errorf("create isolate box for submission: %w", err)
-			l.Error("create isolate box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		defer submBox.Close()
-
-		if err := submBox.AddFile(submFname, submContent); err != nil {
-			errMsg := fmt.Errorf("add submission to isolate box: %w", err)
-			l.Error("add submission to box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		l.Info("setting up isolate for interactor")
-		interactorBox, err := isolate.NewBox()
-		if err != nil {
-			errMsg := fmt.Errorf("create isolate box for interactor: %w", err)
-			l.Error("create interactor box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		defer interactorBox.Close()
-
-		if err := interactorBox.AddFile("interactor", tlibInteractor); err != nil {
-			errMsg := fmt.Errorf("add interactor to isolate box: %w", err)
-			l.Error("add interactor to box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		if err := interactorBox.AddFile("input.txt", input); err != nil {
-			errMsg := fmt.Errorf("add input to isolate box: %w", err)
-			l.Error("add input to box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		if err := interactorBox.AddFile("answer.txt", answer); err != nil {
-			errMsg := fmt.Errorf("add answer to isolate box: %w", err)
-			l.Error("add answer to box", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		interactorProcess, err := interactorBox.Command("./interactor input.txt output.txt answer.txt", nil)
-		if err != nil {
-			errMsg := fmt.Errorf("run interactor: %w", err)
-			l.Error("run interactor", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		submConstraints := &isolate.Constraints{
-			CpuTimeLimInSec:      float64(req.CpuMs) / 1000,
-			ExtraCpuTimeLimInSec: 0.5,
-			WallTimeLimInSec:     20.0,
-			MemoryLimitInKB:      int64(req.RamKiB),
-			MaxProcesses:         256,
-			MaxOpenFiles:         256,
-		}
-		submProcess, err := submBox.Command(req.Lang.ExecCmd, submConstraints)
-		if err != nil {
-			errMsg := fmt.Errorf("run submission: %w", err)
-			l.Error("run submission", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		if err := interactorProcess.Start(); err != nil {
-			errMsg := fmt.Errorf("start interactor: %w", err)
-			l.Error("start interactor", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		if err := submProcess.Start(); err != nil {
-			errMsg := fmt.Errorf("start submission: %w", err)
-			l.Error("start submission", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		interactorStdin := interactorProcess.Stdin()
-		interactorStdout := interactorProcess.Stdout()
-		interactorStderr := interactorProcess.Stderr()
-
-		submStdin := submProcess.Stdin()
-		submStdout := submProcess.Stdout()
-		submStderr := submProcess.Stderr()
-
-		var submStdinStr, submStdoutStr strings.Builder
-		var submStderrStr, interactorStderrStr strings.Builder
-
-		var eg errgroup.Group
-		// move stdout from interactor to stdin of submission
-		eg.Go(func() error {
-			_, err := io.Copy(io.MultiWriter(submStdin, &submStdinStr), interactorStdout)
-			if err != nil {
-				l.Error("copy interactor->submission", "error", err)
-			}
-			submStdin.Close()
-			interactorStdout.Close()
-			return nil
-		})
-		// move stdout from submission to stdin of interactor
-		eg.Go(func() error {
-			_, err := io.Copy(io.MultiWriter(interactorStdin, &submStdoutStr), submStdout)
-			if err != nil {
-				l.Error("copy submission->interactor", "error", err)
-			}
-			submStdout.Close()
-			interactorStdin.Close()
-			return nil
-		})
-		// read stderr from interactor
-		eg.Go(func() error {
-			_, err := io.Copy(&interactorStderrStr, interactorStderr)
-			if err != nil {
-				l.Error("copy interactor stderr", "error", err)
-			}
-			interactorStderr.Close()
-			return nil
-		})
-		// read stderr from submission
-		eg.Go(func() error {
-			_, err := io.Copy(&submStderrStr, submStderr)
-			if err != nil {
-				l.Error("copy submission stderr", "error", err)
-			}
-			submStderr.Close()
-			return nil
-		})
-
-		if err := eg.Wait(); err != nil {
-			errMsg := fmt.Errorf("wait for interactor and submission: %w", err)
-			l.Error("wait for processes", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		submMetrics, err := submProcess.Wait()
-		if err != nil {
-			errMsg := fmt.Errorf("wait for submission: %w", err)
-			l.Error("wait for submission", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-		submissionRuntimeData := &api.RuntimeData{
-			Stdin:         submStdinStr.String(),
-			Stdout:        submStdoutStr.String(),
-			Stderr:        submStderrStr.String(),
-			ExitCode:      submMetrics.ExitCode,
-			CpuMillis:     submMetrics.CpuMillis,
-			WallMillis:    submMetrics.WallMillis,
-			RamKiBytes:    submMetrics.CgMemKb,
-			CtxSwV:        submMetrics.CswVoluntary,
-			CtxSwF:        submMetrics.CswForced,
-			ExitSignal:    submMetrics.ExitSig,
-			IsolateStatus: submMetrics.Status,
-			IsolateMsg:    submMetrics.Message,
-			CgOomKilled:   submMetrics.CgOomKilled,
-		}
-
-		interactorMetrics, err := interactorProcess.Wait()
-		if err != nil {
-			errMsg := fmt.Errorf("wait for interactor: %w", err)
-			l.Error("wait for interactor", "error", err)
-			gath.InternalError(errMsg.Error())
-			return errMsg
-		}
-
-		interactorRuntimeData := &api.RuntimeData{
-			Stdin:         submStdinStr.String(),
-			Stdout:        submStdinStr.String(),
-			Stderr:        interactorStderrStr.String(),
-			ExitCode:      interactorMetrics.ExitCode,
-			CpuMillis:     interactorMetrics.CpuMillis,
-			WallMillis:    interactorMetrics.WallMillis,
-			RamKiBytes:    interactorMetrics.CgMemKb,
-			IsolateStatus: interactorMetrics.Status,
-			CtxSwV:        interactorMetrics.CswVoluntary,
-			CtxSwF:        interactorMetrics.CswForced,
-			ExitSignal:    interactorMetrics.ExitSig,
-			IsolateMsg:    interactorMetrics.Message,
-			CgOomKilled:   interactorMetrics.CgOomKilled,
-		}
-
-		l.Info("test finished", "test_id", testID)
-		finishTrackedTest(gath, skipper, testID, submissionRuntimeData, interactorRuntimeData, req.CpuMs, req.RamKiB)
 	}
 	return nil
+}
+
+// runInteractTest runs one interactive test and reports its result. A
+// per-test scope closes the isolate boxes as soon as the test is over. An
+// error return means a judge failure, which aborts the whole job.
+func (t *Tester) runInteractTest(
+	gath internal.ResultGatherer,
+	req api.ExecReq,
+	l *slog.Logger,
+	skipper *groupSkip,
+	testID int,
+	test api.Test,
+	submFname string,
+	submContent []byte,
+	tlibInteractor []byte,
+) error {
+	if test.In.Sha256 == nil {
+		errMsg := fmt.Errorf("test %d: input sha256 is nil", testID)
+		l.Error("input sha256 is nil", "test_id", testID)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	input, err := t.filestore.Await(*test.In.Sha256)
+	if err != nil {
+		errMsg := fmt.Errorf("test %d: get test input: %w", testID, err)
+		l.Error("get test input", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	if test.Ans.Sha256 == nil {
+		errMsg := fmt.Errorf("test %d: answer sha256 is nil", testID)
+		l.Error("answer sha256 is nil", "test_id", testID)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	answer, err := t.filestore.Await(*test.Ans.Sha256)
+	if err != nil {
+		errMsg := fmt.Errorf("test %d: get test answer: %w", testID, err)
+		l.Error("get test answer", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	gath.ReachTest(int64(testID), input, answer)
+
+	submBox, err := isolate.NewBox()
+	if err != nil {
+		errMsg := fmt.Errorf("test %d: create submission box: %w", testID, err)
+		l.Error("create isolate box for submission", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	defer submBox.Close()
+	if err := submBox.AddFile(submFname, submContent); err != nil {
+		errMsg := fmt.Errorf("test %d: add submission to box: %w", testID, err)
+		l.Error("add submission to box", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	interactorBox, err := isolate.NewBox()
+	if err != nil {
+		errMsg := fmt.Errorf("test %d: create interactor box: %w", testID, err)
+		l.Error("create isolate box for interactor", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	defer interactorBox.Close()
+	interactorFiles := []struct {
+		name    string
+		content []byte
+	}{
+		{"interactor", tlibInteractor},
+		{"input.txt", input},
+		{"answer.txt", answer},
+	}
+	for _, file := range interactorFiles {
+		if err := interactorBox.AddFile(file.name, file.content); err != nil {
+			errMsg := fmt.Errorf("test %d: add %s to interactor box: %w", testID, file.name, err)
+			l.Error("add interactor file to box", "test_id", testID, "file", file.name, "error", err)
+			gath.InternalError(errMsg.Error())
+			return errMsg
+		}
+	}
+
+	interactorProcess, err := interactorBox.Command("./interactor input.txt output.txt answer.txt", &interactorConstraints)
+	if err != nil {
+		errMsg := fmt.Errorf("test %d: run interactor: %w", testID, err)
+		l.Error("run interactor", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	submProcess, err := submBox.Command(req.Lang.ExecCmd, solutionConstraints(req))
+	if err != nil {
+		errMsg := fmt.Errorf("test %d: run submission: %w", testID, err)
+		l.Error("run submission", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	if err := interactorProcess.Start(); err != nil {
+		errMsg := fmt.Errorf("test %d: start interactor: %w", testID, err)
+		l.Error("start interactor", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	if err := submProcess.Start(); err != nil {
+		errMsg := fmt.Errorf("test %d: start submission: %w", testID, err)
+		l.Error("start submission", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	submData, interactorData, err := exchange(l, interactorProcess, submProcess)
+	if err != nil {
+		errMsg := fmt.Errorf("test %d: %w", testID, err)
+		l.Error("interactive exchange", "test_id", testID, "error", err)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+
+	outcome, reason := classifyInteractor(interactorData)
+	submFailed := submissionFailed(submData, req.CpuMs, req.RamKiB, false)
+	if outcome == interactorBroken || (outcome == interactorTimedOut && !submFailed) {
+		errMsg := fmt.Errorf("test %d: %s", testID, reason)
+		l.Error("interactor failure", "test_id", testID, "reason", reason)
+		gath.InternalError(errMsg.Error())
+		return errMsg
+	}
+	if outcome == interactorTimedOut {
+		l.Error("interactor timed out", "test_id", testID)
+	}
+	l.Info("test finished", "test_id", testID)
+	gath.FinishTest(int64(testID), submData, interactorData)
+	if submFailed || outcome == interactorRejected {
+		skipper.markFailed(testID)
+	}
+	return nil
+}
+
+// exchange pipes the interactor and the solution together, waits for both
+// processes, and returns their runtime data. Runtime data records what each
+// process read from stdin and wrote to stdout, so the site can render the
+// interaction.
+func exchange(l *slog.Logger, interactorProcess, submProcess *isolate.Cmd) (*api.RuntimeData, *api.RuntimeData, error) {
+	interactorIn := interactorProcess.Stdin()
+	interactorOut := interactorProcess.Stdout()
+	interactorErr := interactorProcess.Stderr()
+	submIn := submProcess.Stdin()
+	submOut := submProcess.Stdout()
+	submErr := submProcess.Stderr()
+
+	var toSolution, fromSolution, solutionStderr, interactorStderr strings.Builder
+	var eg errgroup.Group
+	eg.Go(func() error {
+		_, err := io.Copy(io.MultiWriter(submIn, &toSolution), interactorOut)
+		if err != nil {
+			l.Error("copy interactor->submission", "error", err)
+		}
+		submIn.Close()
+		interactorOut.Close()
+		return nil
+	})
+	eg.Go(func() error {
+		_, err := io.Copy(io.MultiWriter(interactorIn, &fromSolution), submOut)
+		if err != nil {
+			l.Error("copy submission->interactor", "error", err)
+		}
+		interactorIn.Close()
+		submOut.Close()
+		return nil
+	})
+	eg.Go(func() error {
+		_, err := io.Copy(&interactorStderr, interactorErr)
+		if err != nil {
+			l.Error("copy interactor stderr", "error", err)
+		}
+		interactorErr.Close()
+		return nil
+	})
+	eg.Go(func() error {
+		_, err := io.Copy(&solutionStderr, submErr)
+		if err != nil {
+			l.Error("copy submission stderr", "error", err)
+		}
+		submErr.Close()
+		return nil
+	})
+	if err := eg.Wait(); err != nil {
+		return nil, nil, fmt.Errorf("wait for interactive exchange: %w", err)
+	}
+
+	submMetrics, err := submProcess.Wait()
+	if err != nil {
+		return nil, nil, fmt.Errorf("wait for submission: %w", err)
+	}
+	interactorMetrics, err := interactorProcess.Wait()
+	if err != nil {
+		return nil, nil, fmt.Errorf("wait for interactor: %w", err)
+	}
+
+	submData := &api.RuntimeData{
+		Stdin:         toSolution.String(),
+		Stdout:        fromSolution.String(),
+		Stderr:        solutionStderr.String(),
+		ExitCode:      submMetrics.ExitCode,
+		CpuMillis:     submMetrics.CpuMillis,
+		WallMillis:    submMetrics.WallMillis,
+		RamKiBytes:    submMetrics.CgMemKb,
+		CtxSwV:        submMetrics.CswVoluntary,
+		CtxSwF:        submMetrics.CswForced,
+		ExitSignal:    submMetrics.ExitSig,
+		IsolateStatus: submMetrics.Status,
+		IsolateMsg:    submMetrics.Message,
+		CgOomKilled:   submMetrics.CgOomKilled,
+	}
+	interactorData := &api.RuntimeData{
+		Stdin:         fromSolution.String(),
+		Stdout:        toSolution.String(),
+		Stderr:        interactorStderr.String(),
+		ExitCode:      interactorMetrics.ExitCode,
+		CpuMillis:     interactorMetrics.CpuMillis,
+		WallMillis:    interactorMetrics.WallMillis,
+		RamKiBytes:    interactorMetrics.CgMemKb,
+		CtxSwV:        interactorMetrics.CswVoluntary,
+		CtxSwF:        interactorMetrics.CswForced,
+		ExitSignal:    interactorMetrics.ExitSig,
+		IsolateStatus: interactorMetrics.Status,
+		IsolateMsg:    interactorMetrics.Message,
+		CgOomKilled:   interactorMetrics.CgOomKilled,
+	}
+	return submData, interactorData, nil
 }
 
 func finishTrackedTest(

@@ -578,3 +578,99 @@ lang_id = "java25"
 [scenarios.expect]
 status = "success"
 test_results = [{ verdict = "RE" }, { verdict = "OK" }]
+
+[[scenarios]]
+description = """
+Interactive number guessing game. The interactor replies smaller or greater \
+until the solution guesses the hidden number. \
+"""
+
+[[scenarios.request]]
+code = '''
+#include <iostream>
+#include <string>
+
+int main() {
+    int lo = 1, hi = 100;
+    while (lo <= hi) {
+        int mid = (lo + hi) / 2;
+        std::cout << mid << std::endl;
+        std::string reply;
+        if (!(std::cin >> reply)) return 0;
+        if (reply == "smaller") hi = mid - 1;
+        else if (reply == "greater") lo = mid + 1;
+        else break;
+    }
+    return 0;
+}
+'''
+interactor = '''
+#include "testlib.h"
+#include <iostream>
+
+int main(int argc, char *argv[]) {
+    registerInteraction(argc, argv);
+    int hidden = inf.readInt(1, 100, "hidden");
+    for (int q = 1; q <= 10; q++) {
+        int guess = ouf.readInt(1, 100, "guess");
+        if (guess == hidden) quitf(_ok, "guessed in %d queries", q);
+        std::cout << (guess < hidden ? "smaller" : "greater") << std::endl;
+    }
+    quitf(_wa, "too many queries");
+}
+'''
+tests = [
+    { in = "42", ans = "" },
+]
+
+[scenarios.request.limits]
+cpu_ms = 200
+wall_ms = 500
+ram_kib = 16384
+
+[scenarios.request.language]
+lang_id = "cpp17"
+
+[scenarios.expect]
+status = "success"
+test_results = [{ verdict = "OK" }]
+
+[[scenarios]]
+description = """
+Interactive task where the interactor rejects the solution right after its \
+first query. \
+"""
+
+[[scenarios.request]]
+code = '''
+#include <iostream>
+
+int main() {
+    std::cout << 1 << std::endl;
+    return 0;
+}
+'''
+interactor = '''
+#include "testlib.h"
+
+int main(int argc, char *argv[]) {
+    registerInteraction(argc, argv);
+    ouf.readInt();
+    quitf(_wa, "always rejects");
+}
+'''
+tests = [
+    { in = "1", ans = "" },
+]
+
+[scenarios.request.limits]
+cpu_ms = 200
+wall_ms = 500
+ram_kib = 16384
+
+[scenarios.request.language]
+lang_id = "cpp17"
+
+[scenarios.expect]
+status = "success"
+test_results = [{ verdict = "WA" }]

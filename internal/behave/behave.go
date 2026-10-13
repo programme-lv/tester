@@ -28,10 +28,11 @@ type SpecLanguage struct {
 
 // SpecRequest represents a request block inside a scenario entry
 type SpecRequest struct {
-	Code     string       `toml:"code"`
-	Tests    []SpecTest   `toml:"tests"`
-	Language SpecLanguage `toml:"language"`
-	Limits   SpecLimits   `toml:"limits"`
+	Code       string       `toml:"code"`
+	Tests      []SpecTest   `toml:"tests"`
+	Language   SpecLanguage `toml:"language"`
+	Limits     SpecLimits   `toml:"limits"`
+	Interactor string       `toml:"interactor"`
 }
 
 // SpecLimits describes resource limits for a scenario request
@@ -192,6 +193,10 @@ func Parse(path string) ([]Lang, []Case, error) {
 			Tests:  apiTests,
 			CpuMs:  cpuMs,
 			RamKiB: ramKiB,
+		}
+		if reqSpec.Interactor != "" {
+			interactor := reqSpec.Interactor
+			execReq.Interactor = &interactor
 		}
 
 		cases = append(cases, Case{
