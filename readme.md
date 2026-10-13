@@ -15,6 +15,8 @@ Prerequisites:
 - `isolate` sandbox utility (can run `isolate --cg --init` successfully)
 - A NATS server, or AWS credentials when using the SQS listener
 
+For a self-contained Docker verification environment, see [docs/docker.md](docs/docker.md).
+
 To install tester daemon, run `./scripts/install.sh`.
 Script will output further instructions to configure and run the service.
 
