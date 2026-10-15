@@ -14,6 +14,7 @@ type Box struct {
 	id      int
 	path    string
 	isolate *Isolate
+	direct  bool
 }
 
 func newIsolateBox(isolate *Isolate, id int, path string) *Box {
@@ -33,6 +34,9 @@ func (box *Box) Path() string {
 }
 
 func (box *Box) Close() error {
+	if box.direct {
+		return os.RemoveAll(box.path)
+	}
 	return box.isolate.eraseBox(box.id)
 }
 
@@ -44,6 +48,10 @@ func (box *Box) Command(
 		isolateCmd.Constraints = *constraints
 	} else {
 		isolateCmd.Constraints = DefaultConstraints()
+	}
+
+	if box.direct {
+		return directCommand(box, isolateCmd, command), nil
 	}
 
 	tempFilePath, err := newTempIsolateFilePath()

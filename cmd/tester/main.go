@@ -62,17 +62,18 @@ func main() {
 				Flags: []cli.Flag{
 					&cli.BoolFlag{Name: "verbose", Aliases: []string{"v"}, Usage: "enable verbose logs"},
 					&cli.BoolFlag{Name: "no-color", Usage: "disable colorized output"},
+					&cli.BoolFlag{Name: "no-isolate", Usage: "run commands directly without isolate; local verification of trusted code only"},
 				},
 				Action: func(ctx context.Context, c *cli.Command) error {
 					if c.NArg() < 1 {
 						// Fallback to default behave.toml if present
 						fallback := "/usr/local/etc/tester/behave.toml"
 						if _, err := os.Stat(fallback); err == nil {
-							return cmdVerify(fallback, c.Bool("verbose"), c.Bool("no-color"))
+							return cmdVerify(fallback, c.Bool("verbose"), c.Bool("no-color"), c.Bool("no-isolate"))
 						}
 						return cli.Exit("path to behave.toml is required; default not found; see --help", 1)
 					}
-					return cmdVerify(c.Args().First(), c.Bool("verbose"), c.Bool("no-color"))
+					return cmdVerify(c.Args().First(), c.Bool("verbose"), c.Bool("no-color"), c.Bool("no-isolate"))
 				},
 			},
 			{
@@ -293,12 +294,16 @@ func sendNATSError(nc *nats.Conn, inbox, evalUuid, msg string) {
 	_ = nc.Publish(inbox, b)
 }
 
-func cmdVerify(path string, verbose bool, noColor bool) error {
+func cmdVerify(path string, verbose bool, noColor bool, noIsolate bool) error {
 	langs, cases, err := behave.Parse(path)
 	if err != nil {
 		return err
 	}
 	warningCount := 0
+	if noIsolate {
+		isolate.SetDirectMode(true)
+		fmt.Fprintln(os.Stderr, "WARNING: --no-isolate runs code directly on this machine; do not use with untrusted submissions")
+	}
 	t, _, _ := buildTester()
 	if !verbose {
 		// use a no-op handler to suppress logs
@@ -492,6 +497,9 @@ func buildTester() (*testerpkg.Tester, string, string) {
 
 	// Read configuration assets from /usr/local/etc/tester
 	configDir := "/usr/local/etc/tester"
+	if dir := os.Getenv("TESTER_CONFIG_DIR"); dir != "" {
+		configDir = dir
+	}
 
 	readFileIfExists := func(path string) (string, error) {
 		data, err := os.ReadFile(path)

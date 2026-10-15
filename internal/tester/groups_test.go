@@ -1,6 +1,7 @@
 package tester
 
 import (
+	"syscall"
 	"testing"
 
 	"github.com/programme-lv/tester/api"
@@ -79,5 +80,60 @@ func TestTestFailed(t *testing.T) {
 	re := &api.RuntimeData{ExitSignal: &sig}
 	if !testFailed(re, ok, 1000, 1024) {
 		t.Fatal("signal must fail")
+	}
+}
+
+func TestSubmissionStderrOnlyFailsCheckerTasks(t *testing.T) {
+	withStderr := &api.RuntimeData{Stderr: "warning"}
+	if !submissionFailed(withStderr, 1000, 1024, true) {
+		t.Fatal("checker-based tasks keep failing on stderr")
+	}
+	if submissionFailed(withStderr, 1000, 1024, false) {
+		t.Fatal("interactive tasks must ignore stderr")
+	}
+}
+
+func TestSubmissionTimeoutStatusFails(t *testing.T) {
+	status := "TO"
+	to := &api.RuntimeData{IsolateStatus: &status}
+	if !submissionFailed(to, 1000, 1024, false) {
+		t.Fatal("isolate TO status must fail")
+	}
+}
+
+func TestClassifyInteractor(t *testing.T) {
+	if outcome, _ := classifyInteractor(&api.RuntimeData{}); outcome != interactorAccepted {
+		t.Fatalf("exit 0 must be accepted, got %v", outcome)
+	}
+	for _, code := range []int64{1, 2, 8} {
+		chkr := &api.RuntimeData{ExitCode: code}
+		if outcome, _ := classifyInteractor(chkr); outcome != interactorRejected {
+			t.Fatalf("exit %d must reject, got %v", code, outcome)
+		}
+	}
+	for _, code := range []int64{3, 7, 42} {
+		chkr := &api.RuntimeData{ExitCode: code}
+		if outcome, _ := classifyInteractor(chkr); outcome != interactorBroken {
+			t.Fatalf("exit %d must be a judge failure, got %v", code, outcome)
+		}
+	}
+	pipe := int64(syscall.SIGPIPE)
+	if outcome, _ := classifyInteractor(&api.RuntimeData{ExitSignal: &pipe}); outcome != interactorRejected {
+		t.Fatal("SIGPIPE must reject")
+	}
+	segv := int64(syscall.SIGSEGV)
+	if outcome, _ := classifyInteractor(&api.RuntimeData{ExitSignal: &segv}); outcome != interactorBroken {
+		t.Fatal("SIGSEGV must be a judge failure")
+	}
+	status := "TO"
+	if outcome, _ := classifyInteractor(&api.RuntimeData{IsolateStatus: &status}); outcome != interactorTimedOut {
+		t.Fatal("TO must be a timeout")
+	}
+	status = "XX"
+	if outcome, _ := classifyInteractor(&api.RuntimeData{IsolateStatus: &status}); outcome != interactorBroken {
+		t.Fatal("XX must be a judge failure")
+	}
+	if outcome, _ := classifyInteractor(&api.RuntimeData{CgOomKilled: true}); outcome != interactorBroken {
+		t.Fatal("interactor OOM must be a judge failure")
 	}
 }
