@@ -23,6 +23,8 @@ and connects solution stdout to interactor stdin and the other way around.
 Verdicts follow the testlib exit-code convention:
 
 - exit 0: the interactor accepted the solution;
+- exit 50–150: partial score `exit - 50` percent (testlib `_pc`, compiled
+  with `PC_BASE_EXIT_CODE=50`);
 - exit 1 (WA), 2 (PE), 8 (unexpected EOF), or death by SIGPIPE or SIGXFSZ:
   the solution is rejected;
 - exit 3 (fail), any other exit code, other signals, and resource-limit

@@ -29,7 +29,7 @@ func NewTestlibCompiler() *TestlibCompiler {
 	// These are cached compiled binaries that can be regenerated
 	tc := &TestlibCompiler{
 		checkerDir:    xdgDirs.AppCacheDir("tester/checkers"),
-		interactorDir: xdgDirs.AppCacheDir("tester/interactors"),
+		interactorDir: xdgDirs.AppCacheDir("tester/interactors-v2"),
 	}
 
 	err := xdgDirs.EnsureDir(tc.checkerDir)
@@ -54,7 +54,7 @@ func (tc *TestlibCompiler) CompileChecker(sourceCode string, testlibHeaderStr st
 		return os.ReadFile(compiledPath)
 	}
 
-	compiled, runData, err := compile(sourceCode, testlibHeaderStr)
+	compiled, runData, err := compile(sourceCode, testlibHeaderStr, compileCmd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile checker: %w", err)
 	}
@@ -96,7 +96,7 @@ func (tc *TestlibCompiler) CompileInteractor(sourceCode string, testlibHeaderStr
 		return os.ReadFile(compiledPath)
 	}
 
-	compiled, runData, err := compile(sourceCode, testlibHeaderStr)
+	compiled, runData, err := compile(sourceCode, testlibHeaderStr, interactorCompileCmd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile interactor: %w", err)
 	}
@@ -137,9 +137,10 @@ func getStringSha256(input string) string {
 
 const srcCodeFname = "checker.cpp"
 const compileCmd = "g++ -std=c++17 -o checker checker.cpp -I . -I /usr/include"
+const interactorCompileCmd = "g++ -std=c++17 -DPC_BASE_EXIT_CODE=50 -o checker checker.cpp -I . -I /usr/include"
 const compiledFname = "checker"
 
-func compile(code string, testlibHeaderStr string) (compiled []byte, runData *api.RuntimeData, err error) {
+func compile(code string, testlibHeaderStr string, cmd string) (compiled []byte, runData *api.RuntimeData, err error) {
 	isolateInstance := isolate.GetInstance()
 	var box *isolate.Box
 	box, err = isolateInstance.NewBox()
@@ -165,7 +166,7 @@ func compile(code string, testlibHeaderStr string) (compiled []byte, runData *ap
 	}
 
 	var iCmd *isolate.Cmd
-	iCmd, err = box.Command(compileCmd, nil)
+	iCmd, err = box.Command(cmd, nil)
 	if err != nil {
 		err = fmt.Errorf("failed to create isolate command: %w ", err)
 		return
