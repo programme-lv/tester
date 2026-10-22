@@ -111,10 +111,20 @@ func TestClassifyInteractor(t *testing.T) {
 			t.Fatalf("exit %d must reject, got %v", code, outcome)
 		}
 	}
-	for _, code := range []int64{3, 7, 42} {
+	for _, code := range []int64{3, 7, 42, 151} {
 		chkr := &api.RuntimeData{ExitCode: code}
 		if outcome, _ := classifyInteractor(chkr); outcome != interactorBroken {
 			t.Fatalf("exit %d must be a judge failure, got %v", code, outcome)
+		}
+	}
+	for code, percent := range map[int64]int{50: 0, 90: 40, 150: 100} {
+		chkr := &api.RuntimeData{ExitCode: code}
+		outcome, _ := classifyInteractor(chkr)
+		if outcome != interactorPartial {
+			t.Fatalf("exit %d must be partial, got %v", code, outcome)
+		}
+		if got := interactorScorePercent(chkr); got != percent {
+			t.Fatalf("exit %d must score %d%%, got %d%%", code, percent, got)
 		}
 	}
 	pipe := int64(syscall.SIGPIPE)

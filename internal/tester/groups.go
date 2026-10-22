@@ -95,6 +95,7 @@ type interactorOutcome int
 
 const (
 	interactorAccepted interactorOutcome = iota
+	interactorPartial
 	interactorRejected
 	interactorTimedOut
 	interactorBroken
@@ -132,8 +133,27 @@ func classifyInteractor(chkr *api.RuntimeData) (interactorOutcome, string) {
 	case 1, 2, 8:
 		return interactorRejected, fmt.Sprintf("interactor exit code %d", chkr.ExitCode)
 	default:
+		if chkr.ExitCode >= 50 && chkr.ExitCode <= 150 {
+			return interactorPartial, ""
+		}
 		return interactorBroken, fmt.Sprintf("interactor exit code %d", chkr.ExitCode)
 	}
+}
+
+// interactorScorePercent maps the interactor's exit status to a test
+// percentage. Testlib interactors are compiled with PC_BASE_EXIT_CODE=50,
+// so _pc(p) exits with 50+p.
+func interactorScorePercent(chkr *api.RuntimeData) int {
+	if chkr == nil {
+		return 0
+	}
+	if chkr.ExitCode == 0 {
+		return 100
+	}
+	if chkr.ExitCode >= 50 && chkr.ExitCode <= 150 {
+		return int(chkr.ExitCode - 50)
+	}
+	return 0
 }
 
 func isolateStatusIs(data *api.RuntimeData, status string) bool {

@@ -579,6 +579,9 @@ func (t *Tester) runInteractTest(
 	if outcome == interactorTimedOut {
 		l.Error("interactor timed out", "test_id", testID)
 	}
+	if outcome == interactorPartial {
+		l.Info("partial interactor score", "test_id", testID, "percent", interactorScorePercent(interactorData))
+	}
 	l.Info("test finished", "test_id", testID)
 	gath.FinishTest(int64(testID), submData, interactorData)
 	if submFailed || outcome == interactorRejected {
