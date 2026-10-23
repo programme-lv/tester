@@ -1,7 +1,9 @@
 package tester
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/programme-lv/tester/api"
@@ -10,12 +12,12 @@ import (
 
 func TestPrepareFileFallsBackToURL(t *testing.T) {
 	store := filecache.New(t.TempDir(), t.TempDir())
-	tester := &Tester{filestore: store}
+	tester := &Tester{filestore: store, logger: slog.Default()}
 	key := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	badURL := "%"
 	fetcher := &failingFetcher{}
 
-	err := tester.prepareFile("eval", &api.File{Sha256: &key, Url: &badURL}, fetcher)
+	err := tester.fetchFile(context.Background(), "eval", api.File{Sha256: &key, Url: &badURL}, fetcher)
 	if err == nil {
 		t.Fatal("expected URL fallback error")
 	}

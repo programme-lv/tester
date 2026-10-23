@@ -67,7 +67,7 @@ func (t *Tester) execTests(gath internal.ResultGatherer, req api.ExecReq, fetche
 		"checker", req.Checker != nil, "interactor", req.Interactor != nil)
 	gath.StartJob(t.systemInfo)
 
-	err := t.scheduleAndStoreTests(req.Uuid, req.Tests, fetcher)
+	files, err := t.prefetchTests(req.Uuid, req.Tests, fetcher)
 	if err != nil {
 		msg := "schedule and store tests"
 		l.Error(msg, "error", err)
@@ -75,6 +75,10 @@ func (t *Tester) execTests(gath internal.ResultGatherer, req api.ExecReq, fetche
 		gath.InternalError(err.Error())
 		return err
 	}
+	defer files.close()
+	local := *t
+	local.files = files
+	t = &local
 
 	var tlibInteractor []byte
 	if req.Interactor != nil {
@@ -276,7 +280,7 @@ func (t *Tester) runCheckerTest(
 		shaIn = shaIn[:8]
 	}
 	l.Info("awaiting input", "sha", shaIn)
-	input, err := t.filestore.Await(*test.In.Sha256)
+	input, err := t.files.await(*test.In.Sha256)
 	if err != nil {
 		errMsg := fmt.Errorf("get test input: %w", err)
 		l.Error("get test input", "error", err)
@@ -295,7 +299,7 @@ func (t *Tester) runCheckerTest(
 		shaAns = shaAns[:8]
 	}
 	l.Info("awaiting answer", "sha", shaAns)
-	answer, err := t.filestore.Await(*test.Ans.Sha256)
+	answer, err := t.files.await(*test.Ans.Sha256)
 	if err != nil {
 		errMsg := fmt.Errorf("get test answer: %w", err)
 		l.Error("get test answer", "error", err)
@@ -471,7 +475,7 @@ func (t *Tester) runInteractTest(
 		gath.InternalError(errMsg.Error())
 		return errMsg
 	}
-	input, err := t.filestore.Await(*test.In.Sha256)
+	input, err := t.files.await(*test.In.Sha256)
 	if err != nil {
 		errMsg := fmt.Errorf("test %d: get test input: %w", testID, err)
 		l.Error("get test input", "test_id", testID, "error", err)
@@ -484,7 +488,7 @@ func (t *Tester) runInteractTest(
 		gath.InternalError(errMsg.Error())
 		return errMsg
 	}
-	answer, err := t.filestore.Await(*test.Ans.Sha256)
+	answer, err := t.files.await(*test.Ans.Sha256)
 	if err != nil {
 		errMsg := fmt.Errorf("test %d: get test answer: %w", testID, err)
 		l.Error("get test answer", "test_id", testID, "error", err)
@@ -695,44 +699,4 @@ func finishTrackedTest(
 	if testFailed(subm, chkr, cpuMs, ramKiB) {
 		skipper.markFailed(testID)
 	}
-}
-
-func (t *Tester) scheduleAndStoreTests(evalUUID string, tests []api.Test, fetcher FileFetcher) error {
-	for i := range tests {
-		test := &tests[i]
-		if (test.In.Url == nil && test.In.Content == nil) || (test.Ans.Url == nil && test.Ans.Content == nil) {
-			return errors.New("input or answer download url and content are nil")
-		}
-		if err := t.prepareFile(evalUUID, &test.In, fetcher); err != nil {
-			return fmt.Errorf("prepare input file: %w", err)
-		}
-		if err := t.prepareFile(evalUUID, &test.Ans, fetcher); err != nil {
-			return fmt.Errorf("prepare answer file: %w", err)
-		}
-	}
-	return nil
-}
-
-func (t *Tester) prepareFile(evalUUID string, file *api.File, fetcher FileFetcher) error {
-	if file.Content != nil {
-		if file.Sha256 == nil {
-			file.Sha256 = new(string)
-		}
-		key, err := t.filestore.Store([]byte(*file.Content))
-		if err != nil {
-			return fmt.Errorf("store content: %w", err)
-		}
-		*file.Sha256 = key
-		return nil
-	}
-	if file.Sha256 == nil {
-		return errors.New("sha256 is nil")
-	}
-	if t.filestore.Exists(*file.Sha256) {
-		return nil
-	}
-	if fetcher != nil && fetcher.Fetch(evalUUID, *file.Sha256) == nil {
-		return nil
-	}
-	return t.filestore.Schedule(*file.Sha256, *file.Url)
 }

@@ -2,6 +2,7 @@ package filecache
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
@@ -14,6 +15,32 @@ import (
 
 	"github.com/klauspost/compress/zstd"
 )
+
+func TestDownloadContextCancellation(t *testing.T) {
+	started := make(chan struct{})
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		close(started)
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+	store := New(t.TempDir(), t.TempDir())
+	store.client = server.Client()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- store.DownloadContext(ctx, server.URL, hash([]byte("missing"))) }()
+	<-started
+	cancel()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("cancelled download succeeded")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("download did not cancel")
+	}
+	assertEmpty(t, store.fileDir)
+}
 
 func TestNewSetsHTTPTimeout(t *testing.T) {
 	store := New(t.TempDir(), t.TempDir())

@@ -2,6 +2,7 @@ package natsfile
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +18,52 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/programme-lv/tester/internal/filecache"
 )
+
+type blockingSubscription struct {
+	started chan struct{}
+	closed  chan struct{}
+	once    sync.Once
+}
+
+func (s *blockingSubscription) NextMsg(time.Duration) (*nats.Msg, error) {
+	close(s.started)
+	<-s.closed
+	return nil, nats.ErrBadSubscription
+}
+
+func (s *blockingSubscription) Unsubscribe() error {
+	s.once.Do(func() { close(s.closed) })
+	return nil
+}
+
+type blockingBroker struct {
+	fakeBroker
+	s *blockingSubscription
+}
+
+func (b *blockingBroker) subscribeSync(string) (subscription, error) { return b.s, nil }
+
+func TestFetchContextCancelsBlockedTransfer(t *testing.T) {
+	cache, dir := testCache(t)
+	b := &blockingBroker{s: &blockingSubscription{started: make(chan struct{}), closed: make(chan struct{})}}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- newFetcher(b, cache, "files", testOptions()).FetchContext(ctx, "eval", hash([]byte("missing")))
+	}()
+	<-b.s.started
+	cancel()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("cancelled transfer succeeded")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("transfer did not cancel")
+	}
+	assertEmpty(t, dir)
+}
 
 func TestFetchCacheHit(t *testing.T) {
 	cache, _ := testCache(t)
