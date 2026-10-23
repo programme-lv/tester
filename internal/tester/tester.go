@@ -16,6 +16,7 @@ type Tester struct {
 	testlibHStr  string
 	loggerOld    *log.Logger
 	logger       *slog.Logger
+	files        *testFiles // evaluation-local; set only on a copy of Tester
 }
 
 func NewTester(

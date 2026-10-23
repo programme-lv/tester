@@ -32,18 +32,14 @@ func RunIsolateCmd(p *isolate.Cmd, input []byte) (*api.RuntimeData, error) {
 	// read everything from stdout
 	var stdout []byte
 	eg.Go(func() error {
-		stdout, err = io.ReadAll(p.Stdout())
-		if err != nil {
-		}
+		stdout, _ = io.ReadAll(p.Stdout())
 		return nil
 	})
 
 	// read everything from stderr
 	var stderr []byte
 	eg.Go(func() error {
-		stderr, err = io.ReadAll(p.Stderr())
-		if err != nil {
-		}
+		stderr, _ = io.ReadAll(p.Stderr())
 		return nil
 	})
 

@@ -1,6 +1,7 @@
 package natsfile
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -56,6 +57,13 @@ func newFetcher(b broker, cache Cache, subject string, opts Options) *Fetcher {
 }
 
 func (f *Fetcher) Fetch(evalUUID, sha256 string) error {
+	return f.FetchContext(context.Background(), evalUUID, sha256)
+}
+
+func (f *Fetcher) FetchContext(ctx context.Context, evalUUID, sha256 string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if f.cache.Exists(sha256) {
 		return nil
 	}
@@ -64,6 +72,10 @@ func (f *Fetcher) Fetch(evalUUID, sha256 string) error {
 		return err
 	}
 	defer sub.Unsubscribe()
+	// Unsubscribing wakes NextMsg, interrupting a blocked transfer when the
+	// evaluation ends (including compilation failures and skipped tests).
+	stop := context.AfterFunc(ctx, func() { _ = sub.Unsubscribe() })
+	defer stop()
 
 	body, err := json.Marshal(request{EvalUUID: evalUUID, SHA256: sha256})
 	if err != nil {

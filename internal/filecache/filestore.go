@@ -1,6 +1,7 @@
 package filecache
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -316,6 +317,20 @@ func (fs *FileStore) downloadURLWithLimits(
 	downlURL, expectedSHA256 string,
 	maxCompressed, maxDecompressed int64,
 ) error {
+	return fs.downloadContext(context.Background(), downlURL, expectedSHA256, maxCompressed, maxDecompressed)
+}
+
+// DownloadContext retrieves one file without holding the scheduling mutex.
+// Independent files may be downloaded concurrently by evaluation workers.
+func (fs *FileStore) DownloadContext(ctx context.Context, downlURL, expectedSHA256 string) error {
+	if err := fs.downloadContext(ctx, downlURL, expectedSHA256, maxTransferBytes, maxTransferBytes); err != nil {
+		return err
+	}
+	fs.announceStored(expectedSHA256)
+	return nil
+}
+
+func (fs *FileStore) downloadContext(ctx context.Context, downlURL, expectedSHA256 string, maxCompressed, maxDecompressed int64) error {
 	u, err := url.Parse(downlURL)
 	if err != nil {
 		return fmt.Errorf("parse URL %s: %w", downlURL, err)
@@ -326,7 +341,11 @@ func (fs *FileStore) downloadURLWithLimits(
 	if err := validateHexSha256(expectedSHA256); err != nil {
 		return fmt.Errorf("invalid expected SHA256 hash %s: %w", expectedSHA256, err)
 	}
-	resp, err := fs.client.Get(downlURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downlURL, nil)
+	if err != nil {
+		return fmt.Errorf("create download request: %w", err)
+	}
+	resp, err := fs.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("download file from %s: %w", downlURL, err)
 	}
